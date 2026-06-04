@@ -158,7 +158,6 @@ keyword ::=
   | "if"
   | "else"
   | "match"
-  | "forall"
   | "builtin"
 
 reservedWord ::=
@@ -336,8 +335,7 @@ openDeclaration ::=
     "open" valueName
 
 type ::=
-    forallType
-  | typeConstructor typeArguments?
+    typeConstructor typeArguments?
   | functionType
 
 typeConstructor ::=
@@ -349,11 +347,8 @@ typeArguments ::=
 typeParameters ::=
     "[" commaSeparatedTypeParameters "]"
 
-forallType ::=
-    "forall" commaSeparatedTypeParameters "." functionType
-
 functionType ::=
-    "(" commaSeparatedTypes? ")" "->" type
+    typeParameters? "(" commaSeparatedTypes? ")" "->" type
 
 expression ::=
     ifExpression
@@ -720,7 +715,7 @@ Function types are uncurried. `(T1, T2) -> R` is not the same type object as `(T
 *Generic function formation.*
 
 ```lane2
-forall A1, ..., An. (T1, ..., Tm) -> R // generic function type
+[A1, ..., An](T1, ..., Tm) -> R // generic function type
 ```
 
 #rule[
