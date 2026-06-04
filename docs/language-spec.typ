@@ -3,6 +3,27 @@
 #set text(size: 10pt)
 #set heading(numbering: "1.1")
 
+#let code-box(body) = block(
+  width: 100%,
+  fill: rgb("#f7f9fb"),
+  stroke: 0.5pt + rgb("#d8dee6"),
+  radius: 4pt,
+  inset: 8pt,
+  body,
+)
+
+#let math-box(body) = block(
+  width: 100%,
+  fill: rgb("#fbfaf3"),
+  stroke: 0.5pt + rgb("#e2dcc5"),
+  radius: 4pt,
+  inset: 8pt,
+  body,
+)
+
+#show raw.where(block: true): it => code-box(it)
+#show math.equation.where(block: true): it => math-box(align(center, it))
+
 #align(center)[#text(size: 20pt, weight: "bold")[Lane2 Language Specification]]
 
 #align(center)[
@@ -521,24 +542,32 @@ Comments are trivia. Comments do not appear in the syntactic grammar.
   #table(
     columns: (auto, 1fr),
     [Notation], [Meaning],
-    [$ T, U, R $], [types],
-    [$ A $], [type variable],
-    [$ C $], [type constructor],
-    [$ S $], [struct type constructor],
-    [$ E $], [enum type constructor],
-    [$ e, c, f, a $], [expressions],
-    [$ x $], [value binder],
-    [$ n, m $], [natural numbers],
-    [$ #sym.Delta $], [type-constructor context],
-    [$ #sym.Theta $], [type-variable context],
-    [$ #sym.Gamma $], [value typing context],
-    [$ #sym.Delta; #sym.Theta #sym.tack.r T " type" $], [well-formed type],
-    [$ C[T_1, ..., T_n] $], [nominal type application],
-    [$ #sym.forall A_1, ..., A_n "." T $], [universal type],
-    [$ T #sym.eq.triple U $], [type equality],
-    [$ #sym.Gamma #sym.tack.r e : T $], [expression typing],
-    [$ frac(P, Q) $], [rule with premise $P$ and conclusion $Q$],
-    [$ op("name") $], [abstract syntax constructor],
+    [$T, U, R$], [types],
+    [$A$], [type variable],
+    [$C$], [type constructor],
+    [$S$], [struct type constructor],
+    [$E$], [enum type constructor],
+    [$e, c, f$], [expressions],
+    [$a$], [match arm],
+    [$x$], [value binder],
+    [$n, m$], [natural numbers],
+    [$#sym.Delta$], [type-constructor context],
+    [$D$], [custom type definition],
+    [$#sym.Delta (C) = D$], [visible custom type definition],
+    [$op("params")(D) = (A_1, ..., A_n)$], [custom type parameters],
+    [$#sym.Theta$], [type-variable context],
+    [$#sym.Gamma$], [value typing context],
+    [$l$], [struct field name],
+    [$v$], [enum variant name],
+    [$[T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] U$], [type substitution],
+    [$#sym.sigma$], [type substitution environment],
+    [$#sym.Delta; #sym.Theta #sym.tack.r T " type"$], [well-formed type],
+    [$C[T_1, ..., T_n]$], [nominal type application],
+    [$#sym.forall A_1, ..., A_n "." T$], [universal type],
+    [$T #sym.eq.triple U$], [type equality],
+    [$#sym.Gamma #sym.tack.r e : T$], [expression typing],
+    [$frac(P, Q)$], [rule with premise $P$ and conclusion $Q$],
+    [$op("name")$], [abstract syntax constructor],
   )
 ]
 
@@ -710,9 +739,9 @@ id(1)
 
 Generic function type equality compares the number of type parameters and the function types under corresponding bound type parameters.
 
-== Struct Types
+== Nominal Custom Types
 
-*Struct formation.*
+Struct and enum declarations introduce nominal custom type definitions in #sym.Delta.
 
 ```lane2
 struct Point {
@@ -721,48 +750,6 @@ struct Point {
 }
 ```
 
-A `struct` declaration introduces a nominal type constructor. If the declaration has type parameters, the type constructor arity is the number of declared type parameters.
-
-#rule[
-  $ "S has arity " n " in " #sym.Delta quad #sym.Delta; #sym.Theta #sym.tack.r T_1 " type" quad ... quad #sym.Delta; #sym.Theta #sym.tack.r T_n " type" $
-][
-  $ #sym.Delta; #sym.Theta #sym.tack.r "S"[T_1, ..., T_n] " type" $
-]
-
-*Struct introduction.*
-
-```lane2
-Point::{ x: 1, y: 2 }
-```
-
-A qualified struct literal introduces a struct value. It must provide every field exactly once.
-
-*Struct elimination.*
-
-```lane2
-p.x
-match p {
-  Point::{ x, y } => x + y
-}
-open point_ops
-```
-
-Struct values are eliminated by field access, struct patterns, and `open`.
-
-*Struct type equality.*
-
-#rule[
-  $ "S" " is the same nominal type constructor as " "S" quad T_1 #sym.eq.triple U_1 quad ... quad T_n #sym.eq.triple U_n $
-][
-  $ "S"[T_1, ..., T_n] #sym.eq.triple "S"[U_1, ..., U_n] $
-]
-
-Distinct struct type constructors are not equal, even when their fields have the same names and types.
-
-== Enum Types
-
-*Enum formation.*
-
 ```lane2
 enum Option[A] {
   none
@@ -770,15 +757,80 @@ enum Option[A] {
 }
 ```
 
-An `enum` declaration introduces a nominal type constructor. If the declaration has type parameters, the type constructor arity is the number of declared type parameters.
+The type-constructor context stores the full declaration shape, not only arity.
 
-#rule[
-  $ "E has arity " n " in " #sym.Delta quad #sym.Delta; #sym.Theta #sym.tack.r T_1 " type" quad ... quad #sym.Delta; #sym.Theta #sym.tack.r T_n " type" $
-][
-  $ #sym.Delta; #sym.Theta #sym.tack.r "E"[T_1, ..., T_n] " type" $
+#align(left)[
+  $ #sym.Delta (S) = op("struct")(A_1, ..., A_n; l_1 : F_1, ..., l_m : F_m) $ \
+  $ #sym.Delta (E) = op("enum")(A_1, ..., A_n; v_j(P_(j,1), ..., P_(j,m_j))) $
 ]
 
-*Enum introduction.*
+Top-level custom type declarations are checked in two phases. First, all top-level struct and enum constructors are collected into #sym.Delta with their type parameters, field names, variant names, and declared member type expressions. Second, every field type and variant payload type is checked under the collected #sym.Delta and the declaration's type parameters. This permits mutually recursive custom types.
+
+#rule[
+  $ #sym.Delta (S) = op("struct")(A_1, ..., A_n; l_1 : F_1, ..., l_m : F_m) quad #sym.forall i "." #sym.Delta; A_1, ..., A_n #sym.tack.r F_i " type" $
+][
+  $ #sym.Delta #sym.tack.r S " declaration" $
+]
+
+#rule[
+  $ #sym.Delta (E) = op("enum")(A_1, ..., A_n; v_j(P_(j,1), ..., P_(j,m_j))) quad #sym.forall j,k "." #sym.Delta; A_1, ..., A_n #sym.tack.r P_(j,k) " type" $
+][
+  $ #sym.Delta #sym.tack.r E " declaration" $
+]
+
+*Nominal formation.* A nominal type application is well-formed when its custom type constructor is visible, the number of type arguments matches the declaration's type parameters, and every type argument is well-formed.
+
+#rule[
+  $ #sym.Delta (C) = D quad op("params")(D) = (A_1, ..., A_n) quad #sym.Delta; #sym.Theta #sym.tack.r T_1 " type" quad ... quad #sym.Delta; #sym.Theta #sym.tack.r T_n " type" $
+][
+  $ #sym.Delta; #sym.Theta #sym.tack.r C[T_1, ..., T_n] " type" $
+]
+
+*Nominal type equality.* Nominal type equality compares constructor identity and then compares type arguments pairwise. There is no equality rule whose conclusion relates different nominal constructors.
+
+#rule[
+  $ T_1 #sym.eq.triple U_1 quad ... quad T_n #sym.eq.triple U_n $
+][
+  $ C[T_1, ..., T_n] #sym.eq.triple C[U_1, ..., U_n] $
+]
+
+== Struct Types
+
+*Struct introduction.* A qualified struct literal introduces a struct value. It must provide every declared field exactly once. Source field order is not significant; the rule below uses declaration order.
+
+```lane2
+Point::{ x: 1, y: 2 }
+```
+
+#rule[
+  $ #sym.Delta (S) = op("struct")(A_1, ..., A_n; l_1 : F_1, ..., l_m : F_m) quad #sym.sigma = [T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] $
+][
+  $ op("fields")(S[T_1, ..., T_n]) = (l_1 : #sym.sigma F_1, ..., l_m : #sym.sigma F_m) $
+]
+
+#rule[
+  $ op("fields")(S[T_1, ..., T_n]) = (l_1 : Q_1, ..., l_m : Q_m) quad #sym.Gamma #sym.tack.r e_1 : Q_1 quad ... quad #sym.Gamma #sym.tack.r e_m : Q_m $
+][
+  $ #sym.Gamma #sym.tack.r op("struct-lit")(S[T_1, ..., T_n], l_1 = e_1, ..., l_m = e_m) : S[T_1, ..., T_n] $
+]
+
+*Struct field elimination.* Field access eliminates a struct value by selecting a declared field type after substituting the struct type arguments.
+
+```lane2
+p.x
+```
+
+#rule[
+  $ #sym.Gamma #sym.tack.r e : S[T_1, ..., T_n] quad op("fields")(S[T_1, ..., T_n]) = (..., l : Q, ...) $
+][
+  $ #sym.Gamma #sym.tack.r e.l : Q $
+]
+
+Struct values are also eliminated by struct patterns and exposed by `open`; their detailed static rules are specified in "Pattern Matching" and "Structs, Enums, and Open".
+
+== Enum Types
+
+*Enum variant introduction.* A qualified enum variant expression introduces an enum value. The payload expressions must match the declared variant payload types after substituting the enum type arguments.
 
 ```lane2
 Option::none
@@ -786,9 +838,21 @@ Option::some(1)
 some(1)
 ```
 
-A qualified enum variant expression introduces an enum value. An unqualified enum variant expression is allowed only when the variant name resolves without ambiguity.
+#rule[
+  $ #sym.Delta (E) = op("enum")(A_1, ..., A_n; ..., v(P_1, ..., P_m), ...) $
+][
+  $ op("payloads")(E[T_1, ..., T_n], v) = ([T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] P_1, ..., [T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] P_m) $
+]
 
-*Enum elimination.*
+#rule[
+  $ op("payloads")(E[T_1, ..., T_n], v) = (Q_1, ..., Q_m) quad #sym.Gamma #sym.tack.r e_1 : Q_1 quad ... quad #sym.Gamma #sym.tack.r e_m : Q_m $
+][
+  $ #sym.Gamma #sym.tack.r op("variant")(E[T_1, ..., T_n], v, e_1, ..., e_m) : E[T_1, ..., T_n] $
+]
+
+An unqualified enum variant expression is typed by the same rule after name resolution has selected exactly one visible enum variant.
+
+*Enum match elimination.* A match expression eliminates an enum value. For an enum scrutinee type, every declared variant must be covered.
 
 ```lane2
 match value {
@@ -797,17 +861,25 @@ match value {
 }
 ```
 
-Enum values are eliminated by exhaustive `match`.
-
-*Enum type equality.*
-
 #rule[
-  $ "E" " is the same nominal type constructor as " "E" quad T_1 #sym.eq.triple U_1 quad ... quad T_n #sym.eq.triple U_n $
+  $ op("payloads")(E[T_1, ..., T_n], v) = (Q_1, ..., Q_m) $
 ][
-  $ "E"[T_1, ..., T_n] #sym.eq.triple "E"[U_1, ..., U_n] $
+  $ op("binders")(#sym.Gamma; x_1 : Q_1, ..., x_m : Q_m) = #sym.Gamma' $
 ]
 
-Distinct enum type constructors are not equal, even when their variants have the same names and payload types.
+#rule[
+  $ op("payloads")(E[T_1, ..., T_n], v) = (Q_1, ..., Q_m) quad op("binders")(#sym.Gamma; x_1 : Q_1, ..., x_m : Q_m) = #sym.Gamma' quad #sym.Gamma' #sym.tack.r b : R $
+][
+  $ #sym.Gamma #sym.tack.r op("arm")(v(x_1, ..., x_m) => b) : op("arm-type")(E[T_1, ..., T_n], R) $
+]
+
+#rule[
+  $ #sym.Gamma #sym.tack.r e : E[T_1, ..., T_n] quad #sym.Delta (E) = op("enum")(A_1, ..., A_n; v_1, ..., v_q) quad #sym.Gamma #sym.tack.r a_j : op("arm-type")(E[T_1, ..., T_n], R) $
+][
+  $ #sym.Gamma #sym.tack.r op("match")(e; a_1, ..., a_q) : R $
+]
+
+Pattern syntax and exhaustiveness diagnostics are specified in "Pattern Matching".
 
 == Local Type Inference
 
