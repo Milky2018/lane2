@@ -12,6 +12,8 @@
 
 #outline(title: "Contents")
 
+#let rule(premise, conclusion) = align(center)[$ frac(#premise, #conclusion) $]
+
 = Introduction
 
 Lane2 is a strict, pure, expression-oriented functional programming language. Its first implementation target is a parser, a type checker, and an AST interpreter; later implementations may add bytecode compilation, a virtual machine, a linker, and effect handling.
@@ -129,6 +131,7 @@ keyword ::=
   | "if"
   | "else"
   | "match"
+  | "forall"
   | "builtin"
 
 reservedWord ::=
@@ -306,7 +309,8 @@ openDeclaration ::=
     "open" valueName
 
 type ::=
-    typeConstructor typeArguments?
+    forallType
+  | typeConstructor typeArguments?
   | functionType
 
 typeConstructor ::=
@@ -318,8 +322,11 @@ typeArguments ::=
 typeParameters ::=
     "[" commaSeparatedTypeParameters "]"
 
+forallType ::=
+    "forall" commaSeparatedTypeParameters "." functionType
+
 functionType ::=
-    typeParameters? "(" commaSeparatedTypes? ")" "->" type
+    "(" commaSeparatedTypes? ")" "->" type
 
 expression ::=
     ifExpression
@@ -508,122 +515,327 @@ Comments are trivia. Comments do not appear in the syntactic grammar.
 
 = Type System
 
-== Type Objects
+== Notations
 
-The primitive type objects of Lane2/Core v1 are `Int`, `Bool`, `String`, and `Unit`.
-
-`Int` is a signed 64-bit integer type.
-
-`Bool` has the values `true` and `false`.
-
-`String` is an ASCII string type.
-
-`Unit` has the value `()`.
-
-A `struct` declaration introduces a nominal struct type constructor.
-
-An `enum` declaration introduces a nominal enum type constructor and its variant constructors.
-
-A type parameter introduces a type variable scoped by its enclosing generic function, generic function literal, struct declaration, enum declaration, or generic function type.
-
-A nominal type application consists of a type constructor and zero or more type arguments.
-
-A function type consists of an ordered positional parameter list and a result type. Function types are not curried.
-
-A generic function type consists of a type-parameter list followed by a function type.
-
-Lane2/Core v1 has no tuple types, collection types, type aliases, trait constraints, typeclass constraints, interface constraints, or structural record types.
-
-== Type Well-Formedness
-
-Type well-formedness is written as:
-
-$ #sym.Delta; #sym.Theta #sym.tack.r T " type" $
-
-#sym.Delta is the type-constructor environment. It contains primitive type constructors and type constructors introduced by visible `struct` and `enum` declarations.
-
-#sym.Theta is the type-variable environment. It contains type variables introduced by visible type-parameter binders.
-
-A primitive type is well-formed.
-
-A type variable is well-formed only when it is present in #sym.Theta.
-
-A nominal type application is well-formed only when its type constructor resolves in #sym.Delta, the number of type arguments matches the type constructor arity, and all type arguments are well-formed.
-
-A function type is well-formed only when every parameter type and the result type are well-formed.
-
-A generic function type is well-formed only when its type parameters bind the type variables used by the following function type and that function type is well-formed under the extended type-variable environment.
-
-== Type Equality
-
-Type equality is written as:
-
-$ T #sym.eq.triple U $
-
-Primitive type equality compares primitive type identity.
-
-Type-variable equality compares type-variable binder identity.
-
-Nominal type equality compares nominal type-constructor identity and then compares type arguments pairwise.
-
-Function type equality compares parameter-list length, parameter types pairwise, and result type.
-
-Distinct nominal type constructors are not equal merely because their declarations have the same fields or variants.
-
-== Type Inference
-
-Lane2 uses bidirectional local type inference.
-
-#align(left)[
-  $ #sym.Gamma #sym.tack.r e #sym.arrow.r.double T $ \
-  $ #sym.Gamma #sym.tack.r e #sym.arrow.l.double T $ \
-  $ #sym.Gamma #sym.tack.r p #sym.arrow.l.double T #sym.arrow.r.double #sym.Gamma _ p $
+#figure(caption: [Type system notations])[
+  #table(
+    columns: (auto, 1fr),
+    [Notation], [Meaning],
+    [$ T, U, R $], [types],
+    [$ A $], [type variable],
+    [$ C $], [type constructor],
+    [$ S $], [struct type constructor],
+    [$ E $], [enum type constructor],
+    [$ e, c, f, a $], [expressions],
+    [$ x $], [value binder],
+    [$ n, m $], [natural numbers],
+    [$ #sym.Delta $], [type-constructor context],
+    [$ #sym.Theta $], [type-variable context],
+    [$ #sym.Gamma $], [value typing context],
+    [$ #sym.Delta; #sym.Theta #sym.tack.r T " type" $], [well-formed type],
+    [$ C[T_1, ..., T_n] $], [nominal type application],
+    [$ #sym.forall A_1, ..., A_n "." T $], [universal type],
+    [$ T #sym.eq.triple U $], [type equality],
+    [$ #sym.Gamma #sym.tack.r e : T $], [expression typing],
+    [$ frac(P, Q) $], [rule with premise $P$ and conclusion $Q$],
+    [$ op("name") $], [abstract syntax constructor],
+  )
 ]
 
-$ #sym.Gamma #sym.tack.r e #sym.arrow.r.double T $ means expression `e` synthesizes type `T`.
+== Primitive Types
 
-$ #sym.Gamma #sym.tack.r e #sym.arrow.l.double T $ means expression `e` checks against expected type `T`.
+Lane2/Core v1 has four primitive types: `Unit`, `Bool`, `Int`, and `String`.
 
-$ #sym.Gamma #sym.tack.r p #sym.arrow.l.double T #sym.arrow.r.double #sym.Gamma _ p $ means pattern `p` checks against scrutinee type `T` and produces pattern bindings #sym.Gamma#sub[`p`].
+*Primitive formation.* Each primitive type is well-formed in every type environment.
 
-Type information may synthesize upward from an expression or check downward from an expected type.
+#align(left)[
+  $ #sym.Delta; #sym.Theta #sym.tack.r "Unit" " type" $ \
+  $ #sym.Delta; #sym.Theta #sym.tack.r "Bool" " type" $ \
+  $ #sym.Delta; #sym.Theta #sym.tack.r "Int" " type" $ \
+  $ #sym.Delta; #sym.Theta #sym.tack.r "String" " type" $
+]
 
-The type checker does not create global Hindley-Milner constraints. A binding's type is not inferred from later uses of the bound name.
+*Unit introduction.* The expression `()` introduces a `Unit` value.
 
-Function literals may omit parameter types only when checked against an expected function type. Without an expected function type, every value parameter of a function literal must have an explicit type annotation.
+```lane2
+()
+```
 
-Generic function literals without an expected generic function type must explicitly declare type parameters and explicitly annotate value parameters.
+$ #sym.Gamma #sym.tack.r () : "Unit" $
+
+*Unit elimination.* Lane2/Core v1 has no dedicated elimination form for `Unit`.
+
+*Bool introduction.* Boolean literals introduce `Bool` values.
+
+```lane2
+true
+false
+```
+
+#align(left)[
+  $ #sym.Gamma #sym.tack.r "true" : "Bool" $ \
+  $ #sym.Gamma #sym.tack.r "false" : "Bool" $
+]
+
+*Bool elimination.* `if` eliminates a `Bool` value.
+
+```lane2
+if condition {
+  then_value
+} else {
+  else_value
+}
+```
+
+#rule[
+  $ #sym.Gamma #sym.tack.r c : "Bool" quad #sym.Gamma #sym.tack.r e_1 : T quad #sym.Gamma #sym.tack.r e_2 : T $
+][
+  $ #sym.Gamma #sym.tack.r op("if")(c, e_1, e_2) : T $
+]
+
+*Int introduction.* Integer literals introduce `Int` values.
+
+```lane2
+42
+```
+
+$ #sym.Gamma #sym.tack.r n : "Int" $
+
+*Int elimination.* Lane2/Core v1 has no built-in syntactic eliminator for `Int`. Integer operations are typed through required intrinsics and prelude operation values.
+
+*String introduction.* ASCII string literals introduce `String` values.
+
+```lane2
+"lane"
+```
+
+$ #sym.Gamma #sym.tack.r s : "String" $
+
+*String elimination.* Lane2/Core v1 has no built-in syntactic eliminator for `String`. String equality is typed through the prelude.
+
+*Primitive type equality.* Primitive types are equal only to themselves.
+
+#align(left)[
+  $ "Unit" #sym.eq.triple "Unit" $ \
+  $ "Bool" #sym.eq.triple "Bool" $ \
+  $ "Int" #sym.eq.triple "Int" $ \
+  $ "String" #sym.eq.triple "String" $
+]
+
+== Function Types
+
+*Function formation.*
+
+#rule[
+  $ #sym.Delta; #sym.Theta #sym.tack.r T_1 " type" quad ... quad #sym.Delta; #sym.Theta #sym.tack.r T_n " type" quad #sym.Delta; #sym.Theta #sym.tack.r R " type" $
+][
+  $ #sym.Delta; #sym.Theta #sym.tack.r (T_1, ..., T_n) -> R " type" $
+]
+
+*Function introduction.*
+
+```lane2
+fn(x : Int, y : Int) -> Int {
+  x + y
+}
+```
+
+#rule[
+  $ #sym.Gamma, x_1 : T_1, ..., x_n : T_n #sym.tack.r e : R $
+][
+  $ #sym.Gamma #sym.tack.r op("fn")((x_1 : T_1), ..., (x_n : T_n), R, e) : (T_1, ..., T_n) -> R $
+]
+
+*Function elimination.*
+
+```lane2
+f(a, b)
+```
+
+#rule[
+  $ #sym.Gamma #sym.tack.r f : (T_1, ..., T_n) -> R quad #sym.Gamma #sym.tack.r a_1 : T_1 quad ... quad #sym.Gamma #sym.tack.r a_n : T_n $
+][
+  $ #sym.Gamma #sym.tack.r f(a_1, ..., a_n) : R $
+]
+
+*Function type equality.*
+
+#rule[
+  $ T_1 #sym.eq.triple U_1 quad ... quad T_n #sym.eq.triple U_n quad R #sym.eq.triple S $
+][
+  $ (T_1, ..., T_n) -> R #sym.eq.triple (U_1, ..., U_n) -> S $
+]
+
+Function types are uncurried. `(T1, T2) -> R` is not the same type object as `(T1) -> (T2) -> R`.
+
+== Generic Function Types
+
+*Generic function formation.*
+
+```lane2
+forall A. (A) -> A
+```
+
+#rule[
+  $ #sym.Delta; #sym.Theta, A_1, ..., A_n #sym.tack.r (T_1, ..., T_m) -> R " type" $
+][
+  $ #sym.Delta; #sym.Theta #sym.tack.r #sym.forall A_1, ..., A_n "." (T_1, ..., T_m) -> R " type" $
+]
+
+*Generic function introduction.*
+
+```lane2
+fn[A](value : A) -> A {
+  value
+}
+```
+
+A generic function literal or named generic function introduces a generic function value.
+
+*Generic function elimination.*
+
+Generic function calls instantiate type parameters at the use site when the use site is unambiguous.
+
+```lane2
+id(1)
+```
+
+*Generic function type equality.*
+
+#rule[
+  $ (T_1, ..., T_m) -> R #sym.eq.triple (U_1, ..., U_m) -> S $
+][
+  $ #sym.forall A_1, ..., A_n "." (T_1, ..., T_m) -> R #sym.eq.triple #sym.forall A_1, ..., A_n "." (U_1, ..., U_m) -> S $
+]
+
+Generic function type equality compares the number of type parameters and the function types under corresponding bound type parameters.
+
+== Struct Types
+
+*Struct formation.*
+
+```lane2
+struct Point {
+  x : Int
+  y : Int
+}
+```
+
+A `struct` declaration introduces a nominal type constructor. If the declaration has type parameters, the type constructor arity is the number of declared type parameters.
+
+#rule[
+  $ "S has arity " n " in " #sym.Delta quad #sym.Delta; #sym.Theta #sym.tack.r T_1 " type" quad ... quad #sym.Delta; #sym.Theta #sym.tack.r T_n " type" $
+][
+  $ #sym.Delta; #sym.Theta #sym.tack.r "S"[T_1, ..., T_n] " type" $
+]
+
+*Struct introduction.*
+
+```lane2
+Point::{ x: 1, y: 2 }
+```
+
+A qualified struct literal introduces a struct value. It must provide every field exactly once.
+
+*Struct elimination.*
+
+```lane2
+p.x
+match p {
+  Point::{ x, y } => x + y
+}
+open point_ops
+```
+
+Struct values are eliminated by field access, struct patterns, and `open`.
+
+*Struct type equality.*
+
+#rule[
+  $ "S" " is the same nominal type constructor as " "S" quad T_1 #sym.eq.triple U_1 quad ... quad T_n #sym.eq.triple U_n $
+][
+  $ "S"[T_1, ..., T_n] #sym.eq.triple "S"[U_1, ..., U_n] $
+]
+
+Distinct struct type constructors are not equal, even when their fields have the same names and types.
+
+== Enum Types
+
+*Enum formation.*
+
+```lane2
+enum Option[A] {
+  none
+  some(A)
+}
+```
+
+An `enum` declaration introduces a nominal type constructor. If the declaration has type parameters, the type constructor arity is the number of declared type parameters.
+
+#rule[
+  $ "E has arity " n " in " #sym.Delta quad #sym.Delta; #sym.Theta #sym.tack.r T_1 " type" quad ... quad #sym.Delta; #sym.Theta #sym.tack.r T_n " type" $
+][
+  $ #sym.Delta; #sym.Theta #sym.tack.r "E"[T_1, ..., T_n] " type" $
+]
+
+*Enum introduction.*
+
+```lane2
+Option::none
+Option::some(1)
+some(1)
+```
+
+A qualified enum variant expression introduces an enum value. An unqualified enum variant expression is allowed only when the variant name resolves without ambiguity.
+
+*Enum elimination.*
+
+```lane2
+match value {
+  Option::none => fallback
+  Option::some(x) => x
+}
+```
+
+Enum values are eliminated by exhaustive `match`.
+
+*Enum type equality.*
+
+#rule[
+  $ "E" " is the same nominal type constructor as " "E" quad T_1 #sym.eq.triple U_1 quad ... quad T_n #sym.eq.triple U_n $
+][
+  $ "E"[T_1, ..., T_n] #sym.eq.triple "E"[U_1, ..., U_n] $
+]
+
+Distinct enum type constructors are not equal, even when their variants have the same names and payload types.
+
+== Local Type Inference
+
+Lane2 permits local type inference only at syntactic positions where the omitted type is determined locally.
+
+A binding's type is not determined from later uses of the bound name.
+
+Local `let` bindings may omit type annotations only when the initializer has a type without using later references to the bound name.
+
+Function literals may omit parameter types only when the immediately surrounding context provides a function type. Otherwise, every value parameter of a function literal must have an explicit type annotation.
+
+Generic function literals without an immediately surrounding generic function type must explicitly declare type parameters and explicitly annotate value parameters.
 
 Generic function calls and generic data constructors may instantiate type parameters at the use site when the use site is unambiguous.
 
-== Static Semantics
+== Static Semantics Summary
 
-The static semantics of Lane2/Core v1 use these judgments.
-
-#align(left)[
-  $ #sym.Delta; #sym.Theta #sym.tack.r T " type" $ \
-  $ T #sym.eq.triple U $ \
-  $ #sym.Gamma #sym.tack.r e #sym.arrow.r.double T $ \
-  $ #sym.Gamma #sym.tack.r e #sym.arrow.l.double T $ \
-  $ #sym.Gamma #sym.tack.r p #sym.arrow.l.double T #sym.arrow.r.double #sym.Gamma _ p $ \
-  $ #sym.Gamma #sym.tack.r "sourceFile" " ok" $
-]
-
-#sym.Gamma is the value environment for the current checking position. Name resolution, ordered top-level value scope, open scope extensions, and preopen are specified in "Scopes and Bindings".
-
-$ #sym.Gamma #sym.tack.r "sourceFile" " ok" $ means the source file is syntactically valid, all referenced types are well-formed, all names resolve without ambiguity, all expressions type-check, and all match expressions are exhaustive.
+$ #sym.Gamma #sym.tack.r "sourceFile" " ok" $ means the source file is syntactically valid, all referenced types are well-formed, all names resolve without ambiguity, every expression has a type, and all match expressions are exhaustive.
 
 A Lane2/Core v1 source file is statically valid only if:
 
-```text
-1. every type annotation denotes a well-formed type;
-2. every expression synthesizes or checks against its required type;
-3. every local binding obeys sequential local scope;
-4. every top-level value and top-level open obeys ordered value scope;
-5. every function body checks under the source file's top-level environment;
-6. every match expression is exhaustive;
-7. every unresolved name, ambiguous name, ill-formed type, or type mismatch is rejected.
-```
++ every type annotation denotes a well-formed type;
++ every expression has the type required by its enclosing construct;
++ every local binding obeys sequential local scope;
++ every top-level value and top-level open obeys ordered value scope;
++ every function body checks under the source file's top-level environment;
++ every match expression is exhaustive;
++ every unresolved name, ambiguous name, ill-formed type, or type mismatch is rejected.
 
 = Builtins
 
@@ -653,19 +865,21 @@ Incorrect builtin use can produce undefined behavior. Lane2's type safety guaran
 
 A conforming Lane2/Core v1 implementation provides these portable intrinsic names:
 
-#table(
-  columns: (auto, 1fr),
-  [Intrinsic], [Expected type],
-  [`%i64_add`], [`(Int, Int) -> Int`],
-  [`%i64_sub`], [`(Int, Int) -> Int`],
-  [`%i64_mul`], [`(Int, Int) -> Int`],
-  [`%i64_div`], [`(Int, Int) -> Int`],
-  [`%i64_rem`], [`(Int, Int) -> Int`],
-  [`%i64_neg`], [`(Int) -> Int`],
-  [`%i64_equal`], [`(Int, Int) -> Bool`],
-  [`%i64_less`], [`(Int, Int) -> Bool`],
-  [`%string_equal`], [`(String, String) -> Bool`],
-)
+#figure(caption: [Required intrinsic names and expected types])[
+  #table(
+    columns: (auto, 1fr),
+    [Intrinsic], [Expected type],
+    [`%i64_add`], [`(Int, Int) -> Int`],
+    [`%i64_sub`], [`(Int, Int) -> Int`],
+    [`%i64_mul`], [`(Int, Int) -> Int`],
+    [`%i64_div`], [`(Int, Int) -> Int`],
+    [`%i64_rem`], [`(Int, Int) -> Int`],
+    [`%i64_neg`], [`(Int) -> Int`],
+    [`%i64_equal`], [`(Int, Int) -> Bool`],
+    [`%i64_less`], [`(Int, Int) -> Bool`],
+    [`%string_equal`], [`(String, String) -> Bool`],
+  )
+]
 
 Other intrinsic names are implementation-defined unsafe builtins.
 
@@ -1374,25 +1588,27 @@ Primitive operators are not special-cased. For example, `1 + 2` requires an avai
 
 Recognized operator mappings:
 
-#table(
-  columns: (auto, 1fr),
-  [Operator], [Operation],
-  [`+`], [`Add::add`],
-  [`-`], [`Sub::sub`],
-  [`*`], [`Mul::mul`],
-  [`/`], [`Div::div`],
-  [`%`], [`Rem::rem`],
-  [unary `-`], [`Neg::neg`],
-  [`==`], [`Equal::equal`],
-  [`!=`], [`Equal::not_equal`],
-  [`<`], [`Compare::less`],
-  [`<=`], [`Compare::less_eq`],
-  [`>`], [`Compare::greater`],
-  [`>=`], [`Compare::greater_eq`],
-  [`&&`], [`And::and` with a thunked right operand],
-  [`||`], [`Or::or` with a thunked right operand],
-  [`!`], [`Not::not`],
-)
+#figure(caption: [Recognized operator mappings])[
+  #table(
+    columns: (auto, 1fr),
+    [Operator], [Operation],
+    [`+`], [`Add::add`],
+    [`-`], [`Sub::sub`],
+    [`*`], [`Mul::mul`],
+    [`/`], [`Div::div`],
+    [`%`], [`Rem::rem`],
+    [unary `-`], [`Neg::neg`],
+    [`==`], [`Equal::equal`],
+    [`!=`], [`Equal::not_equal`],
+    [`<`], [`Compare::less`],
+    [`<=`], [`Compare::less_eq`],
+    [`>`], [`Compare::greater`],
+    [`>=`], [`Compare::greater_eq`],
+    [`&&`], [`And::and` with a thunked right operand],
+    [`||`], [`Or::or` with a thunked right operand],
+    [`!`], [`Not::not`],
+  )
+]
 
 `&&` and `||` are short-circuit boolean operators. They are recognized mappings to `And::and` and `Or::or`, but the right operand is passed as a zero-argument function instead of being evaluated before the operation call.
 
