@@ -3,7 +3,7 @@
 #set text(size: 10pt)
 #set heading(numbering: "1.1")
 
-= Lane2 Language Specification
+#align(center)[#text(size: 20pt, weight: "bold")[Lane2 Language Specification]]
 
 #align(center)[
   Version: v1 draft \
@@ -12,7 +12,7 @@
 
 #outline(title: "Contents")
 
-== Introduction
+= Introduction
 
 Lane2 is a strict, pure, expression-oriented functional programming language. Its first implementation target is a parser, a type checker, and an AST interpreter; later implementations may add bytecode compilation, a virtual machine, a linker, and effect handling.
 
@@ -20,7 +20,7 @@ Lane2 is intentionally small. It has no mutable state, assignment, trait system,
 
 This document specifies Lane2/Core v1: the platform-independent part of Lane2 that should behave the same across the initial AST interpreter and later execution backends.
 
-=== Scope
+== Scope
 
 Lane2/Core v1 covers:
 
@@ -44,39 +44,29 @@ The following are outside Lane2/Core v1:
 - traits, typeclasses, and interfaces;
 - tuples and collection syntax.
 
-=== Compatibility
+== Compatibility
 
 This specification is a v1 draft. No compatibility is promised between draft revisions. Language rules may be added, removed, or changed while the first implementation is being developed.
 
 Once a v1 implementation is declared stable, this section should be replaced by an explicit compatibility policy.
 
-=== Experimental Features
+== Experimental Features
 
 This draft does not distinguish stable and experimental language features. Every rule in this document is provisional until v1 is stabilized.
 
 Future drafts may mark individual features as experimental when their surface syntax or semantics are intentionally unsettled.
 
-=== Feedback
+== Feedback
 
 Design feedback is tracked in the Lane2 repository. Implementation changes should update this specification, `docs/language-v1.md`, `docs/prelude-v1.md`, `CONTEXT.md`, and ADRs when the change affects user-visible semantics.
 
-=== Reference
+== Reference
 
 When referencing this draft, use:
 
 > Lane2 Language Specification : Lane2/Core v1 draft.
 
-== Conformance
-
-The words "must", "must not", "may", and "should" are normative in this document.
-
-Text marked as rationale, examples, or notes is informative unless it explicitly uses normative language.
-
-An implementation conforms to this draft if it accepts all valid programs described here, rejects invalid programs described here, and gives the specified typing and evaluation behavior for safe programs.
-
-Programs that misuse `builtin` are outside Lane2's safety guarantee.
-
-== Notation
+= Syntax and Grammar
 
 Grammar fragments in this document use an EBNF-like notation.
 
@@ -91,7 +81,7 @@ Grammar fragments in this document use an EBNF-like notation.
 
 The grammar fragments are intended to specify accepted source shape. The initial parser may follow the MoonBit parser's precedence and associativity where this specification has not deliberately removed a MoonBit feature.
 
-== Lexical Overview
+== Lexical Structure
 
 Lane2 is Unicode source text. The exact Unicode identifier profile is implementation-defined for the first draft, but identifiers must not collide with keywords or operator tokens.
 
@@ -131,20 +121,6 @@ effect handler module import pub type trait interface mut return
 Reserved words are not valid ordinary identifiers.
 
 The concrete tokenization of operators, precedence, and associativity should follow the MoonBit parser reference where Lane2 keeps the corresponding syntax.
-
-== Core Semantics
-
-Lane2 v1 is pure and strict.
-
-- Evaluating a safe expression depends only on its inputs and produces a value.
-- Function arguments are evaluated before the function body runs.
-- `if` and `match` evaluate only the selected branch.
-- There is no mutable binding, mutable field, assignment, field update, or implicit statement sequencing.
-- IO and other effects are not part of v1 core semantics.
-
-The `Unit` value is written explicitly as `()`.
-
-Empty blocks are invalid. A block must contain exactly one final expression after any local items.
 
 == Source Files
 
@@ -191,7 +167,403 @@ let : Add[Int] = Add::{ add: int_add }
 open int_add_ops
 ```
 
-== Top-Level Scope
+== Trailing Commas
+
+Comma-separated syntax lists allow trailing commas:
+
+```lane2
+add(
+  x,
+  y,
+)
+
+Point::{
+  x: 1,
+  y: 2,
+}
+```
+
+= Type System
+
+V1 primitive types:
+
+```lane2
+Int
+Bool
+String
+Unit
+```
+
+There is no `Float`, `Char`, tuple type, array type, list type, map type, or collection literal in v1.
+
+`()` is the only `Unit` value.
+
+== Nominal Types
+
+User-defined data is nominal.
+
+```lane2
+struct UserId {
+  value : Int
+}
+
+struct OrderId {
+  value : Int
+}
+```
+
+`UserId` and `OrderId` are distinct types even though their fields match structurally.
+
+Generic type definitions put type parameters after the type name:
+
+```lane2
+struct Box[A] {
+  value : A
+}
+
+enum Option[A] {
+  none
+  some(A)
+}
+```
+
+Generic type application uses brackets:
+
+```lane2
+Box[Int]
+Option[String]
+```
+
+There are no type aliases in v1.
+
+```text
+type:
+    typeName [ typeArguments ]
+  | functionType
+
+typeArguments:
+    '[' type { ',' type } [ ',' ] ']'
+
+functionType : [ typeParameters ] '(' [ type { ',' type } [ ',' ] ] ')' '->' type
+
+typeParameters:
+    '[' typeParameter { ',' typeParameter } [ ',' ] ']'
+```
+
+== Function Types
+
+Function types use a parenthesized parameter list:
+
+```lane2
+() -> Int
+(Int) -> Int
+(Int, Int) -> Int
+```
+
+`Int -> Int` is not a valid one-argument function type.
+
+Generic function types place type parameters before the value parameter list:
+
+```lane2
+[A](A) -> A
+[A](Bool, A, A) -> A
+```
+
+== Local Type Inference
+
+Lane2 uses bidirectional local type inference.
+
+Type information may:
+
+- synthesize upward from an expression,
+- check downward from an expected type.
+
+Type information moves between adjacent syntax nodes. The type checker does not create global Hindley-Milner constraints and does not infer a binding's type from later uses.
+
+Function literals may be checked against an expected function type:
+
+```lane2
+let f : (Int, Int) -> Int = fn(a, b) {
+  a + b
+}
+```
+
+Without an expected type, a function literal must provide explicit value parameter types:
+
+```lane2
+let f = fn(a : Int, b : Int) {
+  a + b
+}
+```
+
+Generic function literals without an expected type must provide explicit type parameters and explicit value parameter types:
+
+```lane2
+let id = fn[A](value : A) {
+  value
+}
+```
+
+This is invalid:
+
+```lane2
+let id = fn[A](value) {
+  value
+}
+```
+
+Polymorphic calls and generic data constructors may instantiate type arguments locally:
+
+```lane2
+id(1)
+Box::{ value: 1 }
+Option::some(1)
+```
+
+= Builtins
+
+`builtin("...")` is an unsafe expression.
+
+The checker does not interpret intrinsic strings. Instead, `builtin` receives its type from direct expected context:
+
+```lane2
+fn int_add(a : Int, b : Int) -> Int {
+  builtin("%i64_add")
+}
+```
+
+This is valid because the function return type provides the expected type `Int` for the body expression.
+
+This is invalid:
+
+```lane2
+let x = builtin("%anything")
+```
+
+There is no direct expected type.
+
+Incorrect builtin use can produce undefined behavior. Lane2's type safety guarantee applies only to programs that do not misuse `builtin`.
+
+== Required Intrinsics
+
+A conforming Lane2/Core v1 implementation provides these portable intrinsic names:
+
+#table(
+  columns: (auto, 1fr),
+  [Intrinsic], [Expected type],
+  [`%i64_add`], [`(Int, Int) -> Int`],
+  [`%i64_sub`], [`(Int, Int) -> Int`],
+  [`%i64_mul`], [`(Int, Int) -> Int`],
+  [`%i64_div`], [`(Int, Int) -> Int`],
+  [`%i64_rem`], [`(Int, Int) -> Int`],
+  [`%i64_neg`], [`(Int) -> Int`],
+  [`%i64_equal`], [`(Int, Int) -> Bool`],
+  [`%i64_less`], [`(Int, Int) -> Bool`],
+  [`%string_equal`], [`(String, String) -> Bool`],
+)
+
+Other intrinsic names are implementation-defined unsafe builtins.
+
+`%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not required intrinsics. The standard prelude defines boolean operations as ordinary Lane2 functions and anonymous operation values using `if`; `&&` and `||` supply their right operands as thunks.
+
+= Prelude
+
+The standard prelude is implementation-supplied Lane2 source checked before user code. It is not a module system.
+
+Prelude declarations provide standard operation structs, primitive wrappers around required intrinsics, derived primitive operations written in Lane2, and anonymous top-level values that populate the initial preopen namespace.
+
+Prelude entries are ordinary Lane2 values and types except where the compiler recognizes operation field pairs for operator aliases.
+
+== Standard Operation Structs
+
+Arithmetic operations:
+
+```lane2
+struct Add[T] {
+  add : (T, T) -> T
+}
+
+struct Sub[T] {
+  sub : (T, T) -> T
+}
+
+struct Mul[T] {
+  mul : (T, T) -> T
+}
+
+struct Div[T] {
+  div : (T, T) -> T
+}
+
+struct Rem[T] {
+  rem : (T, T) -> T
+}
+
+struct Neg[T] {
+  neg : (T) -> T
+}
+```
+
+Boolean operations:
+
+```lane2
+struct And {
+  and : (Bool, () -> Bool) -> Bool
+}
+
+struct Or {
+  or : (Bool, () -> Bool) -> Bool
+}
+
+struct Not {
+  not : (Bool) -> Bool
+}
+```
+
+Equality and ordering operations:
+
+```lane2
+struct Equal[T] {
+  equal : (T, T) -> Bool
+  not_equal : (T, T) -> Bool
+}
+
+struct Compare[T] {
+  equal_impl : Equal[T]
+  open equal_impl
+  less : (T, T) -> Bool
+  less_eq : (T, T) -> Bool
+  greater : (T, T) -> Bool
+  greater_eq : (T, T) -> Bool
+}
+```
+
+Operation laws are API conventions, not compiler-checked rules.
+
+== Standard Preopen Values
+
+The prelude may populate the initial preopen namespace with anonymous top-level values. For example, primitive arithmetic and boolean operations can be exposed as follows:
+
+```lane2
+let : Add[Int] = Add::{ add: int_add }
+let : Sub[Int] = Sub::{ sub: int_sub }
+let : Mul[Int] = Mul::{ mul: int_mul }
+let : Div[Int] = Div::{ div: int_div }
+let : Rem[Int] = Rem::{ rem: int_rem }
+let : Neg[Int] = Neg::{ neg: int_neg }
+
+let int_equal_ops : Equal[Int] = make_equal(int_equal)
+let : Compare[Int] = make_compare(int_equal_ops, int_less)
+
+let : And = And::{ and: bool_and }
+let : Or = Or::{ or: bool_or }
+let : Not = Not::{ not: bool_not }
+let : Equal[Bool] = Equal::{
+  equal: fn(a : Bool, b : Bool) {
+    if a {
+      b
+    } else {
+      bool_not(b)
+    }
+  },
+  not_equal: fn(a : Bool, b : Bool) {
+    if a {
+      bool_not(b)
+    } else {
+      b
+    }
+  },
+}
+
+let : Equal[String] = make_equal(string_equal)
+```
+
+Boolean conjunction, disjunction, negation, and equality do not require boolean intrinsics; they can be defined with ordinary `if` expressions in the prelude.
+
+= Declarations
+
+Declarations introduce types, functions, values, and open scope extensions.
+
+== Top-Level Declarations
+
+Top-level declarations are described by the `topLevelDefinition` grammar in "Syntax and Grammar".
+
+Top-level forms include struct declarations, enum declarations, named function declarations, typed value declarations, anonymous typed value declarations, and open declarations.
+
+== Struct Declarations
+
+Struct declarations use the grammar in "Structs, Enums, and Open".
+
+== Enum Declarations
+
+Enum declarations use the grammar in "Structs, Enums, and Open".
+
+== Function Declarations
+
+Functions are uncurried. There is no automatic currying or partial application.
+
+Function definitions use block bodies:
+
+```text
+functionDeclaration:
+    'fn' [ typeParameters ] functionName '(' [ parameter { ',' parameter } [ ',' ] ] ')' '->' type block
+
+parameter:
+    valueName ':' type
+
+functionLiteral:
+    'fn' [ typeParameters ] '(' [ functionLiteralParameter { ',' functionLiteralParameter } [ ',' ] ] ')' [ '->' type ] block
+
+functionLiteralParameter:
+    valueName
+  | valueName ':' type
+```
+
+```lane2
+fn add(a : Int, b : Int) -> Int {
+  a + b
+}
+```
+
+There is no `= expr` function body form.
+
+Function result types use `->`, not `:`.
+
+All named functions must state every parameter type and the result type.
+
+Generic named functions place type parameters after `fn` and before the name:
+
+```lane2
+fn[A] id(value : A) -> A {
+  value
+}
+```
+
+Function parameters are positional in v1. Labeled function parameters are not supported.
+
+Function literals produce function values:
+
+```lane2
+let f : (Int, Int) -> Int = fn(a, b) {
+  a + b
+}
+```
+
+Generic function literals place type parameters after `fn`:
+
+```lane2
+let id = fn[A](value : A) {
+  value
+}
+```
+
+== Let Declarations
+
+Named top-level `let` declarations must include type annotations. Anonymous top-level `let` declarations must include type annotations and must have a struct type.
+
+Local `let` declarations may omit type annotations when their initializer can synthesize a type by local type inference.
+
+= Scopes and Bindings
 
 Top-level type and function definitions form recursive definition groups.
 
@@ -245,74 +617,211 @@ let x : Option[Int] = Option::some(1)
 
 The `Option` on the left of `::` denotes the enum type, not the value named `Option`.
 
-== Primitive Types
+== Local Bindings
 
-V1 primitive types:
+Local `let` bindings are sequential. A local binding is visible only to later items and the final expression in the same block.
+
+Local `let` bindings may omit type annotations when their initializer can synthesize a type by local type inference:
 
 ```lane2
-Int
-Bool
-String
-Unit
+let x = 1
 ```
 
-There is no `Float`, `Char`, tuple type, array type, list type, map type, or collection literal in v1.
-
-`()` is the only `Unit` value.
-
-== Nominal Data Types
-
-User-defined data is nominal.
+Local named functions are also sequential. They may call themselves, but local mutually recursive groups and forward references are not supported:
 
 ```lane2
-struct UserId {
-  value : Int
-}
-
-struct OrderId {
-  value : Int
+fn f(n : Int) -> Int {
+  fn loop(x : Int) -> Int {
+    if x == 0 {
+      0
+    } else {
+      loop(x - 1)
+    }
+  }
+  loop(n)
 }
 ```
 
-`UserId` and `OrderId` are distinct types even though their fields match structurally.
+Local value names may shadow earlier local value names.
 
-Generic type definitions put type parameters after the type name:
+== Open Scope Extensions
+
+`open value` opens a struct value.
+
+The operand of `open` must be a visible value name with a struct type. It cannot be an arbitrary expression:
 
 ```lane2
-struct Box[A] {
-  value : A
-}
+open ops
+```
 
-enum Option[A] {
-  none
-  some(A)
+This is invalid:
+
+```lane2
+open make_ops(10)
+```
+
+An open scope extension exposes the struct field values as unqualified names from the declaration point to the end of the current lexical scope.
+
+At top level, `open` extends to the end of the file:
+
+```lane2
+open int_add_ops
+
+fn add_one(x : Int) -> Int {
+  x + 1
 }
 ```
 
-Generic type application uses brackets:
+Inside blocks, `open` is a local item and must appear before the final expression:
 
 ```lane2
-Box[Int]
-Option[String]
+{
+  open int_add_ops
+  x + y
+}
 ```
 
-There are no type aliases in v1.
+Local resolution uses the nearest preceding local binding or open scope extension, then falls back to preopen.
+
+== Preopen
+
+The preopen namespace is a default-open namespace populated by anonymous top-level values.
+
+```lane2
+let : Add[Int] = Add::{ add: int_add }
+```
+
+An anonymous top-level value must have a struct type. It exposes field values, not generated accessors.
+
+Prelude-provided anonymous values are checked before user code, so their preopen entries are visible throughout user code.
+
+User-defined anonymous top-level values extend preopen from their declaration point to the end of the top-level scope.
+
+Preopen conflicts are errors.
+
+Top-level `open` belongs to the global layer and conflicts with ordinary top-level names or preopened names. Local `open` may shadow preopen inside its lexical scope.
+
+= Expressions
+
+Expressions compute values. Lane2 v1 is expression-oriented and has no expression statements.
+
+== Blocks
+
+A block expression contains local items followed by one final expression.
 
 ```text
-type:
-    typeName [ typeArguments ]
-  | functionType
+block:
+    '{' { localItem } expression '}'
 
-typeArguments:
-    '[' type { ',' type } [ ',' ] ']'
+localItem:
+    localLet
+  | localFunctionDeclaration
+  | openDeclaration
 
-functionType : [ typeParameters ] '(' [ type { ',' type } [ ',' ] ] ')' '->' type
+localLet:
+    'let' valueName [ ':' type ] '=' expression
 
-typeParameters:
-    '[' typeParameter { ',' typeParameter } [ ',' ] ']'
+topLevelLet:
+    'let' valueName ':' type '=' expression
+
+anonymousTopLevelLet:
+    'let' ':' type '=' expression
+
+openDeclaration:
+    'open' valueName
 ```
 
-== Structs
+```lane2
+{
+  let x = 1
+  fn double(n : Int) -> Int {
+    n + n
+  }
+  double(x)
+}
+```
+
+Allowed local items:
+
+- `let`,
+- named `fn`,
+- `open`.
+
+Local type definitions are not supported in v1.
+
+A block does not contain expression statements. This is invalid:
+
+```lane2
+{
+  f(x)
+  g(y)
+}
+```
+
+An empty block is invalid. Write `()` explicitly when a `Unit` value is required.
+
+== Conditional Expressions
+
+`if` is an expression:
+
+```lane2
+if condition {
+  then_value
+} else {
+  else_value
+}
+```
+
+The `else` branch is mandatory.
+
+Both branches must have the same type.
+
+== Calls, Field Access, and Pipeline
+
+Function call:
+
+```lane2
+f(x, y)
+```
+
+Field access:
+
+```lane2
+ops.add
+```
+
+Field access followed by call:
+
+```lane2
+ops.add(x, y)
+```
+
+This is not method call syntax. Lane2 v1 has no method receiver lookup.
+
+Pipeline syntax is supported:
+
+```lane2
+value |> f(a, b)
+```
+
+It rewrites to:
+
+```lane2
+f(value, a, b)
+```
+
+The right-hand side of `|>` must be a call or function literal.
+
+The following are invalid:
+
+```lane2
+value |> f
+value |> f(_, y)
+```
+
+Placeholders are not supported.
+
+= Structs, Enums, and Open
 
 ```text
 structDeclaration:
@@ -442,232 +951,34 @@ let x : Option[Int] = Option::some(1)
 
 In patterns, variants must always be qualified.
 
-== Functions
+== Openable Struct Values
 
-Functions are uncurried. There is no automatic currying or partial application.
+Only struct values can be opened.
 
-Function definitions use block bodies:
+Opening a struct value exposes its field values as unqualified bindings according to the scope rules in "Scopes and Bindings".
 
-```text
-functionDeclaration:
-    'fn' [ typeParameters ] functionName '(' [ parameter { ',' parameter } [ ',' ] ] ')' '->' type block
+Enum values, function values, primitive values, and arbitrary expressions are not openable.
 
-parameter:
-    valueName ':' type
+== Struct Field Forwarding
 
-functionLiteral:
-    'fn' [ typeParameters ] '(' [ functionLiteralParameter { ',' functionLiteralParameter } [ ',' ] ] ')' [ '->' type ] block
-
-functionLiteralParameter:
-    valueName
-  | valueName ':' type
-```
+A struct declaration may contain `open field` entries:
 
 ```lane2
-fn add(a : Int, b : Int) -> Int {
-  a + b
+struct Compare[T] {
+  equal_impl : Equal[T]
+  open equal_impl
+  less : (T, T) -> Bool
+  less_eq : (T, T) -> Bool
+  greater : (T, T) -> Bool
+  greater_eq : (T, T) -> Bool
 }
 ```
 
-There is no `= expr` function body form.
+When a value of this struct type is opened, forwarded fields are exposed too.
 
-Function result types use `->`, not `:`.
+Struct field forwarding affects only what is exposed by opening the containing struct value. It does not open the field inside ordinary function bodies.
 
-All named functions must state every parameter type and the result type.
-
-Generic named functions place type parameters after `fn` and before the name:
-
-```lane2
-fn[A] id(value : A) -> A {
-  value
-}
-```
-
-Function parameters are positional in v1. Labeled function parameters are not supported.
-
-Function types use a parenthesized parameter list:
-
-```lane2
-() -> Int
-(Int) -> Int
-(Int, Int) -> Int
-```
-
-`Int -> Int` is not a valid one-argument function type.
-
-Generic function types place type parameters before the value parameter list:
-
-```lane2
-[A](A) -> A
-[A](Bool, A, A) -> A
-```
-
-Function literals produce function values:
-
-```lane2
-let f : (Int, Int) -> Int = fn(a, b) {
-  a + b
-}
-```
-
-Generic function literals place type parameters after `fn`:
-
-```lane2
-let id = fn[A](value : A) {
-  value
-}
-```
-
-== Blocks
-
-A block expression contains local items followed by one final expression.
-
-```text
-block:
-    '{' { localItem } expression '}'
-
-localItem:
-    localLet
-  | localFunctionDeclaration
-  | openDeclaration
-
-localLet:
-    'let' valueName [ ':' type ] '=' expression
-
-topLevelLet:
-    'let' valueName ':' type '=' expression
-
-anonymousTopLevelLet:
-    'let' ':' type '=' expression
-
-openDeclaration:
-    'open' valueName
-```
-
-```lane2
-{
-  let x = 1
-  fn double(n : Int) -> Int {
-    n + n
-  }
-  double(x)
-}
-```
-
-Allowed local items:
-
-- `let`,
-- named `fn`,
-- `open`.
-
-Local type definitions are not supported in v1.
-
-A block does not contain expression statements. This is invalid:
-
-```lane2
-{
-  f(x)
-  g(y)
-}
-```
-
-An empty block is invalid. Write `()` explicitly when a `Unit` value is required.
-
-== Local Bindings
-
-Local `let` bindings are sequential. A local binding is visible only to later items and the final expression in the same block.
-
-Local `let` bindings may omit type annotations when their initializer can synthesize a type by local type inference:
-
-```lane2
-let x = 1
-```
-
-Local named functions are also sequential. They may call themselves, but local mutually recursive groups and forward references are not supported:
-
-```lane2
-fn f(n : Int) -> Int {
-  fn loop(x : Int) -> Int {
-    if x == 0 {
-      0
-    } else {
-      loop(x - 1)
-    }
-  }
-  loop(n)
-}
-```
-
-Local value names may shadow earlier local value names.
-
-== Local Type Inference
-
-Lane2 uses bidirectional local type inference.
-
-Type information may:
-
-- synthesize upward from an expression,
-- check downward from an expected type.
-
-Type information moves between adjacent syntax nodes. The type checker does not create global Hindley-Milner constraints and does not infer a binding's type from later uses.
-
-Function literals may be checked against an expected function type:
-
-```lane2
-let f : (Int, Int) -> Int = fn(a, b) {
-  a + b
-}
-```
-
-Without an expected type, a function literal must provide explicit value parameter types:
-
-```lane2
-let f = fn(a : Int, b : Int) {
-  a + b
-}
-```
-
-Generic function literals without an expected type must provide explicit type parameters and explicit value parameter types:
-
-```lane2
-let id = fn[A](value : A) {
-  value
-}
-```
-
-This is invalid:
-
-```lane2
-let id = fn[A](value) {
-  value
-}
-```
-
-Polymorphic calls and generic data constructors may instantiate type arguments locally:
-
-```lane2
-id(1)
-Box::{ value: 1 }
-Option::some(1)
-```
-
-== Conditional Expressions
-
-`if` is an expression:
-
-```lane2
-if condition {
-  then_value
-} else {
-  else_value
-}
-```
-
-The `else` branch is mandatory.
-
-Both branches must have the same type.
-
-== Match Expressions
+= Pattern Matching
 
 `match` is an expression:
 
@@ -748,128 +1059,7 @@ match p {
 
 Rest patterns, spread patterns, guards, or-patterns, as-patterns, and `is` pattern expressions are not supported in v1.
 
-== Calls, Field Access, And Pipeline
-
-Function call:
-
-```lane2
-f(x, y)
-```
-
-Field access:
-
-```lane2
-ops.add
-```
-
-Field access followed by call:
-
-```lane2
-ops.add(x, y)
-```
-
-This is not method call syntax. Lane2 v1 has no method receiver lookup.
-
-Pipeline syntax is supported:
-
-```lane2
-value |> f(a, b)
-```
-
-It rewrites to:
-
-```lane2
-f(value, a, b)
-```
-
-The right-hand side of `|>` must be a call or function literal.
-
-The following are invalid:
-
-```lane2
-value |> f
-value |> f(_, y)
-```
-
-Placeholders are not supported.
-
-== Open Scope Extensions
-
-`open value` opens a struct value.
-
-The operand of `open` must be a visible value name with a struct type. It cannot be an arbitrary expression:
-
-```lane2
-open ops
-```
-
-This is invalid:
-
-```lane2
-open make_ops(10)
-```
-
-An open scope extension exposes the struct field values as unqualified names from the declaration point to the end of the current lexical scope.
-
-At top level, `open` extends to the end of the file:
-
-```lane2
-open int_add_ops
-
-fn add_one(x : Int) -> Int {
-  x + 1
-}
-```
-
-Inside blocks, `open` is a local item and must appear before the final expression:
-
-```lane2
-{
-  open int_add_ops
-  x + y
-}
-```
-
-Local resolution uses the nearest preceding local binding or open scope extension, then falls back to preopen.
-
-== Preopen
-
-The preopen namespace is a default-open namespace populated by anonymous top-level values.
-
-```lane2
-let : Add[Int] = Add::{ add: int_add }
-```
-
-An anonymous top-level value must have a struct type. It exposes field values, not generated accessors.
-
-Prelude-provided anonymous values are checked before user code, so their preopen entries are visible throughout user code.
-
-User-defined anonymous top-level values extend preopen from their declaration point to the end of the top-level scope.
-
-Preopen conflicts are errors.
-
-Top-level `open` belongs to the global layer and conflicts with ordinary top-level names or preopened names. Local `open` may shadow preopen inside its lexical scope.
-
-== Struct Field Forwarding
-
-A struct declaration may contain `open field` entries:
-
-```lane2
-struct Compare[T] {
-  equal_impl : Equal[T]
-  open equal_impl
-  less : (T, T) -> Bool
-  less_eq : (T, T) -> Bool
-  greater : (T, T) -> Bool
-  greater_eq : (T, T) -> Bool
-}
-```
-
-When a value of this struct type is opened, forwarded fields are exposed too.
-
-Struct field forwarding affects only what is exposed by opening the containing struct value. It does not open the field inside ordinary function bodies.
-
-== Operators
+= Operators
 
 Operators are aliases for recognized prelude operation fields.
 
@@ -905,67 +1095,39 @@ Recognized operator mappings:
 
 Concrete expression precedence, associativity, and unary/binary disambiguation follow the MoonBit parser reference where Lane2 has not deliberately removed a feature.
 
-== Unsafe Builtin
+= Evaluation
 
-`builtin("...")` is an unsafe expression.
+Lane2 v1 is pure and strict.
 
-The checker does not interpret intrinsic strings. Instead, `builtin` receives its type from direct expected context:
+- Evaluating a safe expression depends only on its inputs and produces a value.
+- Function arguments are evaluated before the function body runs.
+- `if` and `match` evaluate only the selected branch.
+- There is no mutable binding, mutable field, assignment, field update, or implicit statement sequencing.
+- IO and other effects are not part of v1 core semantics.
 
-```lane2
-fn int_add(a : Int, b : Int) -> Int {
-  builtin("%i64_add")
-}
-```
+The `Unit` value is written explicitly as `()`.
 
-This is valid because the function return type provides the expected type `Int` for the body expression.
+Empty blocks are invalid. A block must contain exactly one final expression after any local items.
 
-This is invalid:
+Function calls evaluate all arguments before entering the function body. The only v1 operator forms that delay a subexpression are `&&` and `||`, which pass the right operand as a thunk to the resolved prelude operation.
 
-```lane2
-let x = builtin("%anything")
-```
-
-There is no direct expected type.
+= Undefined Behavior
 
 Incorrect builtin use can produce undefined behavior. Lane2's type safety guarantee applies only to programs that do not misuse `builtin`.
 
-=== Required Intrinsics
+Invalid integer arithmetic is undefined behavior in v1. This includes signed 64-bit overflow, division by zero, remainder by zero, `MIN_INT / -1`, and negating `MIN_INT`.
 
-A conforming Lane2/Core v1 implementation provides these portable intrinsic names:
+= Conformance
 
-#table(
-  columns: (auto, 1fr),
-  [Intrinsic], [Expected type],
-  [`%i64_add`], [`(Int, Int) -> Int`],
-  [`%i64_sub`], [`(Int, Int) -> Int`],
-  [`%i64_mul`], [`(Int, Int) -> Int`],
-  [`%i64_div`], [`(Int, Int) -> Int`],
-  [`%i64_rem`], [`(Int, Int) -> Int`],
-  [`%i64_neg`], [`(Int) -> Int`],
-  [`%i64_equal`], [`(Int, Int) -> Bool`],
-  [`%i64_less`], [`(Int, Int) -> Bool`],
-  [`%string_equal`], [`(String, String) -> Bool`],
-)
+The words "must", "must not", "may", and "should" are normative in this document.
 
-Other intrinsic names are implementation-defined unsafe builtins.
+Text marked as rationale, examples, or notes is informative unless it explicitly uses normative language.
 
-`%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not required intrinsics. The standard prelude defines boolean operations as ordinary Lane2 functions and anonymous operation values using `if`; `&&` and `||` supply their right operands as thunks.
+An implementation conforms to this draft if it accepts all valid programs described here, rejects invalid programs described here, and gives the specified typing and evaluation behavior for safe programs.
 
-== Trailing Commas
+Programs that misuse `builtin` are outside Lane2's safety guarantee.
 
-Comma-separated syntax lists allow trailing commas:
-
-```lane2
-add(
-  x,
-  y,
-)
-
-Point::{
-  x: 1,
-  y: 2,
-}
-```
+= Appendix
 
 == Deliberately Omitted From V1
 
