@@ -24,6 +24,12 @@
 #show raw.where(block: true): it => code-box(it)
 #show math.equation.where(block: true): it => math-box(align(center, it))
 
+#let math-list(..items) = stack(
+  dir: ttb,
+  spacing: 6pt,
+  ..items,
+)
+
 #align(center)[#text(size: 20pt, weight: "bold")[Lane2 Language Specification]]
 
 #align(center)[
@@ -542,30 +548,38 @@ Comments are trivia. Comments do not appear in the syntactic grammar.
   #table(
     columns: (auto, 1fr),
     [Notation], [Meaning],
-    [$T, U, R$], [types],
+    [$T, U, R, F, P, Q$], [types],
     [$A$], [type variable],
     [$C$], [type constructor],
     [$S$], [struct type constructor],
     [$E$], [enum type constructor],
-    [$e, c, f$], [expressions],
+    [$e, c, f, b$], [expressions],
     [$a$], [match arm],
     [$x$], [value binder],
-    [$n, m$], [natural numbers],
-    [$#sym.Delta$], [type-constructor context],
-    [$D$], [custom type definition],
-    [$#sym.Delta (C) = D$], [visible custom type definition],
-    [$op("params")(D) = (A_1, ..., A_n)$], [custom type parameters],
-    [$#sym.Theta$], [type-variable context],
-    [$#sym.Gamma$], [value typing context],
+    [$i, j, k, n, m, q$], [indices and natural numbers],
     [$l$], [struct field name],
     [$v$], [enum variant name],
-    [$[T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] U$], [type substitution],
+    [$#sym.Delta$], [type-constructor context],
+    [$#sym.Theta$], [type-variable context],
+    [$#sym.Gamma$], [value typing context],
+    [$D$], [custom type definition],
+    [$#sym.Delta (C) = D$], [visible custom type definition],
+    [$op("struct")(A_1, ..., A_n; l_1 : F_1, ..., l_m : F_m)$], [struct definition],
+    [$op("enum")(A_1, ..., A_n; v_j(P_(j,1), ..., P_(j,m_j)))$], [enum definition],
+    [$op("params")(D) = (A_1, ..., A_n)$], [custom type parameters],
     [$#sym.sigma$], [type substitution environment],
+    [$#sym.sigma = [T_1 #sym.slash A_1, ..., T_n #sym.slash A_n]$], [substitution environment binding],
+    [$U[T_1 #sym.slash A_1, ..., T_n #sym.slash A_n]$], [direct type substitution],
+    [$U #sym.sigma$], [type substitution by environment],
     [$#sym.Delta; #sym.Theta #sym.tack.r T " type"$], [well-formed type],
     [$C[T_1, ..., T_n]$], [nominal type application],
     [$#sym.forall A_1, ..., A_n "." T$], [universal type],
     [$T #sym.eq.triple U$], [type equality],
     [$#sym.Gamma #sym.tack.r e : T$], [expression typing],
+    [$op("fields")(S[T_1, ..., T_n]) = (l_1 : Q_1, ..., l_m : Q_m)$], [instantiated struct fields],
+    [$op("payloads")(E[T_1, ..., T_n], v) = (Q_1, ..., Q_m)$], [instantiated variant payloads],
+    [$op("binders")(#sym.Gamma; x_1 : Q_1, ..., x_m : Q_m) = #sym.Gamma'$], [extended pattern-binder context],
+    [$op("arm-type")(E[T_1, ..., T_n], R)$], [typed enum match arm],
     [$frac(P, Q)$], [rule with premise $P$ and conclusion $Q$],
     [$op("name")$], [abstract syntax constructor],
   )
@@ -577,17 +591,17 @@ Lane2/Core v1 has four primitive types: `Unit`, `Bool`, `Int`, and `String`.
 
 *Primitive formation.* Each primitive type is well-formed in every type environment.
 
-#align(left)[
-  $ #sym.Delta; #sym.Theta #sym.tack.r "Unit" " type" $ \
-  $ #sym.Delta; #sym.Theta #sym.tack.r "Bool" " type" $ \
-  $ #sym.Delta; #sym.Theta #sym.tack.r "Int" " type" $ \
-  $ #sym.Delta; #sym.Theta #sym.tack.r "String" " type" $
-]
+#math-list(
+  $ #sym.Delta; #sym.Theta #sym.tack.r "Unit" " type" $,
+  $ #sym.Delta; #sym.Theta #sym.tack.r "Bool" " type" $,
+  $ #sym.Delta; #sym.Theta #sym.tack.r "Int" " type" $,
+  $ #sym.Delta; #sym.Theta #sym.tack.r "String" " type" $,
+)
 
 *Unit introduction.* The expression `()` introduces a `Unit` value.
 
 ```lane2
-()
+() // unit literal
 ```
 
 $ #sym.Gamma #sym.tack.r () : "Unit" $
@@ -597,23 +611,23 @@ $ #sym.Gamma #sym.tack.r () : "Unit" $
 *Bool introduction.* Boolean literals introduce `Bool` values.
 
 ```lane2
-true
-false
+true  // boolean literal
+false // boolean literal
 ```
 
-#align(left)[
-  $ #sym.Gamma #sym.tack.r "true" : "Bool" $ \
-  $ #sym.Gamma #sym.tack.r "false" : "Bool" $
-]
+#math-list(
+  $ #sym.Gamma #sym.tack.r "true" : "Bool" $,
+  $ #sym.Gamma #sym.tack.r "false" : "Bool" $,
+)
 
 *Bool elimination.* `if` eliminates a `Bool` value.
 
 ```lane2
-if condition {
-  then_value
+if c {
+  e1
 } else {
-  else_value
-}
+  e2
+} // c : Bool, e1 : T, e2 : T
 ```
 
 #rule[
@@ -625,7 +639,7 @@ if condition {
 *Int introduction.* Integer literals introduce `Int` values.
 
 ```lane2
-42
+n // integer literal
 ```
 
 $ #sym.Gamma #sym.tack.r n : "Int" $
@@ -635,7 +649,7 @@ $ #sym.Gamma #sym.tack.r n : "Int" $
 *String introduction.* ASCII string literals introduce `String` values.
 
 ```lane2
-"lane"
+"..." // ASCII string literal
 ```
 
 $ #sym.Gamma #sym.tack.r s : "String" $
@@ -644,16 +658,21 @@ $ #sym.Gamma #sym.tack.r s : "String" $
 
 *Primitive type equality.* Primitive types are equal only to themselves.
 
-#align(left)[
-  $ "Unit" #sym.eq.triple "Unit" $ \
-  $ "Bool" #sym.eq.triple "Bool" $ \
-  $ "Int" #sym.eq.triple "Int" $ \
-  $ "String" #sym.eq.triple "String" $
-]
+#math-list(
+  $ "Unit" #sym.eq.triple "Unit" $,
+  $ "Bool" #sym.eq.triple "Bool" $,
+  $ "Int" #sym.eq.triple "Int" $,
+  $ "String" #sym.eq.triple "String" $,
+)
 
 == Function Types
 
 *Function formation.*
+
+```lane2
+fn f(x1 : T1, ..., xn : Tn) -> R { e } // function definition
+let f : (T1, ..., Tn) -> R = fn(x1, ..., xn) { e } // function literal binding
+```
 
 #rule[
   $ #sym.Delta; #sym.Theta #sym.tack.r T_1 " type" quad ... quad #sym.Delta; #sym.Theta #sym.tack.r T_n " type" quad #sym.Delta; #sym.Theta #sym.tack.r R " type" $
@@ -664,9 +683,8 @@ $ #sym.Gamma #sym.tack.r s : "String" $
 *Function introduction.*
 
 ```lane2
-fn(x : Int, y : Int) -> Int {
-  x + y
-}
+fn(x1 : T1, ..., xn : Tn) -> R { e } // function literal
+fn f(x1 : T1, ..., xn : Tn) -> R { e } // function definition
 ```
 
 #rule[
@@ -678,7 +696,7 @@ fn(x : Int, y : Int) -> Int {
 *Function elimination.*
 
 ```lane2
-f(a, b)
+f(a1, ..., an) // function call
 ```
 
 #rule[
@@ -702,7 +720,7 @@ Function types are uncurried. `(T1, T2) -> R` is not the same type object as `(T
 *Generic function formation.*
 
 ```lane2
-forall A. (A) -> A
+forall A1, ..., An. (T1, ..., Tm) -> R // generic function type
 ```
 
 #rule[
@@ -714,9 +732,8 @@ forall A. (A) -> A
 *Generic function introduction.*
 
 ```lane2
-fn[A](value : A) -> A {
-  value
-}
+fn[A1, ..., An](x1 : T1, ..., xm : Tm) -> R { e } // generic function literal
+fn[A1, ..., An] f(x1 : T1, ..., xm : Tm) -> R { e } // generic function definition
 ```
 
 A generic function literal or named generic function introduces a generic function value.
@@ -726,7 +743,7 @@ A generic function literal or named generic function introduces a generic functi
 Generic function calls instantiate type parameters at the use site when the use site is unambiguous.
 
 ```lane2
-id(1)
+f(a1, ..., am) // generic function call with inferred type arguments
 ```
 
 *Generic function type equality.*
@@ -744,25 +761,27 @@ Generic function type equality compares the number of type parameters and the fu
 Struct and enum declarations introduce nominal custom type definitions in #sym.Delta.
 
 ```lane2
-struct Point {
-  x : Int
-  y : Int
-}
+struct S[A1, ..., An] {
+  l1 : F1
+  ...
+  lm : Fm
+} // struct definition
 ```
 
 ```lane2
-enum Option[A] {
-  none
-  some(A)
-}
+enum E[A1, ..., An] {
+  v1(P11, ..., P1m1)
+  ...
+  vj(Pj1, ..., Pjmj)
+} // enum definition
 ```
 
 The type-constructor context stores the full declaration shape, not only arity.
 
-#align(left)[
-  $ #sym.Delta (S) = op("struct")(A_1, ..., A_n; l_1 : F_1, ..., l_m : F_m) $ \
-  $ #sym.Delta (E) = op("enum")(A_1, ..., A_n; v_j(P_(j,1), ..., P_(j,m_j))) $
-]
+#math-list(
+  $ #sym.Delta (S) = op("struct")(A_1, ..., A_n; l_1 : F_1, ..., l_m : F_m) $,
+  $ #sym.Delta (E) = op("enum")(A_1, ..., A_n; v_j(P_(j,1), ..., P_(j,m_j))) $,
+)
 
 Top-level custom type declarations are checked in two phases. First, all top-level struct and enum constructors are collected into #sym.Delta with their type parameters, field names, variant names, and declared member type expressions. Second, every field type and variant payload type is checked under the collected #sym.Delta and the declaration's type parameters. This permits mutually recursive custom types.
 
@@ -799,13 +818,13 @@ Top-level custom type declarations are checked in two phases. First, all top-lev
 *Struct introduction.* A qualified struct literal introduces a struct value. It must provide every declared field exactly once. Source field order is not significant; the rule below uses declaration order.
 
 ```lane2
-Point::{ x: 1, y: 2 }
+S[T1, ..., Tn]::{ l1: e1, ..., lm: em } // qualified struct literal
 ```
 
 #rule[
   $ #sym.Delta (S) = op("struct")(A_1, ..., A_n; l_1 : F_1, ..., l_m : F_m) quad #sym.sigma = [T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] $
 ][
-  $ op("fields")(S[T_1, ..., T_n]) = (l_1 : #sym.sigma F_1, ..., l_m : #sym.sigma F_m) $
+  $ op("fields")(S[T_1, ..., T_n]) = (l_1 : F_1 #sym.sigma, ..., l_m : F_m #sym.sigma) $
 ]
 
 #rule[
@@ -817,7 +836,7 @@ Point::{ x: 1, y: 2 }
 *Struct field elimination.* Field access eliminates a struct value by selecting a declared field type after substituting the struct type arguments.
 
 ```lane2
-p.x
+e.l // field access
 ```
 
 #rule[
@@ -833,15 +852,14 @@ Struct values are also eliminated by struct patterns and exposed by `open`; thei
 *Enum variant introduction.* A qualified enum variant expression introduces an enum value. The payload expressions must match the declared variant payload types after substituting the enum type arguments.
 
 ```lane2
-Option::none
-Option::some(1)
-some(1)
+E[T1, ..., Tn]::v(e1, ..., em) // qualified variant expression
+v(e1, ..., em) // unqualified variant expression after unambiguous resolution
 ```
 
 #rule[
   $ #sym.Delta (E) = op("enum")(A_1, ..., A_n; ..., v(P_1, ..., P_m), ...) $
 ][
-  $ op("payloads")(E[T_1, ..., T_n], v) = ([T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] P_1, ..., [T_1 #sym.slash A_1, ..., T_n #sym.slash A_n] P_m) $
+  $ op("payloads")(E[T_1, ..., T_n], v) = (P_1[T_1 #sym.slash A_1, ..., T_n #sym.slash A_n], ..., P_m[T_1 #sym.slash A_1, ..., T_n #sym.slash A_n]) $
 ]
 
 #rule[
@@ -855,9 +873,10 @@ An unqualified enum variant expression is typed by the same rule after name reso
 *Enum match elimination.* A match expression eliminates an enum value. For an enum scrutinee type, every declared variant must be covered.
 
 ```lane2
-match value {
-  Option::none => fallback
-  Option::some(x) => x
+match e {
+  E::v1(x11, ..., x1m1) => b1
+  ...
+  E::vq(xq1, ..., xqmq) => bq
 }
 ```
 
@@ -881,7 +900,7 @@ match value {
 
 Pattern syntax and exhaustiveness diagnostics are specified in "Pattern Matching".
 
-== Local Type Inference
+= Type Inference
 
 Lane2 permits local type inference only at syntactic positions where the omitted type is determined locally.
 
@@ -894,20 +913,6 @@ Function literals may omit parameter types only when the immediately surrounding
 Generic function literals without an immediately surrounding generic function type must explicitly declare type parameters and explicitly annotate value parameters.
 
 Generic function calls and generic data constructors may instantiate type parameters at the use site when the use site is unambiguous.
-
-== Static Semantics Summary
-
-$ #sym.Gamma #sym.tack.r "sourceFile" " ok" $ means the source file is syntactically valid, all referenced types are well-formed, all names resolve without ambiguity, every expression has a type, and all match expressions are exhaustive.
-
-A Lane2/Core v1 source file is statically valid only if:
-
-+ every type annotation denotes a well-formed type;
-+ every expression has the type required by its enclosing construct;
-+ every local binding obeys sequential local scope;
-+ every top-level value and top-level open obeys ordered value scope;
-+ every function body checks under the source file's top-level environment;
-+ every match expression is exhaustive;
-+ every unresolved name, ambiguous name, ill-formed type, or type mismatch is rejected.
 
 = Builtins
 
