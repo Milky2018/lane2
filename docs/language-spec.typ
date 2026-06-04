@@ -508,139 +508,121 @@ Comments are trivia. Comments do not appear in the syntactic grammar.
 
 = Type System
 
-V1 primitive types:
+== Type Objects
 
-```lane2
-Int
-Bool
-String
-Unit
-```
+The primitive type objects of Lane2/Core v1 are `Int`, `Bool`, `String`, and `Unit`.
 
-There is no `Float`, `Char`, tuple type, array type, list type, map type, or collection literal in v1.
+`Int` is a signed 64-bit integer type.
 
-`()` is the only `Unit` value.
+`Bool` has the values `true` and `false`.
 
-== Nominal Types
+`String` is an ASCII string type.
 
-User-defined data is nominal.
+`Unit` has the value `()`.
 
-```lane2
-struct UserId {
-  value : Int
-}
+A `struct` declaration introduces a nominal struct type constructor.
 
-struct OrderId {
-  value : Int
-}
-```
+An `enum` declaration introduces a nominal enum type constructor and its variant constructors.
 
-`UserId` and `OrderId` are distinct types even though their fields match structurally.
+A type parameter introduces a type variable scoped by its enclosing generic function, generic function literal, struct declaration, enum declaration, or generic function type.
 
-Generic type definitions put type parameters after the type name:
+A nominal type application consists of a type constructor and zero or more type arguments.
 
-```lane2
-struct Box[A] {
-  value : A
-}
+A function type consists of an ordered positional parameter list and a result type. Function types are not curried.
 
-enum Option[A] {
-  none
-  some(A)
-}
-```
+A generic function type consists of a type-parameter list followed by a function type.
 
-Generic type application uses brackets:
+Lane2/Core v1 has no tuple types, collection types, type aliases, trait constraints, typeclass constraints, interface constraints, or structural record types.
 
-```lane2
-Box[Int]
-Option[String]
-```
+== Type Well-Formedness
 
-There are no type aliases in v1.
+Type well-formedness is written as:
 
-```text
-type:
-    typeName [ typeArguments ]
-  | functionType
+$ #sym.Delta; #sym.Theta #sym.tack.r T " type" $
 
-typeArguments:
-    '[' type { ',' type } [ ',' ] ']'
+#sym.Delta is the type-constructor environment. It contains primitive type constructors and type constructors introduced by visible `struct` and `enum` declarations.
 
-functionType : [ typeParameters ] '(' [ type { ',' type } [ ',' ] ] ')' '->' type
+#sym.Theta is the type-variable environment. It contains type variables introduced by visible type-parameter binders.
 
-typeParameters:
-    '[' typeParameter { ',' typeParameter } [ ',' ] ']'
-```
+A primitive type is well-formed.
 
-== Function Types
+A type variable is well-formed only when it is present in #sym.Theta.
 
-Function types use a parenthesized parameter list:
+A nominal type application is well-formed only when its type constructor resolves in #sym.Delta, the number of type arguments matches the type constructor arity, and all type arguments are well-formed.
 
-```lane2
-() -> Int
-(Int) -> Int
-(Int, Int) -> Int
-```
+A function type is well-formed only when every parameter type and the result type are well-formed.
 
-`Int -> Int` is not a valid one-argument function type.
+A generic function type is well-formed only when its type parameters bind the type variables used by the following function type and that function type is well-formed under the extended type-variable environment.
 
-Generic function types place type parameters before the value parameter list:
+== Type Equality
 
-```lane2
-[A](A) -> A
-[A](Bool, A, A) -> A
-```
+Type equality is written as:
 
-== Local Type Inference
+$ T #sym.eq.triple U $
+
+Primitive type equality compares primitive type identity.
+
+Type-variable equality compares type-variable binder identity.
+
+Nominal type equality compares nominal type-constructor identity and then compares type arguments pairwise.
+
+Function type equality compares parameter-list length, parameter types pairwise, and result type.
+
+Distinct nominal type constructors are not equal merely because their declarations have the same fields or variants.
+
+== Type Inference
 
 Lane2 uses bidirectional local type inference.
 
-Type information may:
+#align(left)[
+  $ #sym.Gamma #sym.tack.r e #sym.arrow.r.double T $ \
+  $ #sym.Gamma #sym.tack.r e #sym.arrow.l.double T $ \
+  $ #sym.Gamma #sym.tack.r p #sym.arrow.l.double T #sym.arrow.r.double #sym.Gamma _ p $
+]
 
-- synthesize upward from an expression,
-- check downward from an expected type.
+$ #sym.Gamma #sym.tack.r e #sym.arrow.r.double T $ means expression `e` synthesizes type `T`.
 
-Type information moves between adjacent syntax nodes. The type checker does not create global Hindley-Milner constraints and does not infer a binding's type from later uses.
+$ #sym.Gamma #sym.tack.r e #sym.arrow.l.double T $ means expression `e` checks against expected type `T`.
 
-Function literals may be checked against an expected function type:
+$ #sym.Gamma #sym.tack.r p #sym.arrow.l.double T #sym.arrow.r.double #sym.Gamma _ p $ means pattern `p` checks against scrutinee type `T` and produces pattern bindings #sym.Gamma#sub[`p`].
 
-```lane2
-let f : (Int, Int) -> Int = fn(a, b) {
-  a + b
-}
-```
+Type information may synthesize upward from an expression or check downward from an expected type.
 
-Without an expected type, a function literal must provide explicit value parameter types:
+The type checker does not create global Hindley-Milner constraints. A binding's type is not inferred from later uses of the bound name.
 
-```lane2
-let f = fn(a : Int, b : Int) {
-  a + b
-}
-```
+Function literals may omit parameter types only when checked against an expected function type. Without an expected function type, every value parameter of a function literal must have an explicit type annotation.
 
-Generic function literals without an expected type must provide explicit type parameters and explicit value parameter types:
+Generic function literals without an expected generic function type must explicitly declare type parameters and explicitly annotate value parameters.
 
-```lane2
-let id = fn[A](value : A) {
-  value
-}
-```
+Generic function calls and generic data constructors may instantiate type parameters at the use site when the use site is unambiguous.
 
-This is invalid:
+== Static Semantics
 
-```lane2
-let id = fn[A](value) {
-  value
-}
-```
+The static semantics of Lane2/Core v1 use these judgments.
 
-Polymorphic calls and generic data constructors may instantiate type arguments locally:
+#align(left)[
+  $ #sym.Delta; #sym.Theta #sym.tack.r T " type" $ \
+  $ T #sym.eq.triple U $ \
+  $ #sym.Gamma #sym.tack.r e #sym.arrow.r.double T $ \
+  $ #sym.Gamma #sym.tack.r e #sym.arrow.l.double T $ \
+  $ #sym.Gamma #sym.tack.r p #sym.arrow.l.double T #sym.arrow.r.double #sym.Gamma _ p $ \
+  $ #sym.Gamma #sym.tack.r "sourceFile" " ok" $
+]
 
-```lane2
-id(1)
-Box::{ value: 1 }
-Option::some(1)
+#sym.Gamma is the value environment for the current checking position. Name resolution, ordered top-level value scope, open scope extensions, and preopen are specified in "Scopes and Bindings".
+
+$ #sym.Gamma #sym.tack.r "sourceFile" " ok" $ means the source file is syntactically valid, all referenced types are well-formed, all names resolve without ambiguity, all expressions type-check, and all match expressions are exhaustive.
+
+A Lane2/Core v1 source file is statically valid only if:
+
+```text
+1. every type annotation denotes a well-formed type;
+2. every expression synthesizes or checks against its required type;
+3. every local binding obeys sequential local scope;
+4. every top-level value and top-level open obeys ordered value scope;
+5. every function body checks under the source file's top-level environment;
+6. every match expression is exhaustive;
+7. every unresolved name, ambiguous name, ill-formed type, or type mismatch is rejected.
 ```
 
 = Builtins
