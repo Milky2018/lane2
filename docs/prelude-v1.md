@@ -8,6 +8,7 @@ The prelude provides:
 
 - operation structs used by recognized operators;
 - primitive wrappers around unsafe builtins;
+- derived primitive operations written in Lane2 itself;
 - anonymous top-level values that populate the initial preopen namespace.
 
 Prelude entries are ordinary Lane2 values and types except where the compiler recognizes operation field pairs for operator aliases.
@@ -25,6 +26,22 @@ fn int_add(a : Int, b : Int) -> Int {
 `builtin` takes its type from direct expected context. In a function body, that expected type is the declared return type.
 
 The type checker does not interpret intrinsic strings. Incorrect builtin use is undefined behavior.
+
+The required portable intrinsic names for v1 are:
+
+| Intrinsic | Expected Type |
+| --- | --- |
+| `%i64_add` | `(Int, Int) -> Int` |
+| `%i64_sub` | `(Int, Int) -> Int` |
+| `%i64_mul` | `(Int, Int) -> Int` |
+| `%i64_div` | `(Int, Int) -> Int` |
+| `%i64_rem` | `(Int, Int) -> Int` |
+| `%i64_neg` | `(Int) -> Int` |
+| `%i64_equal` | `(Int, Int) -> Bool` |
+| `%i64_less` | `(Int, Int) -> Bool` |
+| `%string_equal` | `(String, String) -> Bool` |
+
+Other intrinsic names are implementation-defined unsafe builtins.
 
 ## Operation Structs
 
@@ -59,16 +76,16 @@ struct Neg[T] {
 Boolean operations:
 
 ```lane2
-struct And[T] {
-  and : (T, T) -> T
+struct And {
+  and : (Bool, () -> Bool) -> Bool
 }
 
-struct Or[T] {
-  or : (T, T) -> T
+struct Or {
+  or : (Bool, () -> Bool) -> Bool
 }
 
-struct Not[T] {
-  not : (T) -> T
+struct Not {
+  not : (Bool) -> Bool
 }
 ```
 
@@ -185,25 +202,36 @@ fn int_less(a : Int, b : Int) -> Bool {
 }
 ```
 
-Boolean wrappers:
+Boolean operations:
 
 ```lane2
-fn bool_and(a : Bool, b : Bool) -> Bool {
-  builtin("%bool_and")
+fn bool_and(a : Bool, b : () -> Bool) -> Bool {
+  if a {
+    b()
+  } else {
+    false
+  }
 }
 
-fn bool_or(a : Bool, b : Bool) -> Bool {
-  builtin("%bool_or")
+fn bool_or(a : Bool, b : () -> Bool) -> Bool {
+  if a {
+    true
+  } else {
+    b()
+  }
 }
 
 fn bool_not(a : Bool) -> Bool {
-  builtin("%bool_not")
+  if a {
+    false
+  } else {
+    true
+  }
 }
 
-fn bool_equal(a : Bool, b : Bool) -> Bool {
-  builtin("%bool_equal")
-}
 ```
+
+`bool_and`, `bool_or`, and `bool_not` are ordinary Lane2 functions, not builtin wrappers.
 
 String equality:
 
@@ -213,7 +241,7 @@ fn string_equal(a : String, b : String) -> Bool {
 }
 ```
 
-The exact intrinsic names are placeholders for the first interpreter/backend intrinsic table.
+The exact required intrinsic names are part of the v1 implementation contract.
 
 ## Default Preopen Values
 
@@ -230,10 +258,25 @@ let : Neg[Int] = Neg::{ neg: int_neg }
 let int_equal_ops : Equal[Int] = make_equal(int_equal)
 let : Compare[Int] = make_compare(int_equal_ops, int_less)
 
-let : And[Bool] = And::{ and: bool_and }
-let : Or[Bool] = Or::{ or: bool_or }
-let : Not[Bool] = Not::{ not: bool_not }
-let : Equal[Bool] = make_equal(bool_equal)
+let : And = And::{ and: bool_and }
+let : Or = Or::{ or: bool_or }
+let : Not = Not::{ not: bool_not }
+let : Equal[Bool] = Equal::{
+  equal: fn(a : Bool, b : Bool) {
+    if a {
+      b
+    } else {
+      bool_not(b)
+    }
+  },
+  not_equal: fn(a : Bool, b : Bool) {
+    if a {
+      bool_not(b)
+    } else {
+      b
+    }
+  },
+}
 
 let : Equal[String] = make_equal(string_equal)
 ```
@@ -258,11 +301,15 @@ Do not also anonymously preopen `Equal[Int]` in the same scope if `Compare[Int]`
 | `<=` | `Compare::less_eq` |
 | `>` | `Compare::greater` |
 | `>=` | `Compare::greater_eq` |
-| `&&` | `And::and` |
-| `||` | `Or::or` |
+| `&&` | `And::and` with a thunked right operand |
+| `||` | `Or::or` with a thunked right operand |
 | `!` | `Not::not` |
 
 Operators resolve through currently opened/preopened operation values. There is no type-directed instance search.
+
+`a && b` resolves through `And::and` and passes the right operand as `fn() { b }`.
+`a || b` resolves through `Or::or` and passes the right operand as `fn() { b }`.
+Both operators are defined only for `Bool`.
 
 ## Overriding With Local Open
 

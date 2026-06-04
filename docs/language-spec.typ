@@ -894,12 +894,14 @@ Recognized operator mappings:
   [`<=`], [`Compare::less_eq`],
   [`>`], [`Compare::greater`],
   [`>=`], [`Compare::greater_eq`],
-  [`&&`], [`And::and`],
-  [`||`], [`Or::or`],
+  [`&&`], [`And::and` with a thunked right operand],
+  [`||`], [`Or::or` with a thunked right operand],
   [`!`], [`Not::not`],
 )
 
-`&&` and `||` are strict operator aliases, not short-circuit control forms.
+`&&` and `||` are short-circuit boolean operators. They are recognized mappings to `And::and` and `Or::or`, but the right operand is passed as a zero-argument function instead of being evaluated before the operation call.
+
+`a && b` desugars to a call equivalent to `and(a, fn() { b })` after resolving an available `And::and` operation. `a || b` follows the same rule with `Or::or`. Both operators are defined only for `Bool`.
 
 Concrete expression precedence, associativity, and unary/binary disambiguation follow the MoonBit parser reference where Lane2 has not deliberately removed a feature.
 
@@ -926,6 +928,28 @@ let x = builtin("%anything")
 There is no direct expected type.
 
 Incorrect builtin use can produce undefined behavior. Lane2's type safety guarantee applies only to programs that do not misuse `builtin`.
+
+=== Required Intrinsics
+
+A conforming Lane2/Core v1 implementation provides these portable intrinsic names:
+
+#table(
+  columns: (auto, 1fr),
+  [Intrinsic], [Expected type],
+  [`%i64_add`], [`(Int, Int) -> Int`],
+  [`%i64_sub`], [`(Int, Int) -> Int`],
+  [`%i64_mul`], [`(Int, Int) -> Int`],
+  [`%i64_div`], [`(Int, Int) -> Int`],
+  [`%i64_rem`], [`(Int, Int) -> Int`],
+  [`%i64_neg`], [`(Int) -> Int`],
+  [`%i64_equal`], [`(Int, Int) -> Bool`],
+  [`%i64_less`], [`(Int, Int) -> Bool`],
+  [`%string_equal`], [`(String, String) -> Bool`],
+)
+
+Other intrinsic names are implementation-defined unsafe builtins.
+
+`%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not required intrinsics. The standard prelude defines boolean operations as ordinary Lane2 functions and anonymous operation values using `if`; `&&` and `||` supply their right operands as thunks.
 
 == Trailing Commas
 
@@ -956,7 +980,6 @@ V1 omits:
 - type aliases,
 - traits, typeclasses, interfaces,
 - method syntax,
-- short-circuit boolean operators,
 - tuple types,
 - collections,
 - pattern guards,

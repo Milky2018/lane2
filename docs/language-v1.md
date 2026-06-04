@@ -11,6 +11,8 @@ Lane2 v1 is a strict, pure, expression-oriented functional language.
 - `if` and `match` evaluate only the selected branch.
 - IO and other effects are outside v1 core semantics and are planned to use algebraic effects later.
 - `builtin("...")` is an unsafe escape hatch. It can appear wherever an expression has a direct expected type, but the type checker does not interpret the string. Misuse is undefined behavior.
+- Required portable intrinsics are `%i64_add`, `%i64_sub`, `%i64_mul`, `%i64_div`, `%i64_rem`, `%i64_neg`, `%i64_equal`, `%i64_less`, and `%string_equal`.
+- `%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not required intrinsics; the prelude defines these boolean operations with ordinary `if`.
 
 ## Source Shape
 
@@ -512,10 +514,12 @@ Recognized v1 operator mappings:
 | `<=` | `Compare::less_eq` |
 | `>` | `Compare::greater` |
 | `>=` | `Compare::greater_eq` |
-| `&&` | `And::and` |
-| `||` | `Or::or` |
+| `&&` | `And::and` with a thunked right operand |
+| `||` | `Or::or` with a thunked right operand |
 | `!` | `Not::not` |
 
-`&&` and `||` are strict operator aliases, not short-circuit control forms.
+`&&` and `||` are short-circuit boolean operators. They are recognized mappings to `And::and` and `Or::or`, but the right operand is passed as `fn() { ... }` instead of being evaluated before the operation call.
+
+`a && b` desugars to a call equivalent to `and(a, fn() { b })` after resolving an available `And::and` operation. `a || b` follows the same rule with `Or::or`. Both operators are defined only for `Bool`.
 
 Concrete precedence, associativity, and unary/binary disambiguation should follow the MoonBit parser reference where Lane2 has not deliberately removed a feature.

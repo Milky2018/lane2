@@ -10,7 +10,7 @@ _Avoid_: mutation-free subset, functional mode
 
 **Algebraic Effect**:
 A first-class description of an operation whose meaning is supplied outside the pure expression that invokes it.
-_Avoid_ : IO hook, builtin side effect
+_Avoid_: IO hook, builtin side effect
 
 **Top-Level Definition**:
 A named definition that may introduce a type, function, or immutable value at the outermost program scope.
@@ -188,6 +188,18 @@ _Avoid_: local recursive group, local forward declaration
 A built-in type provided by the language core: `Int`, `Bool`, `String`, or `Unit`.
 _Avoid_: standard library type, numeric tower
 
+**ASCII String**:
+An immutable sequence of ASCII bytes.
+_Avoid_: Unicode string, UTF-16 string
+
+**Short-Circuit Boolean Operation**:
+A boolean operation whose right-hand expression is delayed as a zero-argument function and evaluated only by the operation implementation.
+_Avoid_: generic logical operation, ordinary strict binary function
+
+**Integer Undefined Behavior**:
+Undefined behavior caused by invalid `Int` arithmetic such as signed overflow or division by zero.
+_Avoid_: integer trap, arbitrary precision integer
+
 **Nominal Data Model**:
 The rule that user-defined product and sum data is introduced through named structs and enums rather than anonymous tuples or records.
 _Avoid_: tuple, anonymous product type
@@ -227,6 +239,10 @@ _Avoid_: compiler-only operator magic, user-defined operator trait
 **Unsafe Builtin**:
 An intrinsic expression whose meaning is supplied outside Lane2, whose type is taken from direct context, and whose incorrect use can produce undefined behavior.
 _Avoid_: typed intrinsic, safe primitive
+
+**Required Intrinsic**:
+An intrinsic name that every conforming Lane2/Core v1 implementation must provide for portable programs.
+_Avoid_: placeholder builtin, implementation-only primitive
 
 **Preopen Namespace**:
 A default-open namespace populated by anonymous top-level values.
@@ -305,6 +321,9 @@ _Avoid_: module system, imports
 - A local named function is a **Sequential Local Function**.
 - Local value names may shadow earlier value names.
 - Lane2 v1 has four **Primitive Types**: `Int`, `Bool`, `String`, and `Unit`.
+- `String` is an **ASCII String** in v1.
+- `Bool` has only `true` and `false`, and `&&` and `||` are **Short-Circuit Boolean Operations**.
+- `Int` is a signed 64-bit integer, and invalid integer arithmetic is **Integer Undefined Behavior**.
 - Lane2 uses a **Nominal Data Model** and does not include tuple types in v1.
 - Collection types are expected later, but are outside the v1 language core.
 - Generic functions and data constructors use **Implicit Generic Instantiation**.
@@ -327,9 +346,11 @@ _Avoid_: module system, imports
 - Equality operators are provided by an `Equal` prelude operation containing both `equal` and `not_equal`.
 - Ordering operators are provided by a `Compare` prelude operation that may forward an `Equal` operation.
 - Recognized operator mappings are `Add::add` for `+`, `Sub::sub` for `-`, `Mul::mul` for `*`, `Div::div` for `/`, `Rem::rem` for `%`, `Neg::neg` for unary `-`, `Equal::equal` for `==`, `Equal::not_equal` for `!=`, `Compare::less` for `<`, `Compare::less_eq` for `<=`, `Compare::greater` for `>`, `Compare::greater_eq` for `>=`, `And::and` for `&&`, `Or::or` for `||`, and `Not::not` for `!`.
-- Boolean operators such as `&&` and `||` are strict **Operator Aliases**, not short-circuit control forms.
+- `&&` and `||` are recognized **Short-Circuit Boolean Operations** whose right operand is thunked before calling `And::and` or `Or::or`.
 - Primitive operators are not special-cased; even primitive `+` and `==` require the relevant **Prelude Operation** to be opened.
 - An **Unsafe Builtin** is outside Lane2's safety guarantee and requires a direct expected type.
+- A **Required Intrinsic** is a portable builtin name; other builtin names are implementation-defined unsafe intrinsics.
+- `%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not **Required Intrinsics**; the corresponding boolean prelude operations are implemented through ordinary `if`.
 - The **Preopen Namespace** is open by default.
 - An **Anonymous Top-Level Value** must have a struct type; its fields are exposed through the **Preopen Namespace**.
 - **Preopen Namespace** name conflicts are errors; exposed fields do not override ordinary names or other exposed fields.
@@ -520,6 +541,15 @@ _Avoid_: module system, imports
 > **Dev:** "Is `Float` a core type?"
 > **Domain expert:** "No — v1 **Primitive Types** are only `Int`, `Bool`, `String`, and `Unit`."
 >
+> **Dev:** "Can a `String` contain arbitrary Unicode?"
+> **Domain expert:** "No — v1 `String` is an **ASCII String**."
+>
+> **Dev:** "Does `&&` skip evaluating its right operand?"
+> **Domain expert:** "Yes — `&&` and `||` are **Short-Circuit Boolean Operations**."
+>
+> **Dev:** "Does `Int` use arbitrary precision?"
+> **Domain expert:** "No — `Int` is signed 64-bit, and overflow or division by zero is **Integer Undefined Behavior**."
+>
 > **Dev:** "Does `(Int, Bool)` name a tuple type?"
 > **Domain expert:** "No — Lane2's **Nominal Data Model** uses named structs and enums, while `()` is only the `Unit` value."
 >
@@ -584,13 +614,25 @@ _Avoid_: module system, imports
 > **Domain expert:** "No — primitive operators are not special-cased; `+` requires an opened **Prelude Operation**."
 >
 > **Dev:** "Does `a && b` skip evaluating `b` when `a` is false?"
-> **Domain expert:** "No — boolean operators are strict **Operator Aliases**."
+> **Domain expert:** "Yes — the right operand is passed as a thunk to `And::and`."
 >
 > **Dev:** "Does `builtin` preserve Lane2's type safety guarantee?"
 > **Domain expert:** "No — **Unsafe Builtin** is an explicit escape hatch whose misuse can cause undefined behavior."
 >
 > **Dev:** "Can `let x = builtin(\"%anything\")` infer a type for `x`?"
 > **Domain expert:** "No — **Unsafe Builtin** requires a direct expected type."
+>
+> **Dev:** "Are all builtin strings portable?"
+> **Domain expert:** "No — only a **Required Intrinsic** is portable; other builtin names are implementation-defined."
+>
+> **Dev:** "Are `%bool_and` and `%bool_or` required intrinsics?"
+> **Domain expert:** "No — `bool_and` and `bool_or` are ordinary prelude functions implemented with `if`."
+>
+> **Dev:** "Is `%bool_not` a required intrinsic?"
+> **Domain expert:** "No — `bool_not` is an ordinary prelude function implemented with `if`."
+>
+> **Dev:** "Is `%bool_equal` a required intrinsic?"
+> **Domain expert:** "No — `Equal[Bool]` is an anonymous prelude operation value implemented with `if`."
 >
 > **Dev:** "Can an anonymous `Point` value expose `x` and `y`?"
 > **Domain expert:** "Yes — an **Anonymous Top-Level Value** exposes its fields through the default-open **Preopen Namespace**."
