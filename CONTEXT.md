@@ -10,7 +10,7 @@ _Avoid_: mutation-free subset, functional mode
 
 **Algebraic Effect**:
 A first-class description of an operation whose meaning is supplied outside the pure expression that invokes it.
-_Avoid_: IO hook, builtin side effect
+_Avoid_ : IO hook, builtin side effect
 
 **Top-Level Definition**:
 A named definition that may introduce a type, function, or immutable value at the outermost program scope.
@@ -148,6 +148,10 @@ _Avoid_: comma-sensitive list ending
 Lane2 surface syntax that follows MoonBit's expression-oriented style while excluding mutable bindings and assignment.
 _Avoid_: custom syntax from scratch, MoonBit compatibility
 
+**Type Annotation Spacing**:
+The rule that a colon between a value or field name and a type is written with whitespace on both sides.
+_Avoid_: compact type annotation, struct-literal field assignment
+
 **Keyword-Delimited Top Level**:
 Top-level definitions are separated by their defining keywords rather than semicolons or MoonBit block separators.
 _Avoid_: `///|` separator, semicolon-delimited top level
@@ -251,7 +255,7 @@ _Avoid_: module system, imports
 - **Local Type Inference** applies below explicit top-level boundaries.
 - A **Local Generic Function** does not have to be lifted into a top-level definition.
 - A **Local Generic Function** is written as a **Generic Function Literal** when its type parameters are local to the function value.
-- A named generic function is written as a **Generic Named Function**, such as `fn[A] id(value: A) -> A { value }`.
+- A named generic function is written as a **Generic Named Function**, such as `fn[A] id(value : A) -> A { value }`.
 - **Local Type Inference** uses **Direct Context Inference** and never infers a local function's parameters from later calls.
 - A function literal can be checked against an expected function type or synthesized when its parameter types are explicitly available and its body can synthesize a result type.
 - A function literal without an expected type must provide explicit parameter types.
@@ -287,6 +291,7 @@ _Avoid_: module system, imports
 - A **Pipeline Expression** requires a call or function literal on its right-hand side.
 - Comma-separated lists allow a **Trailing Comma**.
 - Lane2 uses **MoonBit-Like Syntax** without mutation or assignment.
+- Lane2 uses **Type Annotation Spacing** for type annotations; struct literal field assignment remains `field: expression`.
 - Lane2 uses a **Keyword-Delimited Top Level**.
 - Lane2 has **Conditional Expressions**, not statement-only conditionals.
 - A **Block Expression** may contain local value and function bindings, but not local type definitions.
@@ -374,10 +379,10 @@ _Avoid_: module system, imports
 > **Dev:** "Can `let f = fn(a, b) { a }` infer parameter types from nowhere?"
 > **Domain expert:** "No — a function literal without an expected type must provide explicit parameter types."
 >
-> **Dev:** "Does `fn[A](value) { value }` infer `value: A` without context?"
+> **Dev:** "Does `fn[A](value) { value }` infer `value : A` without context?"
 > **Domain expert:** "No — a generic function literal without an expected type must provide explicit value parameter types."
 >
-> **Dev:** "How is the type of `fn[A](value: A) { value }` written?"
+> **Dev:** "How is the type of `fn[A](value : A) { value }` written?"
 > **Domain expert:** "As a **Generic Function Type**, for example `[A](A) -> A`."
 >
 > **Dev:** "Can I call `add(1)` when `add` expects two parameters?"
@@ -469,6 +474,9 @@ _Avoid_: module system, imports
 >
 > **Dev:** "Should Lane2 invent a completely new surface syntax?"
 > **Domain expert:** "No — Lane2 uses **MoonBit-Like Syntax**, minus mutable bindings and assignment."
+>
+> **Dev:** "Can a type annotation be written `x: Int`?"
+> **Domain expert:** "No — **Type Annotation Spacing** requires `x : Int`; `x: expr` is reserved for struct literal fields."
 >
 > **Dev:** "Does Lane2 source require `///|` block separators?"
 > **Domain expert:** "No — Lane2 uses a **Keyword-Delimited Top Level**."

@@ -18,12 +18,14 @@ A source file contains top-level definitions. It does not define an executable `
 
 Top-level definitions are keyword-delimited. Lane2 source does not use MoonBit `///|` separators or semicolon-delimited top-level items.
 
+Type annotations follow MoonBit-style spacing: the colon between a name and a type is written with spaces on both sides, as in `value : Int`. Struct literal field assignment remains `field: expression`.
+
 Allowed top-level forms in v1:
 
 ```lane2
 struct Point {
-  x: Int
-  y: Int
+  x : Int
+  y : Int
 }
 
 enum Option[A] {
@@ -31,11 +33,11 @@ enum Option[A] {
   some(A)
 }
 
-fn add(a: Int, b: Int) -> Int {
+fn add(a : Int, b : Int) -> Int {
   a + b
 }
 
-let answer: Int = 42
+let answer : Int = 42
 
 let : Add[Int] = Add::{ add: int_add }
 
@@ -62,15 +64,15 @@ enum Option[A] {
   some(A)
 }
 
-let Option: Int = 42
-let x: Option[Int] = Option::some(1)
+let Option : Int = 42
+let x : Option[Int] = Option::some(1)
 ```
 
 Enum variant names are scoped to their enum. In expressions, an unqualified variant is allowed only when it resolves without ambiguity:
 
 ```lane2
-let x: Option[Int] = some(1)
-let y: Option[Int] = Option::some(1)
+let x : Option[Int] = some(1)
+let y : Option[Int] = Option::some(1)
 ```
 
 In patterns, variants must always be qualified; bare identifiers are variable bindings.
@@ -94,11 +96,11 @@ User-defined data is nominal:
 
 ```lane2
 struct UserId {
-  value: Int
+  value : Int
 }
 
 struct OrderId {
-  value: Int
+  value : Int
 }
 ```
 
@@ -108,7 +110,7 @@ Generic type definitions put type parameters after the type name:
 
 ```lane2
 struct Box[A] {
-  value: A
+  value : A
 }
 
 enum Option[A] {
@@ -128,14 +130,14 @@ Add[Int]
 Generic struct literals and enum variants may omit type arguments when local information determines them:
 
 ```lane2
-let b: Box[Int] = Box::{ value: 1 }
-let s: Option[Int] = some(1)
+let b : Box[Int] = Box::{ value: 1 }
+let s : Option[Int] = some(1)
 ```
 
 Payloadless enum variants are values, not zero-argument calls:
 
 ```lane2
-let x: Option[Int] = Option::none
+let x : Option[Int] = Option::none
 ```
 
 `Option::none()` is not valid.
@@ -144,9 +146,9 @@ Enum variant payloads are positional in v1. If a variant needs named product dat
 
 ```lane2
 struct Node[A] {
-  left: Tree[A]
-  value: A
-  right: Tree[A]
+  left : Tree[A]
+  value : A
+  right : Tree[A]
 }
 
 enum Tree[A] {
@@ -160,13 +162,13 @@ enum Tree[A] {
 Struct values are constructed with qualified struct literals:
 
 ```lane2
-let p: Point = Point::{ x: 1, y: 2 }
+let p : Point = Point::{ x: 1, y: 2 }
 ```
 
 Field punning is allowed:
 
 ```lane2
-let p: Point = Point::{ x, y }
+let p : Point = Point::{ x, y }
 ```
 
 Punning means `Point::{ x: x, y: y }`.
@@ -188,7 +190,7 @@ Lane2 functions are uncurried. There is no automatic currying or partial applica
 Function definitions use block bodies only:
 
 ```lane2
-fn add(a: Int, b: Int) -> Int {
+fn add(a : Int, b : Int) -> Int {
   a + b
 }
 ```
@@ -202,7 +204,7 @@ Named functions must have explicit parameter types and result type. This applies
 Generic named functions write type parameters after `fn` and before the function name:
 
 ```lane2
-fn[A] id(value: A) -> A {
+fn[A] id(value : A) -> A {
   value
 }
 ```
@@ -227,7 +229,7 @@ Generic function types write type parameters before the value parameter list:
 Function literals are function values:
 
 ```lane2
-let f: (Int, Int) -> Int = fn(a, b) {
+let f : (Int, Int) -> Int = fn(a, b) {
   a + b
 }
 ```
@@ -235,7 +237,7 @@ let f: (Int, Int) -> Int = fn(a, b) {
 Local generic function literals are allowed:
 
 ```lane2
-let id = fn[A](value: A) {
+let id = fn[A](value : A) {
   value
 }
 ```
@@ -247,7 +249,7 @@ A block expression contains local items followed by exactly one final expression
 ```lane2
 {
   let x = 1
-  fn double(n: Int) -> Int {
+  fn double(n : Int) -> Int {
     n + n
   }
   double(x)
@@ -282,8 +284,8 @@ let x = 1
 Local named functions are sequential too. They are visible only to later items in the same block, may call themselves, and cannot form local mutually recursive groups:
 
 ```lane2
-fn f(n: Int) -> Int {
-  fn loop(x: Int) -> Int {
+fn f(n : Int) -> Int {
+  fn loop(x : Int) -> Int {
     if x == 0 {
       0
     } else {
@@ -307,7 +309,7 @@ Lane2 uses bidirectional local type inference:
 Function literals can be checked against an expected function type:
 
 ```lane2
-let f: (Int, Int) -> Int = fn(a, b) {
+let f : (Int, Int) -> Int = fn(a, b) {
   a + b
 }
 ```
@@ -315,7 +317,7 @@ let f: (Int, Int) -> Int = fn(a, b) {
 Without an expected type, a function literal must provide explicit parameter types:
 
 ```lane2
-let f = fn(a: Int, b: Int) {
+let f = fn(a : Int, b : Int) {
   a + b
 }
 ```
@@ -323,7 +325,7 @@ let f = fn(a: Int, b: Int) {
 Generic function literals without an expected type must provide both explicit type parameters and explicit value parameter types:
 
 ```lane2
-let id = fn[A](value: A) {
+let id = fn[A](value : A) {
   value
 }
 ```
@@ -477,12 +479,12 @@ Struct declarations may forward opened fields:
 
 ```lane2
 struct Compare[T] {
-  equal_impl: Equal[T]
+  equal_impl : Equal[T]
   open equal_impl
-  less: (T, T) -> Bool
-  less_eq: (T, T) -> Bool
-  greater: (T, T) -> Bool
-  greater_eq: (T, T) -> Bool
+  less : (T, T) -> Bool
+  less_eq : (T, T) -> Bool
+  greater : (T, T) -> Bool
+  greater_eq : (T, T) -> Bool
 }
 ```
 
