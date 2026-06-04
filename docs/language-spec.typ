@@ -68,120 +68,443 @@ When referencing this draft, use:
 
 = Syntax and Grammar
 
-Grammar fragments in this document use an EBNF-like notation.
-
-- Terminal sequences are written in single quotes, as in `'fn'`.
-- Lexical categories are written in angle brackets, as in `<identifier>`.
-- Non-terminals are written in lowercase camel case, as in `sourceFile`.
-- A sequence `A B` means `A` followed by `B`.
-- A choice `A | B` means either `A` or `B`.
-- An optional item is written `[A]`.
-- A repeated item is written `{A}`.
-- Parentheses group grammar items.
-
-The grammar fragments are intended to specify accepted source shape. The initial parser may follow the MoonBit parser's precedence and associativity where this specification has not deliberately removed a MoonBit feature.
-
-== Lexical Structure
-
-Lane2 is Unicode source text. The exact Unicode identifier profile is implementation-defined for the first draft, but identifiers must not collide with keywords or operator tokens.
-
-Whitespace and comments separate tokens and are otherwise insignificant except where needed to disambiguate tokens.
-
-Line comments start with `//` and continue to the end of the line. Delimited comments start with `/*` and end with `*/`.
-
-In type annotation syntax, the colon between a value or field name and a type must have whitespace on both sides:
-
-```lane2
-let answer : Int = 42
-fn add(a : Int, b : Int) -> Int { a + b }
-struct Point {
-  x : Int
-  y : Int
-}
-```
-
-This spacing rule applies to type annotations only. Struct literal field assignment remains `field: expression`:
-
-```lane2
-Point::{ x: 1, y: 2 }
-```
-
-V1 keywords:
+== Notation
 
 ```text
-struct enum fn let open if else match builtin
+grammar        ::= { production }
+production     ::= nonTerminal "::=" grammarExpression
+grammarExpression ::=
+    grammarSequence { "|" grammarSequence }
+grammarSequence ::=
+    { grammarItem }
+grammarItem ::=
+    terminal
+  | nonTerminal
+  | "[" grammarExpression "]"
+  | "{" grammarExpression "}"
+  | "(" grammarExpression ")"
+  | grammarItem "?"
+  | grammarItem "*"
+  | grammarItem "+"
+
+terminal       ::= "'" terminalText "'"
+nonTerminal    ::= lowerCamelIdentifier
+
+empty sequence denotes epsilon.
+"A B" denotes sequencing.
+"A | B" denotes choice.
+"[ A ]" and "A?" denote optional occurrence.
+"{ A }" and "A*" denote zero or more occurrences.
+"A+" denotes one or more occurrences.
+Parenthesized grammar expressions group without producing syntax.
 ```
 
-V1 reserved words for future use:
+== Lexical Grammar
 
 ```text
-effect handler module import pub type trait interface mut return
+lexicalInput ::=
+    (trivia | token)* eof
+
+trivia ::=
+    whitespace
+  | lineTerminator
+  | comment
+
+token ::=
+    keyword
+  | reservedWord
+  | identifier
+  | intLiteral
+  | stringLiteral
+  | boolLiteral
+  | operatorToken
+  | punctuationToken
+
+keyword ::=
+    "struct"
+  | "enum"
+  | "fn"
+  | "let"
+  | "open"
+  | "if"
+  | "else"
+  | "match"
+  | "builtin"
+
+reservedWord ::=
+    "effect"
+  | "handler"
+  | "module"
+  | "import"
+  | "pub"
+  | "type"
+  | "trait"
+  | "interface"
+  | "mut"
+  | "return"
+
+identifier ::=
+    xidStart identifierContinue*
+  | "_" identifierContinue+
+
+identifierContinue ::=
+    "_"
+  | xidContinue
+  | decimalDigit
+
+boolLiteral ::=
+    "true"
+  | "false"
+
+intLiteral ::=
+    decimalDigit+
+
+stringLiteral ::=
+    "\"" stringElement* "\""
+
+stringElement ::=
+    asciiStringCharacter
+  | stringEscape
+
+asciiStringCharacter ::=
+    asciiCodePointExceptControlBackslashQuote
+
+stringEscape ::=
+    "\\" "\\"
+  | "\\" "\""
+  | "\\" "n"
+  | "\\" "r"
+  | "\\" "t"
+  | "\\" "x" asciiHexByte
+
+asciiHexByte ::=
+    asciiHexLowByte
+  | asciiHexHighByte
+
+asciiHexLowByte ::=
+    ("0" | "1" | "2" | "3" | "4" | "5" | "6") asciiHexDigit
+
+asciiHexHighByte ::=
+    "7" ("0" | "1" | "2" | "3" | "4" | "5" | "6" | "7")
+
+operatorToken ::=
+    "+"
+  | "-"
+  | "*"
+  | "/"
+  | "%"
+  | "=="
+  | "!="
+  | "<"
+  | "<="
+  | ">"
+  | ">="
+  | "&&"
+  | "||"
+  | "!"
+  | "|>"
+
+punctuationToken ::=
+    "("
+  | ")"
+  | "{"
+  | "}"
+  | "["
+  | "]"
+  | ","
+  | "."
+  | ":"
+  | "::"
+  | "->"
+  | "=>"
+  | "="
+  | "_"
+
+whitespace ::=
+    U+0009
+  | U+000B
+  | U+000C
+  | U+0020
+
+lineTerminator ::=
+    U+000A
+  | U+000D
+  | U+000D U+000A
+
+decimalDigit ::=
+    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+asciiHexDigit ::=
+    decimalDigit
+  | "a" | "b" | "c" | "d" | "e" | "f"
+  | "A" | "B" | "C" | "D" | "E" | "F"
+
+xidStart ::=
+    any Unicode code point with the XID_Start property
+
+xidContinue ::=
+    any Unicode code point with the XID_Continue property
 ```
 
-Reserved words are not valid ordinary identifiers.
+Lexical analysis uses maximal munch. If more than one token class matches the same maximal source span, keyword, reservedWord, and boolLiteral take priority over identifier.
 
-The concrete tokenization of operators, precedence, and associativity should follow the MoonBit parser reference where Lane2 keeps the corresponding syntax.
-
-== Source Files
-
-A Lane2 source file is a sequence of top-level definitions.
-
-There is no language-level `main` entrypoint in v1. Entrypoint selection belongs to a later linker or runtime layer.
-
-Top-level definitions are keyword-delimited. Lane2 source does not use MoonBit `///|` separators or semicolon-delimited top-level items.
+== Syntax Grammar
 
 ```text
-sourceFile:
-    { topLevelDefinition }
+sourceFile ::=
+    topLevelDeclaration* eof
 
-topLevelDefinition:
+topLevelDeclaration ::=
     structDeclaration
   | enumDeclaration
   | functionDeclaration
-  | topLevelLet
-  | anonymousTopLevelLet
+  | topLevelLetDeclaration
+  | anonymousTopLevelLetDeclaration
   | openDeclaration
+
+structDeclaration ::=
+    "struct" typeName typeParameters? "{" structMember* "}"
+
+structMember ::=
+    fieldDeclaration
+  | fieldForwardingDeclaration
+
+fieldDeclaration ::=
+    fieldName space ":" space type
+
+fieldForwardingDeclaration ::=
+    "open" valueName
+
+enumDeclaration ::=
+    "enum" typeName typeParameters? "{" enumVariant* "}"
+
+enumVariant ::=
+    variantName enumPayload?
+
+enumPayload ::=
+    "(" commaSeparatedTypes? ")"
+
+functionDeclaration ::=
+    "fn" typeParameters? functionName "(" commaSeparatedParameters? ")" "->" type block
+
+parameter ::=
+    valueName space ":" space type
+
+topLevelLetDeclaration ::=
+    "let" valueName space ":" space type "=" expression
+
+anonymousTopLevelLetDeclaration ::=
+    "let" space ":" space type "=" expression
+
+localLetDeclaration ::=
+    "let" valueName typeAnnotation? "=" expression
+
+typeAnnotation ::=
+    space ":" space type
+
+openDeclaration ::=
+    "open" valueName
+
+type ::=
+    typeConstructor typeArguments?
+  | functionType
+
+typeConstructor ::=
+    typeName
+
+typeArguments ::=
+    "[" commaSeparatedTypes "]"
+
+typeParameters ::=
+    "[" commaSeparatedTypeParameters "]"
+
+functionType ::=
+    typeParameters? "(" commaSeparatedTypes? ")" "->" type
+
+expression ::=
+    ifExpression
+  | matchExpression
+  | functionLiteral
+  | block
+  | pipelineExpression
+
+pipelineExpression ::=
+    binaryExpression { "|>" pipelineRhs }
+
+pipelineRhs ::=
+    callExpression
+  | functionLiteral
+
+binaryExpression ::=
+    unaryExpression { binaryOperator unaryExpression }
+
+unaryExpression ::=
+    unaryOperator unaryExpression
+  | callExpression
+
+callExpression ::=
+    fieldExpression { callSuffix }
+
+callSuffix ::=
+    "(" commaSeparatedExpressions? ")"
+
+fieldExpression ::=
+    primaryExpression { "." fieldName }
+
+primaryExpression ::=
+    literal
+  | valueName
+  | qualifiedVariantExpression
+  | structLiteral
+  | builtinExpression
+  | "(" expression ")"
+  | "(" ")"
+
+literal ::=
+    intLiteral
+  | stringLiteral
+  | boolLiteral
+
+qualifiedVariantExpression ::=
+    typeName typeArguments? "::" variantName variantArguments?
+
+variantArguments ::=
+    "(" commaSeparatedExpressions? ")"
+
+structLiteral ::=
+    typeName typeArguments? "::" "{" commaSeparatedStructLiteralFields "}"
+
+structLiteralField ::=
+    fieldName
+  | fieldName ":" expression
+
+builtinExpression ::=
+    "builtin" "(" stringLiteral ")"
+
+functionLiteral ::=
+    "fn" typeParameters? "(" commaSeparatedFunctionLiteralParameters? ")" functionReturnAnnotation? block
+
+functionLiteralParameter ::=
+    valueName
+  | valueName space ":" space type
+
+functionReturnAnnotation ::=
+    "->" type
+
+block ::=
+    "{" localItem* expression "}"
+
+localItem ::=
+    localLetDeclaration
+  | functionDeclaration
+  | openDeclaration
+
+ifExpression ::=
+    "if" expression block "else" block
+
+matchExpression ::=
+    "match" expression "{" matchArm* "}"
+
+matchArm ::=
+    pattern "=>" expression
+
+pattern ::=
+    "_"
+  | valueName
+  | literal
+  | qualifiedVariantPattern
+  | structPattern
+
+qualifiedVariantPattern ::=
+    typeName "::" variantName patternArguments?
+
+patternArguments ::=
+    "(" commaSeparatedPatterns? ")"
+
+structPattern ::=
+    typeName "::" "{" commaSeparatedStructPatternFields "}"
+
+structPatternField ::=
+    fieldName
+  | fieldName ":" pattern
+
+binaryOperator ::=
+    "+" | "-" | "*" | "/" | "%"
+  | "==" | "!=" | "<" | "<=" | ">" | ">="
+  | "&&" | "||"
+
+unaryOperator ::=
+    "-" | "!"
+
+commaSeparatedTypes ::=
+    type ("," type)* ","?
+
+commaSeparatedTypeParameters ::=
+    typeParameter ("," typeParameter)* ","?
+
+commaSeparatedParameters ::=
+    parameter ("," parameter)* ","?
+
+commaSeparatedExpressions ::=
+    expression ("," expression)* ","?
+
+commaSeparatedFunctionLiteralParameters ::=
+    functionLiteralParameter ("," functionLiteralParameter)* ","?
+
+commaSeparatedStructLiteralFields ::=
+    structLiteralField ("," structLiteralField)* ","?
+
+commaSeparatedPatterns ::=
+    pattern ("," pattern)* ","?
+
+commaSeparatedStructPatternFields ::=
+    structPatternField ("," structPatternField)* ","?
+
+typeName ::=
+    identifier
+
+functionName ::=
+    identifier
+
+valueName ::=
+    identifier
+
+fieldName ::=
+    identifier
+
+variantName ::=
+    identifier
+
+typeParameter ::=
+    identifier
+
+space ::=
+    whitespace+
 ```
 
-Top-level forms:
+The precedence and associativity of `binaryOperator`, `unaryOperator`, calls, field access, and pipeline expressions are defined in "Operators".
 
-```lane2
-struct Point {
-  x : Int
-  y : Int
-}
+== Comments
 
-enum Option[A] {
-  none
-  some(A)
-}
+```text
+comment ::=
+    lineComment
+  | blockComment
 
-fn add(a : Int, b : Int) -> Int {
-  a + b
-}
+lineComment ::=
+    "/" "/" lineCommentCharacter* lineTerminator?
 
-let answer : Int = 42
+lineCommentCharacter ::=
+    any Unicode code point except U+000A or U+000D
 
-let : Add[Int] = Add::{ add: int_add }
+blockComment ::=
+    "/" "*" blockCommentCharacter* "*" "/"
 
-open int_add_ops
+blockCommentCharacter ::=
+    any Unicode code point sequence that does not start "*/"
 ```
 
-== Trailing Commas
-
-Comma-separated syntax lists allow trailing commas:
-
-```lane2
-add(
-  x,
-  y,
-)
-
-Point::{
-  x: 1,
-  y: 2,
-}
-```
+Comments are trivia. Comments do not appear in the syntactic grammar.
 
 = Type System
 
