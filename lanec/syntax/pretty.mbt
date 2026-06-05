@@ -520,15 +520,3 @@ pub impl @prettyprinter.Pretty for BinaryOperator with fn pretty(
 ) {
   operator.to_doc()
 }
-
-///|
-fn BinaryOperator::precedence(self : BinaryOperator) -> Int {
-  match self {
-    Or => 2
-    And => 3
-    Equal | NotEqual => 4
-    Less | LessEqual | Greater | GreaterEqual => 5
-    Add | Sub => 6
-    Mul | Div | Rem => 7
-  }
-}

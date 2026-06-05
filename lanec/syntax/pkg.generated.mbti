@@ -27,6 +27,8 @@ pub(all) enum BinaryOperator {
   And
   Or
 } derive(Eq, @debug.Debug)
+pub fn BinaryOperator::minimum_precedence() -> Int
+pub fn BinaryOperator::precedence(Self) -> Int
 pub impl @prettyprinter.Pretty for BinaryOperator
 
 pub(all) struct EnumDeclaration {

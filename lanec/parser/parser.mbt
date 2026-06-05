@@ -329,7 +329,9 @@ fn State::parse_expression(self : State) -> @syntax.Expr {
 
 ///|
 fn State::parse_pipeline_expression(self : State) -> @syntax.Expr {
-  let mut left = self.parse_binary_expression(prec=1)
+  let mut left = self.parse_binary_expression(
+    prec=@syntax.BinaryOperator::minimum_precedence(),
+  )
   while self.peek_token() is @lexer.Token::PIPE {
     self.consume() |> ignore
     let right = if self.peek_token() is @lexer.Token::FN {
@@ -350,11 +352,12 @@ fn State::parse_pipeline_expression(self : State) -> @syntax.Expr {
 fn State::parse_binary_expression(self : State, prec~ : Int) -> @syntax.Expr {
   let mut left = self.parse_unary_expression()
   let mut current = self.binary_operator()
-  while current is Some((op, op_prec)) && op_prec >= prec {
+  while current is Some(operator) && operator.precedence() >= prec {
+    let operator_precedence = operator.precedence()
     self.consume() |> ignore
-    let right = self.parse_binary_expression(prec=op_prec + 1)
+    let right = self.parse_binary_expression(prec=operator_precedence + 1)
     left = @syntax.Expr::Binary(
-      operator=op,
+      operator~,
       left~,
       right~,
       loc=join_span(left.loc(), right.loc()),
@@ -365,21 +368,21 @@ fn State::parse_binary_expression(self : State, prec~ : Int) -> @syntax.Expr {
 }
 
 ///|
-fn State::binary_operator(self : State) -> (@syntax.BinaryOperator, Int)? {
+fn State::binary_operator(self : State) -> @syntax.BinaryOperator? {
   match self.peek_token() {
-    @lexer.Token::BARBAR => Some((@syntax.BinaryOperator::Or, 1))
-    @lexer.Token::AMPAMP => Some((@syntax.BinaryOperator::And, 2))
-    @lexer.Token::EQEQ => Some((@syntax.BinaryOperator::Equal, 3))
-    @lexer.Token::BANGEQ => Some((@syntax.BinaryOperator::NotEqual, 3))
-    @lexer.Token::LT => Some((@syntax.BinaryOperator::Less, 4))
-    @lexer.Token::LTEQ => Some((@syntax.BinaryOperator::LessEqual, 4))
-    @lexer.Token::GT => Some((@syntax.BinaryOperator::Greater, 4))
-    @lexer.Token::GTEQ => Some((@syntax.BinaryOperator::GreaterEqual, 4))
-    @lexer.Token::PLUS => Some((@syntax.BinaryOperator::Add, 5))
-    @lexer.Token::MINUS => Some((@syntax.BinaryOperator::Sub, 5))
-    @lexer.Token::STAR => Some((@syntax.BinaryOperator::Mul, 6))
-    @lexer.Token::SLASH => Some((@syntax.BinaryOperator::Div, 6))
-    @lexer.Token::PERCENT => Some((@syntax.BinaryOperator::Rem, 6))
+    @lexer.Token::BARBAR => Some(@syntax.BinaryOperator::Or)
+    @lexer.Token::AMPAMP => Some(@syntax.BinaryOperator::And)
+    @lexer.Token::EQEQ => Some(@syntax.BinaryOperator::Equal)
+    @lexer.Token::BANGEQ => Some(@syntax.BinaryOperator::NotEqual)
+    @lexer.Token::LT => Some(@syntax.BinaryOperator::Less)
+    @lexer.Token::LTEQ => Some(@syntax.BinaryOperator::LessEqual)
+    @lexer.Token::GT => Some(@syntax.BinaryOperator::Greater)
+    @lexer.Token::GTEQ => Some(@syntax.BinaryOperator::GreaterEqual)
+    @lexer.Token::PLUS => Some(@syntax.BinaryOperator::Add)
+    @lexer.Token::MINUS => Some(@syntax.BinaryOperator::Sub)
+    @lexer.Token::STAR => Some(@syntax.BinaryOperator::Mul)
+    @lexer.Token::SLASH => Some(@syntax.BinaryOperator::Div)
+    @lexer.Token::PERCENT => Some(@syntax.BinaryOperator::Rem)
     _ => None
   }
 }
