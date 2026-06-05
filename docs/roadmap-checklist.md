@@ -30,8 +30,10 @@ module tasks should live in issues or implementation notes.
   and origin spans.
 - [x] Provide an initial resolved IR pretty printer and tests based on resolved
   declaration output.
-- [ ] Resolve source type references, value references, patterns, calls, field
-  access, and expression-local binders into symbol identities.
+- [x] Resolve source type references, value references, qualified variants,
+  patterns, function bodies, and expression-local binders into resolved IR.
+- [ ] Resolve field access into field symbol identities after enough type
+  information is available.
 - [ ] Resolve type names, value names, variants, field access, `open`, preopen,
   struct field forwarding, and operator aliases.
 - [ ] Reject ambiguous unqualified variants and conflicting open/preopen

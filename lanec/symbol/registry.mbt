@@ -114,3 +114,30 @@ pub fn SymbolRegistry::variant_metadata(
 ) -> VariantSymbolMetadata? {
   self.variants.get(id.index)
 }
+
+///|
+pub fn SymbolRegistry::type_named(
+  self : SymbolRegistry,
+  name : String,
+) -> TypeSymbolId? {
+  for metadata in self.types {
+    if metadata.name == name {
+      return Some(metadata.id)
+    }
+  }
+  None
+}
+
+///|
+pub fn SymbolRegistry::variant_named(
+  self : SymbolRegistry,
+  owner : TypeSymbolId,
+  name : String,
+) -> VariantSymbolId? {
+  for metadata in self.variants {
+    if metadata.owner == owner && metadata.name == name {
+      return Some(metadata.id)
+    }
+  }
+  None
+}

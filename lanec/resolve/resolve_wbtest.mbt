@@ -47,7 +47,8 @@ test "collect top level declaration symbols" {
       #|      value#0 top_function unwrap_or
       #|      value#1 parameter value
       #|      value#2 parameter fallback
-      #|      value#3 top_value <anonymous>
+      #|      value#3 pattern_binder x
+      #|      value#4 top_value <anonymous>
       #|    }
       #|    fields {
       #|      field#0 owner=type#0 x index=0
@@ -60,15 +61,23 @@ test "collect top level declaration symbols" {
       #|  }
       #|  declarations {
       #|    struct type#0 Point {
-      #|      field field#0 x index=0
-      #|      field field#1 y index=1
+      #|      field field#0 x : Int index=0
+      #|      field field#1 y : Int index=1
       #|    }
       #|    enum type#1 Option[tparam#0 A] {
       #|      variant variant#0 none index=0 payloads=0
-      #|      variant variant#1 some index=1 payloads=1
+      #|      variant variant#1 some index=1 payloads=1(tparam#0 A)
       #|    }
-      #|    fn value#0 unwrap_or(value#1 value, value#2 fallback)
-      #|    let value#3 <anonymous>
+      #|    fn value#0 unwrap_or(value#1 value : type#1 Option[Int], value#2 fallback : Int) -> Int {
+      #|      match var value#1 value {
+      #|        variant#0 Option::none() => var value#2 fallback
+      #|        variant#1 Option::some(bind value#3 x) => var value#3 x
+      #|      }
+      #|    }
+      #|    let value#4 <anonymous> : type#0 Point = Point::{
+      #|      x: 1
+      #|      y: 2
+      #|    }
       #|  }
       #|}
     ),
