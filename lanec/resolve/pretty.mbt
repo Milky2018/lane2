@@ -61,6 +61,18 @@ pub impl @prettyprinter.Pretty for ResolveDiagnosticKind with fn pretty(
       text(type_name) +
       text("::") +
       text(variant)
+    UnresolvedOpenValue(name) => text("unresolved_open") + space + text(name)
+    CannotOpenValue(name) => text("cannot_open") + space + text(name)
+    ConflictingOpenExposure(name~, existing~, incoming~) =>
+      text("conflicting_open") +
+      space +
+      text(name) +
+      space +
+      text("existing=") +
+      text(existing) +
+      space +
+      text("incoming=") +
+      text(incoming)
     AmbiguousUnqualifiedVariant(name~, candidates~) =>
       text("ambiguous_variant") +
       space +
@@ -263,6 +275,8 @@ pub impl @prettyprinter.Pretty for ResolvedValueReference with fn pretty(
 ) {
   match reference {
     Symbol(symbol) => symbol.pretty()
+    OpenedField(base~, field~) =>
+      field.pretty() + space + text("of") + space + base.pretty()
     Unresolved(name) => text("?") + text(name)
   }
 }

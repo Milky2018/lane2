@@ -28,6 +28,9 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedType(String)
   UnresolvedValue(String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
+  UnresolvedOpenValue(String)
+  CannotOpenValue(String)
+  ConflictingOpenExposure(name~ : String, existing~ : String, incoming~ : String)
   AmbiguousUnqualifiedVariant(name~ : String, candidates~ : Array[ResolveVariantCandidate])
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolveDiagnosticKind
@@ -223,6 +226,7 @@ pub impl @prettyprinter.Pretty for ResolvedValueParameter
 
 pub(all) enum ResolvedValueReference {
   Symbol(@symbol.ValueSymbolId)
+  OpenedField(base~ : @symbol.ValueSymbolId, field~ : @symbol.FieldSymbolId)
   Unresolved(String)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedValueReference

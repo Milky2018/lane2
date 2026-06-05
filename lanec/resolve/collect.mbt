@@ -1,7 +1,8 @@
 ///|
 priv struct ValueBinding {
   name : String
-  symbol : ValueSymbolId
+  reference : ResolvedValueReference
+  type_ : ResolvedType?
 }
 
 ///|
@@ -68,7 +69,11 @@ fn Resolver::collect_top_level_headers(
           TopLevelFunction,
           declaration.loc,
         )
-        self.top_values.push({ name: declaration.name, symbol })
+        self.top_values.push({
+          name: declaration.name,
+          reference: Symbol(symbol),
+          type_: None,
+        })
       }
       Let(_) | Open(_) => ()
     }
@@ -126,7 +131,7 @@ fn @syntax.TopLevelDeclaration::resolve_top_level(
     Function(declaration) =>
       Function(declaration.resolve_top_level_function(resolver))
     Let(declaration) => Let(declaration.resolve_top_level_let(resolver))
-    Open(declaration) => Open(declaration.resolve_open())
+    Open(declaration) => Open(declaration.resolve_top_level_open(resolver))
   }
 }
 
@@ -262,7 +267,7 @@ fn @syntax.Parameter::resolve_parameter(
 ) -> ResolvedValueParameter {
   let type_ = self.type_.resolve_type(resolver, scope)
   let symbol = resolver.registry.define_value(self.name, Parameter, self.loc)
-  scope.define_value(self.name, symbol)
+  scope.define_value(self.name, symbol, Some(type_))
   { symbol, name: self.name, type_, loc: self.loc }
 }
 
@@ -273,9 +278,25 @@ fn @syntax.LetDeclaration::resolve_top_level_let(
 ) -> ResolvedLetDeclaration {
   let scope = resolver.scope([])
   let declaration = self.resolve_let(resolver, scope, TopLevelValue)
-  let display_name = self.name.unwrap_or("<anonymous>")
-  resolver.top_values.push({ name: display_name, symbol: declaration.symbol })
+  resolver.publish_top_level_let(declaration, self.loc)
   declaration
+}
+
+///|
+fn Resolver::publish_top_level_let(
+  self : Resolver,
+  declaration : ResolvedLetDeclaration,
+  loc : SourceSpan,
+) -> Unit {
+  let binding = {
+    name: declaration.name.unwrap_or("<anonymous>"),
+    reference: Symbol(declaration.symbol),
+    type_: declaration.type_annotation,
+  }
+  match declaration.name {
+    Some(_) => self.publish_top_level_binding(binding, loc)
+    None => self.open_top_level_binding(binding, loc)
+  }
 }
 
 ///|
@@ -292,7 +313,7 @@ fn @syntax.LetDeclaration::resolve_let(
   })
   let symbol = resolver.registry.define_value(display_name, kind, self.loc)
   match self.name {
-    Some(name) => scope.define_value(name, symbol)
+    Some(name) => scope.define_value(name, symbol, type_annotation)
     None => ()
   }
   { symbol, name: self.name, type_annotation, initializer, loc: self.loc }
@@ -303,6 +324,19 @@ fn @syntax.OpenDeclaration::resolve_open(
   self : @syntax.OpenDeclaration,
 ) -> ResolvedOpenDeclaration {
   { name: self.name, loc: self.loc }
+}
+
+///|
+fn @syntax.OpenDeclaration::resolve_top_level_open(
+  self : @syntax.OpenDeclaration,
+  resolver : Resolver,
+) -> ResolvedOpenDeclaration {
+  let scope = resolver.scope([])
+  match scope.value_binding(self.name) {
+    Some(binding) => resolver.open_top_level_binding(binding, self.loc)
+    None => resolver.report(UnresolvedOpenValue(self.name), self.loc)
+  }
+  self.resolve_open()
 }
 
 ///|
@@ -467,7 +501,7 @@ fn @syntax.Expr::resolve_call(
   match self {
     Var(name, ..) =>
       match scope.value_reference(name) {
-        Symbol(_) as reference =>
+        Symbol(_) | OpenedField(..) as reference =>
           Call(
             callee=Var(name~, reference~, loc=self.loc()),
             arguments=arguments.map(fn(argument) {
@@ -540,7 +574,7 @@ fn @syntax.FunctionLiteralParameter::resolve_function_literal_parameter(
     type_.resolve_type(resolver, scope)
   })
   let symbol = resolver.registry.define_value(self.name, Parameter, self.loc)
-  scope.define_value(self.name, symbol)
+  scope.define_value(self.name, symbol, type_annotation)
   { symbol, name: self.name, type_annotation, loc: self.loc }
 }
 
@@ -559,11 +593,24 @@ fn @syntax.LocalItem::resolve_local_item(
         LocalFunction,
         declaration.loc,
       )
-      scope.define_value(declaration.name, symbol)
+      scope.define_value(declaration.name, symbol, None)
       Function(declaration.resolve_function_with_symbol(resolver, symbol))
     }
-    Open(declaration) => Open(declaration.resolve_open())
+    Open(declaration) => Open(declaration.resolve_local_open(resolver, scope))
   }
+}
+
+///|
+fn @syntax.OpenDeclaration::resolve_local_open(
+  self : @syntax.OpenDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+) -> ResolvedOpenDeclaration {
+  match scope.value_binding(self.name) {
+    Some(binding) => resolver.open_local_binding(binding, scope, self.loc)
+    None => resolver.report(UnresolvedOpenValue(self.name), self.loc)
+  }
+  self.resolve_open()
 }
 
 ///|
@@ -590,7 +637,7 @@ fn @syntax.Pattern::resolve_pattern(
     Wildcard(loc) => Wildcard(loc)
     Binding(name, loc~) => {
       let symbol = resolver.registry.define_value(name, PatternBinder, loc)
-      scope.define_value(name, symbol)
+      scope.define_value(name, symbol, None)
       Binding(name~, symbol~, loc~)
     }
     IntLiteral(value, loc~) => IntLiteral(value, loc~)
@@ -650,8 +697,17 @@ fn ResolveScope::define_value(
   self : ResolveScope,
   name : String,
   symbol : ValueSymbolId,
+  type_ : ResolvedType?,
 ) -> Unit {
-  self.values.push({ name, symbol })
+  self.values.push({ name, reference: Symbol(symbol), type_ })
+}
+
+///|
+fn ResolveScope::define_binding(
+  self : ResolveScope,
+  binding : ValueBinding,
+) -> Unit {
+  self.values.push(binding)
 }
 
 ///|
@@ -662,10 +718,24 @@ fn ResolveScope::value_reference(
   for index = self.values.length(); index > 0; index = index - 1 {
     let binding = self.values[index - 1]
     if binding.name == name {
-      return Symbol(binding.symbol)
+      return binding.reference
     }
   }
   Unresolved(name)
+}
+
+///|
+fn ResolveScope::value_binding(
+  self : ResolveScope,
+  name : String,
+) -> ValueBinding? {
+  for index = self.values.length(); index > 0; index = index - 1 {
+    let binding = self.values[index - 1]
+    if binding.name == name {
+      return Some(binding)
+    }
+  }
+  None
 }
 
 ///|
@@ -691,10 +761,131 @@ fn Resolver::type_symbol(self : Resolver, name : String) -> TypeSymbolId {
 fn Resolver::value_symbol(self : Resolver, name : String) -> ValueSymbolId {
   for binding in self.top_values {
     if binding.name == name {
-      return binding.symbol
+      match binding.reference {
+        Symbol(symbol) => return symbol
+        _ => ()
+      }
     }
   }
   abort("missing predeclared value symbol")
+}
+
+///|
+fn Resolver::top_value_binding(self : Resolver, name : String) -> ValueBinding? {
+  for index = self.top_values.length(); index > 0; index = index - 1 {
+    let binding = self.top_values[index - 1]
+    if binding.name == name {
+      return Some(binding)
+    }
+  }
+  None
+}
+
+///|
+fn Resolver::publish_top_level_binding(
+  self : Resolver,
+  binding : ValueBinding,
+  loc : SourceSpan,
+) -> Unit {
+  match self.top_value_binding(binding.name) {
+    Some(existing) =>
+      self.report(
+        ConflictingOpenExposure(
+          name=binding.name,
+          existing=self.binding_display(existing),
+          incoming=self.binding_display(binding),
+        ),
+        loc,
+      )
+    None => self.top_values.push(binding)
+  }
+}
+
+///|
+fn Resolver::open_top_level_binding(
+  self : Resolver,
+  binding : ValueBinding,
+  loc : SourceSpan,
+) -> Unit {
+  match self.opened_fields(binding, loc) {
+    Some(fields) =>
+      for field in fields {
+        self.publish_top_level_binding(field, loc)
+      }
+    None => ()
+  }
+}
+
+///|
+fn Resolver::open_local_binding(
+  self : Resolver,
+  binding : ValueBinding,
+  scope : ResolveScope,
+  loc : SourceSpan,
+) -> Unit {
+  match self.opened_fields(binding, loc) {
+    Some(fields) =>
+      for field in fields {
+        scope.define_binding(field)
+      }
+    None => ()
+  }
+}
+
+///|
+fn Resolver::opened_fields(
+  self : Resolver,
+  binding : ValueBinding,
+  loc : SourceSpan,
+) -> Array[ValueBinding]? {
+  match (binding.reference, binding.type_) {
+    (Symbol(base), Some(Nominal(symbol~, ..))) =>
+      match self.registry.type_metadata(symbol) {
+        Some({ kind: Struct, .. }) =>
+          Some(
+            self.registry
+            .fields_of(symbol)
+            .map(fn(field) {
+              {
+                name: field.name,
+                reference: OpenedField(base~, field=field.id),
+                type_: None,
+              }
+            }),
+          )
+        _ => {
+          self.report(CannotOpenValue(binding.name), loc)
+          None
+        }
+      }
+    _ => {
+      self.report(CannotOpenValue(binding.name), loc)
+      None
+    }
+  }
+}
+
+///|
+fn Resolver::binding_display(self : Resolver, binding : ValueBinding) -> String {
+  match binding.reference {
+    Symbol(symbol) =>
+      match self.registry.value_metadata(symbol) {
+        Some(metadata) => metadata.name
+        None => binding.name
+      }
+    OpenedField(base~, field~) => {
+      let base_name = match self.registry.value_metadata(base) {
+        Some(metadata) => metadata.name
+        None => "<unknown>"
+      }
+      let field_name = match self.registry.field_metadata(field) {
+        Some(metadata) => metadata.name
+        None => binding.name
+      }
+      base_name + "." + field_name
+    }
+    Unresolved(name) => name
+  }
 }
 
 ///|
@@ -777,6 +968,7 @@ fn Resolver::report_unresolved_value(
 ) -> Unit {
   match reference {
     Symbol(_) => ()
+    OpenedField(..) => ()
     Unresolved(name) => self.report(UnresolvedValue(name), loc)
   }
 }

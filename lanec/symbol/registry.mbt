@@ -169,3 +169,17 @@ pub fn SymbolRegistry::field_named(
   }
   None
 }
+
+///|
+pub fn SymbolRegistry::fields_of(
+  self : SymbolRegistry,
+  owner : TypeSymbolId,
+) -> Array[FieldSymbolMetadata] {
+  let fields = []
+  for metadata in self.fields {
+    if metadata.owner == owner {
+      fields.push(metadata)
+    }
+  }
+  fields
+}

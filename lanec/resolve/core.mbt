@@ -28,6 +28,13 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedType(String)
   UnresolvedValue(String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
+  UnresolvedOpenValue(String)
+  CannotOpenValue(String)
+  ConflictingOpenExposure(
+    name~ : String,
+    existing~ : String,
+    incoming~ : String
+  )
   AmbiguousUnqualifiedVariant(
     name~ : String,
     candidates~ : Array[ResolveVariantCandidate]
@@ -152,6 +159,7 @@ pub(all) enum ResolvedType {
 ///|
 pub(all) enum ResolvedValueReference {
   Symbol(ValueSymbolId)
+  OpenedField(base~ : ValueSymbolId, field~ : FieldSymbolId)
   Unresolved(String)
 } derive(Debug, Eq)
 

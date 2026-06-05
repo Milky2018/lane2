@@ -248,3 +248,178 @@ test "keep unknown calls as unresolved value calls" {
     content="unresolved_value missing",
   )
 }
+
+///|
+test "resolve top level open exposes struct fields" {
+  let file = expect_parse_ok(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|let ops : Ops = Ops::{ add: 1 }
+      #|open ops
+      #|fn use() -> Int {
+      #|  add
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 struct Ops/0
+      #|    }
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function use
+      #|      value#1 top_value ops
+      #|    }
+      #|    fields {
+      #|      field#0 owner=type#0 add index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    struct type#0 Ops {
+      #|      field field#0 add : Int index=0
+      #|    }
+      #|    let value#1 ops : type#0 Ops = Ops::{
+      #|      add: 1
+      #|    }
+      #|    open ops
+      #|    fn value#0 use() -> Int {
+      #|      var field#0 of value#1 add
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "report conflicting top level open exposure" {
+  let file = expect_parse_ok(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|fn add() -> Int {
+      #|  0
+      #|}
+      #|let ops : Ops = Ops::{ add: 1 }
+      #|open ops
+    ),
+  )
+  let result = resolve_source_file_result(file)
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content=(
+      #|conflicting_open add existing=add incoming=ops.add
+    ),
+  )
+}
+
+///|
+test "resolve anonymous top level let as preopen fields" {
+  let file = expect_parse_ok(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|let : Ops = Ops::{ add: 1 }
+      #|fn use() -> Int {
+      #|  add
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 struct Ops/0
+      #|    }
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function use
+      #|      value#1 top_value <anonymous>
+      #|    }
+      #|    fields {
+      #|      field#0 owner=type#0 add index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    struct type#0 Ops {
+      #|      field field#0 add : Int index=0
+      #|    }
+      #|    let value#1 <anonymous> : type#0 Ops = Ops::{
+      #|      add: 1
+      #|    }
+      #|    fn value#0 use() -> Int {
+      #|      var field#0 of value#1 add
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "resolve local open shadows earlier local bindings" {
+  let file = expect_parse_ok(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|fn use() -> Int {
+      #|  {
+      #|    let ops : Ops = Ops::{ add: 1 }
+      #|    let add = 2
+      #|    open ops
+      #|    add
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 struct Ops/0
+      #|    }
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function use
+      #|      value#1 local_binding ops
+      #|      value#2 local_binding add
+      #|    }
+      #|    fields {
+      #|      field#0 owner=type#0 add index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    struct type#0 Ops {
+      #|      field field#0 add : Int index=0
+      #|    }
+      #|    fn value#0 use() -> Int {
+      #|      {
+      #|        let value#1 ops : type#0 Ops = Ops::{
+      #|          add: 1
+      #|        }
+      #|        let value#2 add = 2
+      #|        open ops
+      #|        var field#0 of value#1 add
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}

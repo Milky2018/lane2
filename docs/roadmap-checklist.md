@@ -34,13 +34,16 @@ module tasks should live in issues or implementation notes.
   patterns, function bodies, and expression-local binders into resolved IR.
 - [x] Resolve unqualified variant calls when exactly one visible variant
   matches, and preserve ambiguous candidates in resolved IR.
+- [x] Resolve direct `open` and anonymous top-level preopen fields for values
+  with explicit nominal struct type annotations.
 - [ ] Resolve field access into field symbol identities after enough type
   information is available.
-- [ ] Resolve type names, value names, variants, field access, `open`, preopen,
-  struct field forwarding, and operator aliases.
+- [ ] Resolve struct field forwarding and operator aliases after checked field
+  types are available.
 - [x] Report diagnostics for unresolved types, unresolved values, unresolved
-  qualified variants, and ambiguous unqualified variants.
-- [ ] Reject conflicting open/preopen exposure.
+  qualified variants, ambiguous unqualified variants, and invalid `open`
+  targets.
+- [x] Reject conflicting top-level `open` and preopen exposure.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
 
