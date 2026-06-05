@@ -1,0 +1,178 @@
+// Lane2 v1 standard prelude.
+// This file is the source of truth for prelude declarations shown in the
+// language specification.
+
+struct Add[T] {
+  op_add : (T, T) -> T
+}
+
+struct Sub[T] {
+  op_sub : (T, T) -> T
+}
+
+struct Mul[T] {
+  op_mul : (T, T) -> T
+}
+
+struct Div[T] {
+  op_div : (T, T) -> T
+}
+
+struct Rem[T] {
+  op_rem : (T, T) -> T
+}
+
+struct Neg[T] {
+  op_neg : (T) -> T
+}
+
+struct And {
+  op_and : (Bool, () -> Bool) -> Bool
+}
+
+struct Or {
+  op_or : (Bool, () -> Bool) -> Bool
+}
+
+struct Not {
+  op_not : (Bool) -> Bool
+}
+
+struct Equal[T] {
+  op_equal : (T, T) -> Bool
+  op_not_equal : (T, T) -> Bool
+}
+
+struct Compare[T] {
+  equal_impl : Equal[T]
+  open equal_impl
+  op_less : (T, T) -> Bool
+  op_less_eq : (T, T) -> Bool
+  op_greater : (T, T) -> Bool
+  op_greater_eq : (T, T) -> Bool
+}
+
+fn int_add(a : Int, b : Int) -> Int {
+  builtin("%i64_add")
+}
+
+fn int_sub(a : Int, b : Int) -> Int {
+  builtin("%i64_sub")
+}
+
+fn int_mul(a : Int, b : Int) -> Int {
+  builtin("%i64_mul")
+}
+
+fn int_div(a : Int, b : Int) -> Int {
+  builtin("%i64_div")
+}
+
+fn int_rem(a : Int, b : Int) -> Int {
+  builtin("%i64_rem")
+}
+
+fn int_neg(a : Int) -> Int {
+  builtin("%i64_neg")
+}
+
+fn int_equal(a : Int, b : Int) -> Bool {
+  builtin("%i64_equal")
+}
+
+fn int_less(a : Int, b : Int) -> Bool {
+  builtin("%i64_less")
+}
+
+fn string_equal(a : String, b : String) -> Bool {
+  builtin("%string_equal")
+}
+
+fn bool_and(a : Bool, b : () -> Bool) -> Bool {
+  if a {
+    b()
+  } else {
+    false
+  }
+}
+
+fn bool_or(a : Bool, b : () -> Bool) -> Bool {
+  if a {
+    true
+  } else {
+    b()
+  }
+}
+
+fn bool_not(a : Bool) -> Bool {
+  if a {
+    false
+  } else {
+    true
+  }
+}
+
+fn bool_equal(a : Bool, b : Bool) -> Bool {
+  if a {
+    b
+  } else {
+    bool_not(b)
+  }
+}
+
+fn[T] make_equal(equal : (T, T) -> Bool) -> Equal[T] {
+  Equal::{
+    op_equal: equal,
+    op_not_equal: fn(a : T, b : T) -> Bool {
+      if equal(a, b) {
+        false
+      } else {
+        true
+      }
+    },
+  }
+}
+
+fn[T] make_compare(
+  equal_impl : Equal[T],
+  less : (T, T) -> Bool
+) -> Compare[T] {
+  Compare::{
+    equal_impl,
+    op_less: less,
+    op_less_eq: fn(a : T, b : T) -> Bool {
+      if equal_impl.op_equal(a, b) {
+        true
+      } else {
+        less(a, b)
+      }
+    },
+    op_greater: fn(a : T, b : T) -> Bool {
+      less(b, a)
+    },
+    op_greater_eq: fn(a : T, b : T) -> Bool {
+      if equal_impl.op_equal(a, b) {
+        true
+      } else {
+        less(b, a)
+      }
+    },
+  }
+}
+
+let open int_add_ops : Add[Int] = Add::{ op_add: int_add }
+let open int_sub_ops : Sub[Int] = Sub::{ op_sub: int_sub }
+let open int_mul_ops : Mul[Int] = Mul::{ op_mul: int_mul }
+let open int_div_ops : Div[Int] = Div::{ op_div: int_div }
+let open int_rem_ops : Rem[Int] = Rem::{ op_rem: int_rem }
+let open int_neg_ops : Neg[Int] = Neg::{ op_neg: int_neg }
+
+let int_equal_ops : Equal[Int] = make_equal(int_equal)
+let open int_compare_ops : Compare[Int] = make_compare(int_equal_ops, int_less)
+
+let open bool_and_ops : And = And::{ op_and: bool_and }
+let open bool_or_ops : Or = Or::{ op_or: bool_or }
+let open bool_not_ops : Not = Not::{ op_not: bool_not }
+let open bool_equal_ops : Equal[Bool] = make_equal(bool_equal)
+
+let open string_equal_ops : Equal[String] = make_equal(string_equal)

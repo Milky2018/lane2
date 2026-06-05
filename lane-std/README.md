@@ -1,5 +1,5 @@
 # Lane Standard Library
 
-This directory is reserved for the Lane standard library source.
+This directory contains Lane standard library source.
 
-The first standard library surface is the prelude described in `../spec/language-spec.typ`; implementation files will be added here once the compiler can parse and check Lane source.
+`prelude.lane` is the v1 standard prelude source used by the language specification. It will become the implementation input once the compiler can parse and check Lane source.
