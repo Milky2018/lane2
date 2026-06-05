@@ -44,6 +44,8 @@ module tasks should live in issues or implementation notes.
 
 ## 4. Semantic Checking
 
+- [ ] Build the checked declaration environment for custom types, including
+  struct field types and enum variant payload types.
 - [ ] Implement bidirectional local type checking and direct context inference.
 - [ ] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.
