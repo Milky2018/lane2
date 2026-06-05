@@ -9,13 +9,7 @@ pub(all) struct SymbolRegistry {
 
 ///|
 pub fn SymbolRegistry::SymbolRegistry() -> SymbolRegistry {
-  SymbolRegistry::{
-    types: [],
-    type_parameters: [],
-    values: [],
-    fields: [],
-    variants: [],
-  }
+  { types: [], type_parameters: [], values: [], fields: [], variants: [] }
 }
 
 ///|
@@ -27,7 +21,7 @@ pub fn SymbolRegistry::define_type(
   loc : SourceSpan,
 ) -> TypeSymbolId {
   let id = TypeSymbolId::{ index: self.types.length() }
-  self.types.push(TypeSymbolMetadata::{ id, name, kind, arity, loc })
+  self.types.push({ id, name, kind, arity, loc })
   id
 }
 
@@ -38,7 +32,7 @@ pub fn SymbolRegistry::define_type_parameter(
   loc : SourceSpan,
 ) -> TypeParameterId {
   let id = TypeParameterId::{ index: self.type_parameters.length() }
-  self.type_parameters.push(TypeParameterMetadata::{ id, name, loc })
+  self.type_parameters.push({ id, name, loc })
   id
 }
 
@@ -50,7 +44,7 @@ pub fn SymbolRegistry::define_value(
   loc : SourceSpan,
 ) -> ValueSymbolId {
   let id = ValueSymbolId::{ index: self.values.length() }
-  self.values.push(ValueSymbolMetadata::{ id, name, kind, loc })
+  self.values.push({ id, name, kind, loc })
   id
 }
 
@@ -63,7 +57,7 @@ pub fn SymbolRegistry::define_field(
   loc : SourceSpan,
 ) -> FieldSymbolId {
   let id = FieldSymbolId::{ index: self.fields.length() }
-  self.fields.push(FieldSymbolMetadata::{ id, owner, name, index, loc })
+  self.fields.push({ id, owner, name, index, loc })
   id
 }
 
@@ -77,14 +71,7 @@ pub fn SymbolRegistry::define_variant(
   loc : SourceSpan,
 ) -> VariantSymbolId {
   let id = VariantSymbolId::{ index: self.variants.length() }
-  self.variants.push(VariantSymbolMetadata::{
-    id,
-    owner,
-    name,
-    index,
-    payload_count,
-    loc,
-  })
+  self.variants.push({ id, owner, name, index, payload_count, loc })
   id
 }
 

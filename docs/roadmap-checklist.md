@@ -15,11 +15,11 @@ module tasks should live in issues or implementation notes.
 
 - [x] Introduce stable compiler identities for types, values, fields, variants,
   and type parameters.
-- [ ] Introduce checked type objects shared by semantic analysis, typed core,
+- [x] Introduce checked type objects shared by semantic analysis, typed core,
   builtin dispatch, and the interpreter.
-- [ ] Support primitive type constants, nominal type applications, function
+- [x] Support primitive type constants, nominal type applications, function
   types, forall types, kind metadata, substitution, and alpha-equivalence.
-- [ ] Provide pretty printers and tests for symbols and checked types.
+- [x] Provide pretty printers and tests for symbols and checked types.
 
 ## 2. Name Resolution
 
