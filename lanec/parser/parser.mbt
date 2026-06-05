@@ -24,25 +24,156 @@ pub fn parse_tokens(tokens : Array[(@lexer.Token, SourceSpan)]) -> ParseResult {
     (token.to_yacc_token(), loc, loc)
   })
   let source = @yacc_parser.source_file(yacc_tokens) catch {
-    UnexpectedEndOfInput(loc, _) =>
-      return ParseResult::{
-        source: None,
-        lexical_errors: [],
-        parse_errors: [ParseError::{ message: "Unexpected end of file.", loc }],
-      }
-    UnexpectedToken(_, (start, end), _) =>
+    UnexpectedEndOfInput(loc, expected) =>
       return ParseResult::{
         source: None,
         lexical_errors: [],
         parse_errors: [
           ParseError::{
-            message: "Unexpected token.",
+            kind: UnexpectedEndOfInput(expected_syntax(expected)),
+            loc,
+          },
+        ],
+      }
+    UnexpectedToken(token, (start, end), expected) =>
+      return ParseResult::{
+        source: None,
+        lexical_errors: [],
+        parse_errors: [
+          ParseError::{
+            kind: UnexpectedToken(
+              token_summary(token),
+              expected_syntax(expected),
+            ),
             loc: SourceSpan::join(start, end),
           },
         ],
       }
   }
   ParseResult::{ source: Some(source), lexical_errors: [], parse_errors: [] }
+}
+
+///|
+fn token_summary(token : @yacc_parser.Token) -> TokenSummary {
+  TokenSummary::{ label: token_label(token) }
+}
+
+///|
+fn expected_syntax(
+  kinds : Array[@yacc_parser.TokenKind],
+) -> Array[ExpectedSyntax] {
+  let result = []
+  for kind in kinds {
+    let syntax = ExpectedSyntax::{ label: token_kind_label(kind) }
+    if !result.contains(syntax) {
+      result.push(syntax)
+    }
+  }
+  result
+}
+
+///|
+fn token_label(token : @yacc_parser.Token) -> String {
+  match token {
+    CHAR(_) => "character literal"
+    INT(_) => "integer literal"
+    STRING(_) => "string literal"
+    IDENT(value) => "identifier `\{value}`"
+    RESERVED(value) => "reserved word `\{value}`"
+    EOF => "end of file"
+    FALSE => "`false`"
+    TRUE => "`true`"
+    STRUCT => "`struct`"
+    ENUM => "`enum`"
+    FN => "`fn`"
+    LET => "`let`"
+    OPEN => "`open`"
+    IF => "`if`"
+    ELSE => "`else`"
+    MATCH => "`match`"
+    BUILTIN => "`builtin`"
+    PLUS => "`+`"
+    MINUS => "`-`"
+    STAR => "`*`"
+    SLASH => "`/`"
+    PERCENT => "`%`"
+    EQEQ => "`==`"
+    BANGEQ => "`!=`"
+    LT => "`<`"
+    LTEQ => "`<=`"
+    GT => "`>`"
+    GTEQ => "`>=`"
+    AMPAMP => "`&&`"
+    BARBAR => "`||`"
+    BANG => "`!`"
+    PIPE => "`|>`"
+    LPAREN => "`(`"
+    RPAREN => "`)`"
+    LBRACE => "`{`"
+    RBRACE => "`}`"
+    LBRACKET => "`[`"
+    RBRACKET => "`]`"
+    COMMA => "`,`"
+    DOT => "`.`"
+    COLON => "`:`"
+    COLONCOLON => "`::`"
+    THIN_ARROW => "`->`"
+    FAT_ARROW => "`=>`"
+    EQUAL => "`=`"
+    UNDERSCORE => "`_`"
+  }
+}
+
+///|
+fn token_kind_label(kind : @yacc_parser.TokenKind) -> String {
+  match kind {
+    TK_CHAR => "character literal"
+    TK_INT => "integer literal"
+    TK_STRING => "string literal"
+    TK_IDENT => "identifier"
+    TK_RESERVED => "reserved word"
+    TK_EOF => "end of file"
+    TK_FALSE => "`false`"
+    TK_TRUE => "`true`"
+    TK_STRUCT => "`struct`"
+    TK_ENUM => "`enum`"
+    TK_FN => "`fn`"
+    TK_LET => "`let`"
+    TK_OPEN => "`open`"
+    TK_IF => "`if`"
+    TK_ELSE => "`else`"
+    TK_MATCH => "`match`"
+    TK_BUILTIN => "`builtin`"
+    TK_PLUS => "`+`"
+    TK_MINUS => "`-`"
+    TK_STAR => "`*`"
+    TK_SLASH => "`/`"
+    TK_PERCENT => "`%`"
+    TK_EQEQ => "`==`"
+    TK_BANGEQ => "`!=`"
+    TK_LT => "`<`"
+    TK_LTEQ => "`<=`"
+    TK_GT => "`>`"
+    TK_GTEQ => "`>=`"
+    TK_AMPAMP => "`&&`"
+    TK_BARBAR => "`||`"
+    TK_BANG => "`!`"
+    TK_PIPE => "`|>`"
+    TK_LPAREN => "`(`"
+    TK_RPAREN => "`)`"
+    TK_LBRACE => "`{`"
+    TK_RBRACE => "`}`"
+    TK_LBRACKET => "`[`"
+    TK_RBRACKET => "`]`"
+    TK_COMMA => "`,`"
+    TK_DOT => "`.`"
+    TK_COLON => "`:`"
+    TK_COLONCOLON => "`::`"
+    TK_THIN_ARROW => "`->`"
+    TK_FAT_ARROW => "`=>`"
+    TK_EQUAL => "`=`"
+    TK_UNDERSCORE => "`_`"
+  }
 }
 
 ///|

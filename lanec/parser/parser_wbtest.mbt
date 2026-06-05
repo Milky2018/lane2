@@ -11,12 +11,17 @@ fn expect_parse_ok(source : String) -> @syntax.SourceFile {
 }
 
 ///|
-fn parse_error_messages(source : String) -> Array[String] {
+fn parse_errors(source : String) -> Array[ParseError] {
   let result = parse_string(source)
   if !result.lexical_errors.is_empty() {
     abort("expected parser errors, got lexer errors")
   }
-  result.parse_errors.map(fn(error) { error.message })
+  result.parse_errors
+}
+
+///|
+fn parse_error_kinds(source : String) -> Array[ParseErrorKind] {
+  parse_errors(source).map(fn(error) { error.kind })
 }
 
 ///|
@@ -120,41 +125,64 @@ test "parse anonymous top level let and struct forwarding" {
 
 ///|
 test "parse rejects equals function body syntax" {
-  inspect(
-    @prettyprinter.render(
-      parse_error_messages("fn add(a : Int, b : Int) -> Int = a + b"),
-    ),
+  debug_inspect(
+    parse_error_kinds("fn add(a : Int, b : Int) -> Int = a + b"),
     content=(
-      #|["Unexpected token."]
+      #|[
+      #|  UnexpectedToken(
+      #|    { label: "`=`" },
+      #|    [{ label: "`{`" }, { label: "`[`" }],
+      #|  ),
+      #|]
     ),
   )
 }
 
 ///|
 test "parse rejects empty enum variant payload syntax" {
-  inspect(
-    @prettyprinter.render(
-      parse_error_messages("enum Option[A] { none() some(A) }"),
-    ),
+  debug_inspect(
+    parse_error_kinds("enum Option[A] { none() some(A) }"),
     content=(
-      #|["Unexpected token."]
+      #|[
+      #|  UnexpectedToken(
+      #|    { label: "`)`" },
+      #|    [{ label: "identifier" }, { label: "`(`" }, { label: "`[`" }],
+      #|  ),
+      #|]
     ),
   )
 }
 
 ///|
 test "parse rejects empty qualified variant argument syntax" {
-  inspect(
-    @prettyprinter.render(
-      parse_error_messages(
-        (
-          #|enum Option[A] { none some(A) }
-          #|let value : Option[Int] = Option::none()
-        ),
+  debug_inspect(
+    parse_error_kinds(
+      (
+        #|enum Option[A] { none some(A) }
+        #|let value : Option[Int] = Option::none()
       ),
     ),
     content=(
-      #|["Unexpected token."]
+      #|[
+      #|  UnexpectedToken(
+      #|    { label: "`)`" },
+      #|    [
+      #|      { label: "integer literal" },
+      #|      { label: "string literal" },
+      #|      { label: "identifier" },
+      #|      { label: "`false`" },
+      #|      { label: "`true`" },
+      #|      { label: "`fn`" },
+      #|      { label: "`if`" },
+      #|      { label: "`match`" },
+      #|      { label: "`builtin`" },
+      #|      { label: "`-`" },
+      #|      { label: "`!`" },
+      #|      { label: "`(`" },
+      #|      { label: "`{`" },
+      #|    ],
+      #|  ),
+      #|]
     ),
   )
 }

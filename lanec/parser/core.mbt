@@ -1,6 +1,22 @@
 ///|
+pub(all) struct TokenSummary {
+  label : String
+} derive(Debug, Eq)
+
+///|
+pub(all) struct ExpectedSyntax {
+  label : String
+} derive(Debug, Eq)
+
+///|
+pub(all) enum ParseErrorKind {
+  UnexpectedToken(TokenSummary, Array[ExpectedSyntax])
+  UnexpectedEndOfInput(Array[ExpectedSyntax])
+} derive(Debug, Eq)
+
+///|
 pub(all) struct ParseError {
-  message : String
+  kind : ParseErrorKind
   loc : SourceSpan
 } derive(Debug, Eq)
 
