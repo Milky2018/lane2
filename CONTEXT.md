@@ -497,14 +497,18 @@ An intrinsic name that every conforming Lane2/Core v1 implementation must provid
 _Avoid_: placeholder builtin, implementation-only primitive
 
 **Preopen Namespace**:
-A default-open namespace populated by **Open Value Declarations**.
+A default-open namespace populated by prelude-provided **Open Bindings** before user code is checked.
 _Avoid_: implicit instance search, operation-only prelude, anonymous namespace
 
+**Open Exposure**:
+Checked metadata describing which field values an open declaration or **Open Binding** contributes to a lexical open layer.
+_Avoid_: generated accessor, import binding
+
 **Preopen Exposure**:
-Checked metadata describing which field values an **Open Value Declaration** contributes to the preopen namespace.
+An **Open Exposure** in the **Preopen Namespace**.
 _Avoid_: anonymous runtime binding, open syntax node
 
-**Open Value Declaration**:
+**Open Binding**:
 A named value declaration whose value is automatically opened into the following scope.
 _Avoid_: primitive declaration form, anonymous top-level value, discarded value
 
@@ -707,16 +711,16 @@ _Avoid_: module system, imports
 - A **Required Intrinsic** is a portable builtin name; other builtin names are implementation-defined unsafe intrinsics.
 - `%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not **Required Intrinsics**; the corresponding boolean prelude operations are implemented through ordinary `if`.
 - The **Preopen Namespace** is open by default.
-- An **Open Value Declaration** must have a struct type; its fields are exposed through the **Preopen Namespace**.
-- An **Open Value Declaration** defines a normal named value and opens that value from the declaration point forward.
-- An **Open Value Declaration** is syntax sugar for a value declaration immediately followed by opening that value.
-- An **Open Value Declaration** may appear as a top-level value declaration or as a local item.
-- A top-level **Open Value Declaration** must include a type annotation, as all top-level value declarations do.
-- A local **Open Value Declaration** may omit its type annotation when the initializer determines a unique struct type.
-- A local **Open Value Declaration** cannot use later references to infer the opened value's type.
-- Top-level and local **Open Value Declarations** are not forward-visible or recursively open.
-- In **Typed Core IR**, an **Open Value Declaration** becomes checked value data plus **Preopen Exposure**.
-- **Preopen Exposure** is produced during type checking or elaboration, after the opened value's struct type is known.
+- An **Open Binding** must have a struct type; its fields become an **Open Exposure**.
+- An **Open Binding** defines a normal named value and opens that value from the declaration point forward.
+- An **Open Binding** is syntax sugar for a value declaration immediately followed by opening that value.
+- An **Open Binding** may appear as a top-level value declaration or as a local item.
+- A top-level **Open Binding** must include a type annotation, as all top-level value declarations do.
+- A local **Open Binding** may omit its type annotation when the initializer determines a unique struct type.
+- A local **Open Binding** cannot use later references to infer the opened value's type.
+- Top-level and local **Open Bindings** are not forward-visible or recursively open.
+- In **Typed Core IR**, an **Open Binding** becomes checked value data plus **Open Exposure**.
+- **Open Exposure** is produced during type checking or elaboration, after the opened value's struct type is known.
 - Multiple opened field values with the same name may form an **Open Candidate Set**.
 - Open exposures in the same scope may repeat names; repeated names are handled at use sites through candidate selection.
 - An **Open Candidate Set** may contain any value, not only functions or operations.
@@ -730,13 +734,13 @@ _Avoid_: module system, imports
 - Lane2 exposes ambiguity instead of choosing a default candidate when more than one candidate remains applicable.
 - An **Ambiguous Candidate Diagnostic** should list writable disambiguation paths such as `.name` and `owner.field`.
 - If local typing cannot select exactly one candidate, the reference is ambiguous.
-- Open scope extensions and preopen exposures in the same scope layer add candidates; inner local scope layers shadow outer layers.
+- Open exposures in the same lexical layer add candidates; inner open layers shadow outer open layers, including preopen.
 - The **Preopen Namespace** exposes field values, not generated field accessors.
-- A **Prelude** may contribute open value declarations to the **Preopen Namespace**.
+- A **Prelude** may contribute open bindings to the **Preopen Namespace**.
 - Module import and export rules are outside the current design scope.
 - The v1 **Prelude** is implementation-supplied Lane2 source checked before user code.
 - Prelude-provided **Preopen Namespace** entries are visible throughout user code.
-- User-defined **Open Value Declarations** extend the **Preopen Namespace** from their declaration point to the end of the top-level scope.
+- User-defined **Open Bindings** contribute to the top-level or local open layer from their declaration point forward.
 - A **Top-Level Open** contributes to the top-level lexical layer's **Open Candidate Sets** while preserving ordered top-level value scope.
 
 ## Example dialogue
@@ -1009,19 +1013,19 @@ _Avoid_: module system, imports
 > **Domain expert:** "No — `bool_not` is an ordinary prelude function implemented with `if`."
 >
 > **Dev:** "Is `%bool_equal` a required intrinsic?"
-> **Domain expert:** "No — `Equal[Bool]` is an anonymous prelude operation value implemented with `if`."
+> **Domain expert:** "No — `Equal[Bool]` can be provided by a prelude **Open Binding** implemented with `if`."
 >
 > **Dev:** "Can `let open point : Point = Point::{ x: 1, y: 2 }` expose `x` and `y`?"
-> **Domain expert:** "Yes — an **Open Value Declaration** exposes its fields through the default-open **Preopen Namespace**."
+> **Domain expert:** "Yes — an **Open Binding** creates an **Open Exposure** from that declaration point forward."
 >
-> **Dev:** "Can `let open x : Int = 1` add something to preopen?"
-> **Domain expert:** "No — only struct values can be opened into the **Preopen Namespace**."
+> **Dev:** "Can `let open x : Int = 1` create an open exposure?"
+> **Domain expert:** "No — only struct values can be opened."
 >
-> **Dev:** "If two open values expose `x`, does one win?"
+> **Dev:** "If two open bindings expose `x`, does one win?"
 > **Domain expert:** "No — the visible values form an **Open Candidate Set** that must be disambiguated by use."
 >
 > **Dev:** "Does `let open point : Point = ...` create an `x(point)` accessor?"
-> **Domain expert:** "No — it exposes the concrete field value `x` from that open value."
+> **Domain expert:** "No — it exposes the concrete field value `x` from that open binding."
 >
 > **Dev:** "Does this design define module imports?"
 > **Domain expert:** "No — only the **Prelude** is in scope for now; module imports are a later design."
@@ -1032,8 +1036,8 @@ _Avoid_: module system, imports
 > **Dev:** "Is the prelude a module import?"
 > **Domain expert:** "No — the v1 **Prelude** is implementation-supplied Lane2 source checked before user code."
 >
-> **Dev:** "Does a user open value declaration affect definitions before it?"
-> **Domain expert:** "No — it extends the **Preopen Namespace** from its declaration point to the end of the top-level scope."
+> **Dev:** "Does a user open binding affect definitions before it?"
+> **Domain expert:** "No — it contributes to the top-level open layer only from its declaration point forward."
 
 ## Flagged ambiguities
 
