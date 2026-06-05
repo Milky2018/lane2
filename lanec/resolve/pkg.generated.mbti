@@ -207,3 +207,4 @@ pub impl @prettyprinter.Pretty for ResolvedVariantReference
 // Type aliases
 
 // Traits
+
