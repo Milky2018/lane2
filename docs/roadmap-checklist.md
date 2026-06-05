@@ -20,16 +20,24 @@ module tasks should live in issues or implementation notes.
 - [x] Support primitive type constants, nominal type applications, function
   types, forall types, kind metadata, substitution, and alpha-equivalence.
 - [x] Provide pretty printers and tests for symbols and checked types.
+- [x] Keep compiler identity and substitution internals behind public APIs
+  instead of exposing raw indices or backing arrays.
 
 ## 2. Name Resolution
 
-- [ ] Resolve source names into separated symbol identities while preserving
-  display names and origin spans for diagnostics.
+- [x] Collect top-level declarations, nominal members, parameters, and type
+  parameters into separated symbol identities while preserving display names
+  and origin spans.
+- [x] Provide an initial resolved IR pretty printer and tests based on resolved
+  declaration output.
+- [ ] Resolve source type references, value references, patterns, calls, field
+  access, and expression-local binders into symbol identities.
 - [ ] Resolve type names, value names, variants, field access, `open`, preopen,
   struct field forwarding, and operator aliases.
 - [ ] Reject ambiguous unqualified variants and conflicting open/preopen
   exposure.
-- [ ] Provide a resolved IR pretty printer and tests based on resolved output.
+- [ ] Extend resolved IR pretty tests to cover expression and pattern
+  resolution once those nodes carry symbols.
 
 ## 3. Typed Core ANF
 
