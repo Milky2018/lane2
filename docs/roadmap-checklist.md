@@ -34,8 +34,8 @@ module tasks should live in issues or implementation notes.
   patterns, function bodies, and expression-local binders into resolved IR.
 - [x] Resolve unqualified variant calls when exactly one visible variant
   matches, and preserve ambiguous candidates in resolved IR.
-- [x] Resolve direct `open` and anonymous top-level preopen fields for values
-  with explicit nominal struct type annotations.
+- [x] Resolve direct `open` and named open bindings for values with explicit
+  nominal struct type annotations.
 - [ ] Resolve field access into field symbol identities after enough type
   information is available.
 - [ ] Resolve struct field forwarding and operator aliases after checked field
@@ -43,7 +43,8 @@ module tasks should live in issues or implementation notes.
 - [x] Report diagnostics for unresolved types, unresolved values, unresolved
   qualified variants, ambiguous unqualified variants, and invalid `open`
   targets.
-- [x] Reject conflicting top-level `open` and preopen exposure.
+- [x] Preserve repeated open and preopen exposures as candidate sets for
+  use-site disambiguation.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
 
@@ -92,7 +93,8 @@ module tasks should live in issues or implementation notes.
 ## 7. Prelude And Conformance
 
 - [ ] Encode and check the v1 prelude as Lane2 source.
-- [ ] Populate the initial preopen namespace from anonymous top-level values.
+- [ ] Populate the initial preopen namespace from prelude-provided open
+  bindings.
 - [ ] Provide required intrinsic implementations through builtin runtime
   plugins.
 - [ ] Expand valid and invalid conformance fixtures under `spec/examples`.
