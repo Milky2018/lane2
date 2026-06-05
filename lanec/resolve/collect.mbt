@@ -20,6 +20,7 @@ priv struct Resolver {
 pub fn resolve_source_file(source : @syntax.SourceFile) -> ResolvedSourceFile {
   let resolver = Resolver::Resolver(SymbolRegistry())
   resolver.collect_top_level_headers(source)
+  resolver.collect_nominal_members(source)
   let declarations = source.declarations.map(fn(declaration) {
     declaration.resolve_top_level(resolver)
   })
@@ -63,6 +64,46 @@ fn Resolver::collect_top_level_headers(
         self.top_values.push({ name: declaration.name, symbol })
       }
       Let(_) | Open(_) => ()
+    }
+  }
+}
+
+///|
+fn Resolver::collect_nominal_members(
+  self : Resolver,
+  source : @syntax.SourceFile,
+) -> Unit {
+  for declaration in source.declarations {
+    match declaration {
+      Struct(declaration) => {
+        let owner = self.type_symbol(declaration.name)
+        let mut index = 0
+        for item in declaration.members {
+          match item {
+            Field(field) => {
+              self.registry.define_field(owner, field.name, index, field.loc)
+              |> ignore
+              index += 1
+            }
+            Open(_) => ()
+          }
+        }
+      }
+      Enum(declaration) => {
+        let owner = self.type_symbol(declaration.name)
+        for index = 0; index < declaration.variants.length(); index = index + 1 {
+          let variant = declaration.variants[index]
+          self.registry.define_variant(
+            owner,
+            variant.name,
+            index,
+            variant.payload.length(),
+            variant.loc,
+          )
+          |> ignore
+        }
+      }
+      Function(_) | Let(_) | Open(_) => ()
     }
   }
 }
@@ -144,7 +185,7 @@ fn @syntax.FieldDeclaration::resolve_field(
   owner : TypeSymbolId,
   index : Int,
 ) -> ResolvedFieldDeclaration {
-  let symbol = resolver.registry.define_field(owner, self.name, index, self.loc)
+  let symbol = resolver.registry.field_named(owner, self.name).unwrap()
   {
     symbol,
     name: self.name,
@@ -162,13 +203,7 @@ fn @syntax.EnumVariant::resolve_variant(
   owner : TypeSymbolId,
   index : Int,
 ) -> ResolvedEnumVariant {
-  let symbol = resolver.registry.define_variant(
-    owner,
-    self.name,
-    index,
-    self.payload.length(),
-    self.loc,
-  )
+  let symbol = resolver.registry.variant_named(owner, self.name).unwrap()
   {
     symbol,
     name: self.name,
@@ -386,13 +421,7 @@ fn @syntax.Expr::resolve_expr(
         loc~,
       )
     Call(callee~, arguments~, loc~) =>
-      Call(
-        callee=callee.resolve_expr(resolver, scope),
-        arguments=arguments.map(fn(argument) {
-          argument.resolve_expr(resolver, scope)
-        }),
-        loc~,
-      )
+      callee.resolve_call(resolver, scope, arguments, loc)
     Field(base~, name~, loc~) =>
       Field(base=base.resolve_expr(resolver, scope), name~, loc~)
     Unary(operator~, operand~, loc~) =>
@@ -408,6 +437,65 @@ fn @syntax.Expr::resolve_expr(
       Pipeline(
         left=left.resolve_expr(resolver, scope),
         right=right.resolve_expr(resolver, scope),
+        loc~,
+      )
+  }
+}
+
+///|
+fn @syntax.Expr::resolve_call(
+  self : @syntax.Expr,
+  resolver : Resolver,
+  scope : ResolveScope,
+  arguments : Array[@syntax.Expr],
+  loc : SourceSpan,
+) -> ResolvedExpr {
+  match self {
+    Var(name, ..) =>
+      match scope.value_reference(name) {
+        Symbol(_) as reference =>
+          Call(
+            callee=Var(name~, reference~, loc=self.loc()),
+            arguments=arguments.map(fn(argument) {
+              argument.resolve_expr(resolver, scope)
+            }),
+            loc~,
+          )
+        Unresolved(_) =>
+          match resolver.unqualified_variant_reference(name) {
+            Symbol(_) | Ambiguous(_) as reference =>
+              UnqualifiedVariant(
+                variant=name,
+                reference~,
+                arguments=arguments.map(fn(argument) {
+                  argument.resolve_expr(resolver, scope)
+                }),
+                loc~,
+              )
+            UnresolvedUnqualified(_) =>
+              Call(
+                callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
+                arguments=arguments.map(fn(argument) {
+                  argument.resolve_expr(resolver, scope)
+                }),
+                loc~,
+              )
+            Unresolved(..) =>
+              Call(
+                callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
+                arguments=arguments.map(fn(argument) {
+                  argument.resolve_expr(resolver, scope)
+                }),
+                loc~,
+              )
+          }
+      }
+    _ =>
+      Call(
+        callee=self.resolve_expr(resolver, scope),
+        arguments=arguments.map(fn(argument) {
+          argument.resolve_expr(resolver, scope)
+        }),
         loc~,
       )
   }
@@ -606,6 +694,19 @@ fn Resolver::variant_reference(
         None => Unresolved(type_name~, variant~)
       }
     None => Unresolved(type_name~, variant~)
+  }
+}
+
+///|
+fn Resolver::unqualified_variant_reference(
+  self : Resolver,
+  name : String,
+) -> ResolvedVariantReference {
+  let candidates = self.registry.variants_named(name)
+  match candidates.length() {
+    0 => UnresolvedUnqualified(name)
+    1 => Symbol(candidates[0])
+    _ => Ambiguous(name~, candidates~)
   }
 }
 

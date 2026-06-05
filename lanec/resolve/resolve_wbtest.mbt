@@ -83,3 +83,135 @@ test "collect top level declaration symbols" {
     ),
   )
 }
+
+///|
+test "resolve unqualified variant calls after nominal member collection" {
+  let file = expect_parse_ok(
+    (
+      #|fn wrap(value : Int) -> Option[Int] {
+      #|  some(value)
+      #|}
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 enum Option/1
+      #|    }
+      #|    type_parameters {
+      #|      tparam#0 A
+      #|    }
+      #|    values {
+      #|      value#0 top_function wrap
+      #|      value#1 parameter value
+      #|    }
+      #|    fields {}
+      #|    variants {
+      #|      variant#0 owner=type#0 none index=0 payloads=0
+      #|      variant#1 owner=type#0 some index=1 payloads=1
+      #|    }
+      #|  }
+      #|  declarations {
+      #|    fn value#0 wrap(value#1 value : Int) -> type#0 Option[Int] {
+      #|      variant#1 some(var value#1 value)
+      #|    }
+      #|    enum type#0 Option[tparam#0 A] {
+      #|      variant variant#0 none index=0 payloads=0
+      #|      variant variant#1 some index=1 payloads=1(tparam#0 A)
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "resolve ambiguous unqualified variant calls" {
+  let file = expect_parse_ok(
+    (
+      #|enum Left {
+      #|  same(Int)
+      #|}
+      #|enum Right {
+      #|  same(Int)
+      #|}
+      #|fn choose(value : Int) -> Int {
+      #|  same(value)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 enum Left/0
+      #|      type#1 enum Right/0
+      #|    }
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function choose
+      #|      value#1 parameter value
+      #|    }
+      #|    fields {}
+      #|    variants {
+      #|      variant#0 owner=type#0 same index=0 payloads=1
+      #|      variant#1 owner=type#1 same index=0 payloads=1
+      #|    }
+      #|  }
+      #|  declarations {
+      #|    enum type#0 Left {
+      #|      variant variant#0 same index=0 payloads=1(Int)
+      #|    }
+      #|    enum type#1 Right {
+      #|      variant variant#1 same index=0 payloads=1(Int)
+      #|    }
+      #|    fn value#0 choose(value#1 value : Int) -> Int {
+      #|      ?ambiguous same [variant#0, variant#1] same(var value#1 value)
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "keep unknown calls as unresolved value calls" {
+  let file = expect_parse_ok(
+    (
+      #|fn call_unknown(value : Int) -> Int {
+      #|  missing(value)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {}
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function call_unknown
+      #|      value#1 parameter value
+      #|    }
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    fn value#0 call_unknown(value#1 value : Int) -> Int {
+      #|      var ?missing missing(var value#1 value)
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}

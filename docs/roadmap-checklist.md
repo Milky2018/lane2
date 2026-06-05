@@ -32,13 +32,15 @@ module tasks should live in issues or implementation notes.
   declaration output.
 - [x] Resolve source type references, value references, qualified variants,
   patterns, function bodies, and expression-local binders into resolved IR.
+- [x] Resolve unqualified variant calls when exactly one visible variant
+  matches, and preserve ambiguous candidates in resolved IR.
 - [ ] Resolve field access into field symbol identities after enough type
   information is available.
 - [ ] Resolve type names, value names, variants, field access, `open`, preopen,
   struct field forwarding, and operator aliases.
 - [ ] Reject ambiguous unqualified variants and conflicting open/preopen
   exposure.
-- [ ] Extend resolved IR pretty tests to cover expression and pattern
+- [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
 
 ## 3. Typed Core ANF

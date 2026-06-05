@@ -224,6 +224,13 @@ pub impl @prettyprinter.Pretty for ResolvedVariantReference with fn pretty(
     Symbol(symbol) => symbol.pretty()
     Unresolved(type_name~, variant~) =>
       text("?") + text(type_name) + text("::") + text(variant)
+    UnresolvedUnqualified(name) => text("?") + text(name)
+    Ambiguous(name~, candidates~) =>
+      text("?ambiguous") +
+      space +
+      text(name) +
+      space +
+      @pretty.bracketed_inline(candidates.map(VariantSymbolId::pretty))
   }
 }
 
@@ -300,6 +307,11 @@ pub impl @prettyprinter.Pretty for ResolvedExpr with fn pretty(
       text(type_name) +
       type_arguments_doc(type_arguments) +
       text("::") +
+      text(variant) +
+      @pretty.parenthesized_inline(arguments.map(ResolvedExpr::pretty))
+    UnqualifiedVariant(variant~, reference~, arguments~, ..) =>
+      reference.pretty() +
+      space +
       text(variant) +
       @pretty.parenthesized_inline(arguments.map(ResolvedExpr::pretty))
     StructLiteral(type_name~, type_arguments~, fields~, ..) =>

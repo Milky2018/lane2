@@ -130,6 +130,8 @@ pub(all) enum ResolvedValueReference {
 pub(all) enum ResolvedVariantReference {
   Symbol(VariantSymbolId)
   Unresolved(type_name~ : String, variant~ : String)
+  UnresolvedUnqualified(String)
+  Ambiguous(name~ : String, candidates~ : Array[VariantSymbolId])
 } derive(Debug, Eq)
 
 ///|
@@ -178,6 +180,12 @@ pub(all) enum ResolvedExpr {
   QualifiedVariant(
     type_name~ : String,
     type_arguments~ : Array[ResolvedType],
+    variant~ : String,
+    reference~ : ResolvedVariantReference,
+    arguments~ : Array[ResolvedExpr],
+    loc~ : SourceSpan
+  )
+  UnqualifiedVariant(
     variant~ : String,
     reference~ : ResolvedVariantReference,
     arguments~ : Array[ResolvedExpr],

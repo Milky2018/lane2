@@ -141,3 +141,31 @@ pub fn SymbolRegistry::variant_named(
   }
   None
 }
+
+///|
+pub fn SymbolRegistry::variants_named(
+  self : SymbolRegistry,
+  name : String,
+) -> Array[VariantSymbolId] {
+  let variants = []
+  for metadata in self.variants {
+    if metadata.name == name {
+      variants.push(metadata.id)
+    }
+  }
+  variants
+}
+
+///|
+pub fn SymbolRegistry::field_named(
+  self : SymbolRegistry,
+  owner : TypeSymbolId,
+  name : String,
+) -> FieldSymbolId? {
+  for metadata in self.fields {
+    if metadata.owner == owner && metadata.name == name {
+      return Some(metadata.id)
+    }
+  }
+  None
+}
