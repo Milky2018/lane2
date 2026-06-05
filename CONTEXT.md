@@ -453,15 +453,19 @@ A struct declaration entry `open field` that forwards the opened field's exposed
 _Avoid_: inherited field, function-body open
 
 **Operator Alias**:
-A symbolic operator form that resolves to a named operation made available through primitive rules or an **Open Scope Extension**.
-_Avoid_: operator overloading, type-directed operator lookup
+A symbolic operator form that resolves through its corresponding ordinary operation name.
+_Avoid_: primitive operator, compiler-only operator
 
 **Recognized Operation**:
-A reserved operation struct and field pair, such as `Add::add` or `Equal::equal`, that may provide an operator alias when opened.
-_Avoid_: name-only operator, ad-hoc operator field
+A conventional operation name, such as `op_add` or `op_equal`, that may be referenced by an operator alias.
+_Avoid_: compiler-only operator method, ad-hoc operator field
+
+**Operation Name**:
+A normal value name with an `op_` prefix that may be targeted by a fixed operator alias mapping.
+_Avoid_: reserved identifier, user-defined operator token
 
 **Prelude Operation**:
-A prelude-defined nominal operation struct whose fields are ordinary values and whose recognized fields may be mapped to operators.
+A prelude-defined nominal operation struct whose fields use conventional operation names.
 _Avoid_: compiler-only operator magic, user-defined operator trait
 
 **Unsafe Builtin**:
@@ -484,21 +488,37 @@ _Avoid_: name-only builtin lookup, type-checked intrinsic
 An execution-target diagnostic result that reports interpreter or plugin failure without becoming a Lane2 language-level exception.
 _Avoid_: catchable exception, panic
 
+**Ambiguous Candidate Diagnostic**:
+A diagnostic that reports an unresolved choice among value candidates and lists source-level disambiguation paths.
+_Avoid_: symbol-id-only ambiguity, silent default choice
+
 **Required Intrinsic**:
 An intrinsic name that every conforming Lane2/Core v1 implementation must provide for portable programs.
 _Avoid_: placeholder builtin, implementation-only primitive
 
 **Preopen Namespace**:
-A default-open namespace populated by anonymous top-level values.
-_Avoid_: implicit instance search, operation-only prelude
+A default-open namespace populated by **Open Value Declarations**.
+_Avoid_: implicit instance search, operation-only prelude, anonymous namespace
 
 **Preopen Exposure**:
-Checked metadata describing which field values an anonymous top-level value contributes to the preopen namespace.
+Checked metadata describing which field values an **Open Value Declaration** contributes to the preopen namespace.
 _Avoid_: anonymous runtime binding, open syntax node
 
-**Anonymous Top-Level Value**:
-A top-level value declaration without a name whose fields are exposed through the **Preopen Namespace**.
-_Avoid_: discarded value, unnamed local binding
+**Open Value Declaration**:
+A named value declaration whose value is automatically opened into the following scope.
+_Avoid_: primitive declaration form, anonymous top-level value, discarded value
+
+**Open Candidate Set**:
+A same-name value lookup result formed from an ordinary value binding and field values exposed by open scope extensions.
+_Avoid_: unrestricted overload set, trait instance search
+
+**Plain Value Reference**:
+A value reference written with a leading dot that resolves only ordinary lexical value bindings and excludes open exposures.
+_Avoid_: field access, candidate selection syntax
+
+**Qualified Field Access**:
+A field access expression whose base value is resolved before selecting a field.
+_Avoid_: candidate-set field search, namespace lookup
 
 **Prelude**:
 The initial language environment that provides primitive types, primitive functions, and default preopened values before user definitions are checked.
@@ -625,6 +645,8 @@ _Avoid_: module system, imports
 - A local **Sequential Local Binding** may omit its type when local inference can synthesize its expression type.
 - A local named function is a **Sequential Local Function**.
 - Local value names may shadow earlier value names.
+- Ordinary value bindings in the same scope must have distinct names.
+- Function parameters, local lets, top-level values, local functions, and pattern binders are ordinary value bindings.
 - Lane2 v1 has four **Primitive Types**: `Int`, `Bool`, `String`, and `Unit`.
 - **Primitive Types** are core type constants with **Primitive Inhabitants**, not nominal enum or struct types.
 - `true`, `false`, integer literals, string literals, and `()` are matched as **Primitive Inhabitants**, not **Qualified Variant Patterns**.
@@ -641,20 +663,40 @@ _Avoid_: module system, imports
 - An **Open Scope Extension** makes struct field values available as unqualified names.
 - An **Open Scope Extension** extends from its declaration point to the end of the current lexical scope.
 - An **Open Scope Extension** is introduced from a visible value name, not an arbitrary expression.
+- An **Open Scope Extension** may use the inferred type of a previously checked binding.
+- A local **Open Scope Extension** may open a preceding local binding whose struct type was inferred.
+- An **Open Scope Extension** reports an error at its declaration point if its target is missing or is not a struct value.
 - A **Top-Level Open** exposes struct field values to later top-level definitions.
-- Local name resolution uses the nearest preceding local binding or **Open Scope Extension**, then falls back to the **Preopen Namespace**.
+- Top-level open scope extensions share the top-level lexical layer and may merge exposed fields into **Open Candidate Sets**.
+- Plain value bindings use lexical shadowing between scope layers.
+- Open scope extensions use lexical shadowing between scope layers.
+- Within one visible scope layer, open scope extensions may form an **Open Candidate Set**.
+- Plain value bindings do not shadow open scope extensions.
+- Open scope extensions do not shadow plain value bindings.
+- Multiple open scope extensions in the same lexical layer merge their exposed fields into the same **Open Candidate Set**.
+- An unqualified value reference combines the nearest plain binding candidate with the nearest open exposure candidates.
+- A **Plain Value Reference** resolves only ordinary lexical value bindings.
+- A **Plain Value Reference** still follows ordinary lexical shadowing among plain bindings.
+- **Qualified Field Access** requires its base expression to resolve to a unique value before field selection.
+- **Qualified Field Access** does not search through an unresolved **Open Candidate Set** for a base value.
 - **Struct Field Forwarding** affects what is exposed when a struct value is opened, but does not open that field inside ordinary function bodies.
+- Direct fields and forwarded fields from the same opened struct value contribute to the same open exposure layer.
+- Open exposure never reports conflicts at the open declaration point; ambiguity is reported only at use sites.
 - Operation laws are API conventions, not compiler-checked rules.
-- An **Operator Alias** such as `+` maps to a named operation only when that operation is available.
-- An **Operator Alias** does not resolve through an ordinary local function that merely has the corresponding name.
-- An **Operator Alias** can be provided by a **Recognized Operation**, not by any struct that happens to contain a same-named field.
-- A **Recognized Operation** is exposed as a **Prelude Operation** rather than as a trait or interface.
+- An **Operator Alias** such as `+` resolves as the corresponding ordinary operation name, such as `op_add`.
+- An **Operator Alias** may resolve through an ordinary local function with the corresponding operation name.
+- An **Operator Alias** participates in the same lexical lookup and candidate selection as the corresponding ordinary operation name.
+- A **Recognized Operation** requires only that the corresponding operation name resolves to a suitable value.
+- An **Operation Name** is an ordinary value name, not a reserved word.
+- Lane2 fixes mappings from built-in operator tokens to operation names, but does not allow user-defined operator tokens or mappings in v1.
+- A **Prelude Operation** is an API convention rather than a required source for operator resolution.
 - Lane2 v1 includes `open` and recognized mappings for prelude operations such as `Add`, `Sub`, `Mul`, `Div`, and `Equal`.
 - Equality operators are provided by an `Equal` prelude operation containing both `equal` and `not_equal`.
 - Ordering operators are provided by a `Compare` prelude operation that may forward an `Equal` operation.
-- Recognized operator mappings are `Add::add` for `+`, `Sub::sub` for `-`, `Mul::mul` for `*`, `Div::div` for `/`, `Rem::rem` for `%`, `Neg::neg` for unary `-`, `Equal::equal` for `==`, `Equal::not_equal` for `!=`, `Compare::less` for `<`, `Compare::less_eq` for `<=`, `Compare::greater` for `>`, `Compare::greater_eq` for `>=`, `And::and` for `&&`, `Or::or` for `||`, and `Not::not` for `!`.
-- `&&` and `||` are recognized **Short-Circuit Boolean Operations** whose right operand is thunked before calling `And::and` or `Or::or`.
+- Recognized operator mappings use operation names such as `op_add` for `+`, `op_sub` for `-`, `op_mul` for `*`, `op_div` for `/`, `op_rem` for `%`, `op_neg` for unary `-`, `op_equal` for `==`, `op_not_equal` for `!=`, `op_less` for `<`, `op_less_eq` for `<=`, `op_greater` for `>`, `op_greater_eq` for `>=`, `op_and` for `&&`, `op_or` for `||`, and `op_not` for `!`.
+- `&&` and `||` are recognized **Short-Circuit Boolean Operations** whose right operand is thunked before calling `op_and` or `op_or`.
 - In **Typed Core IR**, `&&` and `||` lower to **Thunked Operator Calls**, not direct `if` expressions.
+- Ordinary calls to `op_and` and `op_or` do not thunk their arguments.
 - Other operator aliases lower to **Resolved Operator Calls**.
 - Primitive operators are not special-cased; even primitive `+` and `==` require the relevant **Prelude Operation** to be opened.
 - An **Unsafe Builtin** is outside Lane2's safety guarantee and requires a direct expected type.
@@ -665,16 +707,37 @@ _Avoid_: module system, imports
 - A **Required Intrinsic** is a portable builtin name; other builtin names are implementation-defined unsafe intrinsics.
 - `%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not **Required Intrinsics**; the corresponding boolean prelude operations are implemented through ordinary `if`.
 - The **Preopen Namespace** is open by default.
-- An **Anonymous Top-Level Value** must have a struct type; its fields are exposed through the **Preopen Namespace**.
-- In **Typed Core IR**, an **Anonymous Top-Level Value** becomes checked value data plus **Preopen Exposure**, not a source-shaped anonymous binding.
-- **Preopen Namespace** name conflicts are errors; exposed fields do not override ordinary names or other exposed fields.
+- An **Open Value Declaration** must have a struct type; its fields are exposed through the **Preopen Namespace**.
+- An **Open Value Declaration** defines a normal named value and opens that value from the declaration point forward.
+- An **Open Value Declaration** is syntax sugar for a value declaration immediately followed by opening that value.
+- An **Open Value Declaration** may appear as a top-level value declaration or as a local item.
+- A top-level **Open Value Declaration** must include a type annotation, as all top-level value declarations do.
+- A local **Open Value Declaration** may omit its type annotation when the initializer determines a unique struct type.
+- A local **Open Value Declaration** cannot use later references to infer the opened value's type.
+- Top-level and local **Open Value Declarations** are not forward-visible or recursively open.
+- In **Typed Core IR**, an **Open Value Declaration** becomes checked value data plus **Preopen Exposure**.
+- **Preopen Exposure** is produced during type checking or elaboration, after the opened value's struct type is known.
+- Multiple opened field values with the same name may form an **Open Candidate Set**.
+- Open exposures in the same scope may repeat names; repeated names are handled at use sites through candidate selection.
+- An **Open Candidate Set** may contain any value, not only functions or operations.
+- An **Open Candidate Set** must be narrowed to one candidate by expected type, call shape, or another direct local typing constraint.
+- Candidate selection may use a direct expected type, including a function body's expected return type.
+- Candidate selection may use local expected types produced inside the same expression, such as branch result checking for `if` or `match`.
+- Candidate selection for a function call may use argument count and argument checking against each candidate's parameter types.
+- Generic candidates may be instantiated using the same direct local typing information.
+- If multiple instantiated candidates are applicable, the reference remains ambiguous.
+- Candidate selection does not use global constraint solving or later unrelated uses.
+- Lane2 exposes ambiguity instead of choosing a default candidate when more than one candidate remains applicable.
+- An **Ambiguous Candidate Diagnostic** should list writable disambiguation paths such as `.name` and `owner.field`.
+- If local typing cannot select exactly one candidate, the reference is ambiguous.
+- Open scope extensions and preopen exposures in the same scope layer add candidates; inner local scope layers shadow outer layers.
 - The **Preopen Namespace** exposes field values, not generated field accessors.
-- A **Prelude** may contribute anonymous top-level values to the **Preopen Namespace**.
+- A **Prelude** may contribute open value declarations to the **Preopen Namespace**.
 - Module import and export rules are outside the current design scope.
 - The v1 **Prelude** is implementation-supplied Lane2 source checked before user code.
 - Prelude-provided **Preopen Namespace** entries are visible throughout user code.
-- User-defined **Anonymous Top-Level Values** extend the **Preopen Namespace** from their declaration point to the end of the top-level scope.
-- A **Top-Level Open** belongs to the global layer and conflicts with ordinary top-level names or preopened names.
+- User-defined **Open Value Declarations** extend the **Preopen Namespace** from their declaration point to the end of the top-level scope.
+- A **Top-Level Open** contributes to the top-level lexical layer's **Open Candidate Sets** while preserving ordered top-level value scope.
 
 ## Example dialogue
 
@@ -883,13 +946,13 @@ _Avoid_: module system, imports
 > **Domain expert:** "No — v1 has no trait, typeclass, or interface constraints."
 >
 > **Dev:** "Does `a + b` search for an `Add` implementation by type?"
-> **Domain expert:** "No — an **Operator Alias** resolves through primitive rules or an explicit **Open Scope Extension**."
+> **Domain expert:** "No — an **Operator Alias** resolves through its corresponding ordinary operation name."
 >
 > **Dev:** "What is the scope of `open ops`?"
 > **Domain expert:** "It creates an **Open Scope Extension** from the declaration point to the end of the current lexical scope."
 >
-> **Dev:** "Can a top-level `open` override a preopened `add`?"
-> **Domain expert:** "No — a **Top-Level Open** belongs to the global layer and conflicts instead of overriding."
+> **Dev:** "Can a top-level `open` override a preopened `op_add`?"
+> **Domain expert:** "No — it adds another candidate to the **Open Candidate Set**."
 >
 > **Dev:** "Can `open constants` expose non-function fields?"
 > **Domain expert:** "Yes — an **Open Scope Extension** exposes struct field values, while only recognized operations provide operator aliases."
@@ -904,13 +967,13 @@ _Avoid_: module system, imports
 > **Domain expert:** "No — operation laws are API conventions."
 >
 > **Dev:** "If a block opens modular addition, does it override preopened integer addition?"
-> **Domain expert:** "Yes — local resolution uses the nearest preceding local source before falling back to the **Preopen Namespace**."
+> **Domain expert:** "Yes — a local **Open Scope Extension** shadows outer preopen exposures."
 >
-> **Dev:** "Does a local function named `add` make `+` available?"
-> **Domain expert:** "No — an **Operator Alias** requires an operation source, not just an ordinary function with the same name."
+> **Dev:** "Does a local function named `op_add` make `+` available?"
+> **Domain expert:** "Yes — an **Operator Alias** resolves through its corresponding ordinary operation name."
 >
-> **Dev:** "Does any opened struct with an `add` field enable `+`?"
-> **Domain expert:** "No — `+` comes from a **Recognized Operation** such as `Add::add`."
+> **Dev:** "Does any opened struct with an `op_add` field enable `+`?"
+> **Domain expert:** "Yes — `+` resolves through the ordinary name `op_add`."
 >
 > **Dev:** "Do `<` and `<=` come from separate operation structs?"
 > **Domain expert:** "No — ordering operators come from a `Compare` prelude operation."
@@ -925,10 +988,10 @@ _Avoid_: module system, imports
 > **Domain expert:** "No — v1 includes recognized **Prelude Operations** and `open` without adding traits or interfaces."
 >
 > **Dev:** "Can I write `1 + 2` without opening integer addition?"
-> **Domain expert:** "No — primitive operators are not special-cased; `+` requires an opened **Prelude Operation**."
+> **Domain expert:** "No — primitive operators are not special-cased; `+` resolves through `op_add`."
 >
 > **Dev:** "Does `a && b` skip evaluating `b` when `a` is false?"
-> **Domain expert:** "Yes — the right operand is passed as a thunk to `And::and`."
+> **Domain expert:** "Yes — the right operand is passed as a thunk to `op_and`."
 >
 > **Dev:** "Does `builtin` preserve Lane2's type safety guarantee?"
 > **Domain expert:** "No — **Unsafe Builtin** is an explicit escape hatch whose misuse can cause undefined behavior."
@@ -948,28 +1011,28 @@ _Avoid_: module system, imports
 > **Dev:** "Is `%bool_equal` a required intrinsic?"
 > **Domain expert:** "No — `Equal[Bool]` is an anonymous prelude operation value implemented with `if`."
 >
-> **Dev:** "Can an anonymous `Point` value expose `x` and `y`?"
-> **Domain expert:** "Yes — an **Anonymous Top-Level Value** exposes its fields through the default-open **Preopen Namespace**."
+> **Dev:** "Can `let open point : Point = Point::{ x: 1, y: 2 }` expose `x` and `y`?"
+> **Domain expert:** "Yes — an **Open Value Declaration** exposes its fields through the default-open **Preopen Namespace**."
 >
-> **Dev:** "Can `let : Int = 1` add something to preopen?"
+> **Dev:** "Can `let open x : Int = 1` add something to preopen?"
 > **Domain expert:** "No — only struct values can be opened into the **Preopen Namespace**."
 >
-> **Dev:** "If two anonymous values expose `x`, does one win?"
-> **Domain expert:** "No — **Preopen Namespace** conflicts are errors."
+> **Dev:** "If two open values expose `x`, does one win?"
+> **Domain expert:** "No — the visible values form an **Open Candidate Set** that must be disambiguated by use."
 >
-> **Dev:** "Does anonymous `Point` create an `x(point)` accessor?"
-> **Domain expert:** "No — it exposes the concrete field value `x` from that anonymous value."
+> **Dev:** "Does `let open point : Point = ...` create an `x(point)` accessor?"
+> **Domain expert:** "No — it exposes the concrete field value `x` from that open value."
 >
 > **Dev:** "Does this design define module imports?"
 > **Domain expert:** "No — only the **Prelude** is in scope for now; module imports are a later design."
 >
-> **Dev:** "Can two preopened values both expose `add`?"
-> **Domain expert:** "No — **Preopen Namespace** conflicts are errors."
+> **Dev:** "Can two preopened values both expose `op_add`?"
+> **Domain expert:** "Yes — they form an **Open Candidate Set** and each use must select a unique candidate."
 >
 > **Dev:** "Is the prelude a module import?"
 > **Domain expert:** "No — the v1 **Prelude** is implementation-supplied Lane2 source checked before user code."
 >
-> **Dev:** "Does a user anonymous top-level value affect definitions before it?"
+> **Dev:** "Does a user open value declaration affect definitions before it?"
 > **Domain expert:** "No — it extends the **Preopen Namespace** from its declaration point to the end of the top-level scope."
 
 ## Flagged ambiguities
