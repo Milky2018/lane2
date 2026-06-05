@@ -1,8 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "zhengyu/lane2/lexer"
+package "Milky2018/lane2/lexer"
 
 import {
   "moonbitlang/core/debug",
+  "Milky2018/lane2/basic",
 }
 
 // Values
@@ -13,11 +14,11 @@ pub fn tokens_from_string(String) -> LexResult
 // Types and methods
 pub(all) struct LexError {
   error : LexicalError
-  span : SourceSpan
+  span : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 
 pub struct LexResult {
-  tokens : Array[(Token, SourceSpan)]
+  tokens : Array[(Token, @basic.SourceSpan)]
   errors : Array[LexError]
 } derive(Eq, @debug.Debug)
 
@@ -28,15 +29,6 @@ pub(all) enum LexicalError {
   InvalidStringEscape(String)
   InvalidHexEscape(String)
   NonAsciiStringCharacter
-} derive(Eq, @debug.Debug)
-
-pub(all) struct SourceSpan {
-  start_offset : Int
-  end_offset : Int
-  start_line : Int
-  start_column : Int
-  end_line : Int
-  end_column : Int
 } derive(Eq, @debug.Debug)
 
 pub(all) enum Token {

@@ -1,4 +1,5 @@
 import {
+  "Milky2018/lane2/basic",
   "moonbitlang/core/hashmap",
   "moonbitlang/core/hashset",
 }

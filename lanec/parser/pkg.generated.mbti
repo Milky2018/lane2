@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/lane2/parser"
+
+import {
+  "moonbitlang/core/debug",
+  "Milky2018/lane2/basic",
+  "Milky2018/lane2/lexer",
+  "Milky2018/lane2/syntax",
+}
+
+// Values
+pub fn parse_string(String) -> ParseResult
+
+pub fn parse_tokens(Array[(@lexer.Token, @basic.SourceSpan)]) -> ParseResult
+
+// Errors
+
+// Types and methods
+pub(all) struct ParseError {
+  message : String
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+
+pub struct ParseResult {
+  source : @syntax.SourceFile?
+  lexical_errors : Array[@lexer.LexError]
+  parse_errors : Array[ParseError]
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

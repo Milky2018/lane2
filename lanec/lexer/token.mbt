@@ -1,14 +1,4 @@
 ///|
-pub(all) struct SourceSpan {
-  start_offset : Int
-  end_offset : Int
-  start_line : Int
-  start_column : Int
-  end_line : Int
-  end_column : Int
-} derive(Debug, Eq)
-
-///|
 pub(all) enum Token {
   CHAR(String)
   INT(String)
