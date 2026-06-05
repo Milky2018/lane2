@@ -16,6 +16,130 @@ _Avoid_: docs spec draft, compiler tests
 The `lanec/` directory containing the MoonBit compiler implementation.
 _Avoid_: toolchain, standard library
 
+**Type Object**:
+A checked type representation shared by semantic analysis, typed core, and execution contracts.
+_Avoid_: source type syntax, parser type node
+
+**Nominal Type Symbol**:
+A type-namespace symbol identity for a declared struct or enum type constructor.
+_Avoid_: type parameter, source type name
+
+**Type Parameter Identity**:
+A compiler identity for a type parameter introduced by a generic binder.
+_Avoid_: nominal type symbol, erased runtime type
+
+**Kind**:
+A classifier of type-level expressions, with v1 supporting only the `Type` kind.
+_Avoid_: runtime type, trait constraint
+
+**Execution Target**:
+A way to execute a checked Lane2 program, such as an interpreter or a bytecode virtual machine.
+_Avoid_: host target, MoonBit target, backend platform
+
+**Reference Interpreter**:
+The first execution target that directly evaluates typed core to define observable Lane2/Core behavior.
+_Avoid_: source interpreter, bytecode VM
+
+**Interpreter Entry Selection**:
+The rule that a caller chooses which checked value or function to evaluate rather than the interpreter hard-coding `main`.
+_Avoid_: built-in main, source entrypoint
+
+**Global Environment**:
+The interpreter environment containing initialized top-level and prelude values.
+_Avoid_: module namespace, source scope
+
+**Call Frame**:
+The interpreter environment for a single function call or local evaluation scope.
+_Avoid_: global scope, closure object
+
+**Tail-Call Optimization**:
+An execution optimization that reuses a call frame for a tail-position call.
+_Avoid_: required recursion semantics, function correctness
+
+**Closure Environment**:
+The captured interpreter environment stored with a first-class function value.
+_Avoid_: call frame, lambda-lifted parameter list
+
+**Syntax AST**:
+The source-shaped tree produced from Lane2 concrete syntax.
+_Avoid_: typed tree, core IR
+
+**Resolved AST**:
+A source-shaped tree whose names, variants, operators, and open-scope references have been resolved.
+_Avoid_: parsed AST, typed core
+
+**Semantic Lowering**:
+The transformation from resolved source-shaped syntax into typed core representation.
+_Avoid_: parsing, bytecode generation
+
+**Symbol Identity**:
+A stable compiler identity for a resolved type, value, constructor, or local binding.
+_Avoid_: source spelling, de Bruijn-only identity
+
+**Separated Symbol Identity**:
+Distinct compiler identity types for different namespaces such as type, value, field, and variant symbols.
+_Avoid_: kind-tagged universal symbol id, string namespace
+
+**Owned Symbol Metadata**:
+Compiler metadata that records the nominal owner of a globally unique field or variant symbol.
+_Avoid_: locally indexed field only, ownerless constructor
+
+**Value Symbol**:
+A value-namespace symbol identity for top-level values, functions, parameters, local bindings, local functions, and pattern binders.
+_Avoid_: function-only id, parameter-only id
+
+**Origin Span**:
+A diagnostic annotation that links resolved or core IR back to source text.
+_Avoid_: semantic location, runtime value
+
+**Typed Core IR**:
+The typed intermediate representation that removes surface syntax sugar while preserving Lane2/Core semantics.
+_Avoid_: source AST, bytecode, VM instruction format
+
+**Typed Core Node**:
+A typed core expression or binding whose type is explicitly available after type checking.
+_Avoid_: re-inferred core node, untyped core expression
+
+**IR Pretty Printer**:
+A stable human-readable printer for an intermediate representation used in diagnostics and tests.
+_Avoid_: debug dump, unstable snapshot
+
+**Nominal Core Data**:
+Typed core data that retains its struct or enum constructor identity.
+_Avoid_: anonymous tuple, raw tag
+
+**Dedicated Data Constructor**:
+A typed core construction form for nominal struct or enum data that is not a first-class function value.
+_Avoid_: constructor function, curried constructor
+
+**Declaration-Order Struct Construction**:
+A typed core struct construction whose field values are ordered by the struct declaration.
+_Avoid_: source-order field construction, string-key record
+
+**Declaration-Order Struct Pattern**:
+A checked struct pattern whose field patterns are ordered by the struct declaration.
+_Avoid_: source-order struct pattern, partial record pattern
+
+**Resolved Variant Construction**:
+A typed core enum construction that references a variant by variant symbol identity and stores payloads in declaration order.
+_Avoid_: string variant lookup, raw tag only
+
+**Resolved Variant Pattern**:
+A checked enum pattern that references a variant by variant symbol identity and stores payload patterns in declaration order.
+_Avoid_: source variant spelling, raw tag pattern
+
+**Administrative Normal Form**:
+An intermediate representation shape where non-trivial computations are named so that evaluation order is explicit.
+_Avoid_: CPS, bytecode
+
+**Structured ANF**:
+An **Administrative Normal Form** that keeps structured conditionals and matches while requiring their inputs and calls to use atomic values.
+_Avoid_: CFG, basic blocks, jump IR
+
+**Core Atom**:
+A typed core ANF value form that can be referenced without introducing additional evaluation order.
+_Avoid_: arbitrary expression, computed RHS
+
 **Tools Project**:
 The `lane-tools/` directory containing developer tools built around the compiler.
 _Avoid_: compiler core, standard library
@@ -84,6 +208,26 @@ _Avoid_: curried function type, bare arrow chain
 A function type whose explicit type parameter list precedes its parenthesized value parameter list.
 _Avoid_: implicit forall, top-level-only polymorphic type
 
+**Forall Type**:
+A type object that binds type parameters over another type.
+_Avoid_: function-owned generic parameter list, implicit polymorphic wrapper
+
+**Type Application**:
+A typed core operation that instantiates a polymorphic value with type arguments.
+_Avoid_: runtime type argument, erased substitution only
+
+**First-Class Type Application**:
+A typed core type application whose callee is any polymorphic atom rather than only a known generic function symbol.
+_Avoid_: direct generic call only, runtime typecase
+
+**Type Lambda**:
+A typed core value form that abstracts over type parameters to create a polymorphic value.
+_Avoid_: generic ordinary lambda, runtime type function
+
+**Type Alpha-Equivalence**:
+The rule that types differing only by bound type parameter names are equal.
+_Avoid_: display-name equality, raw binder identity equality
+
 **Nominal Type**:
 A type whose identity comes from its declaration name rather than from having the same structure as another type.
 _Avoid_: structural type, shape-compatible type
@@ -103,6 +247,34 @@ _Avoid_: keyword-attached type parameters
 **Generic Type Application**:
 A use of a generic type name with explicit type arguments in brackets.
 _Avoid_: inferred type constructor use, angle-bracket type application
+
+**Runtime Typecase**:
+A runtime branch whose behavior depends on inspecting a type argument or type constructor.
+_Avoid_: ordinary pattern match, implicit reflection
+
+**Runtime Type Erasure**:
+The rule that generic type arguments used for checking are not represented in execution targets.
+_Avoid_: runtime generic metadata, implicit type evidence
+
+**Uniform Value Representation**:
+A runtime representation where values share one execution-level value model rather than being specialized by generic type arguments.
+_Avoid_: monomorphized value layout, type-specialized runtime
+
+**Interpreter Value**:
+A uniform runtime value used by the reference interpreter.
+_Avoid_: unboxed primitive special case, source AST node
+
+**First-Class Function Value**:
+A function that can be stored, passed, returned, and called as a value.
+_Avoid_: top-level-only function, method
+
+**First-Class Call**:
+A typed core call whose callee is any function-valued atom rather than only a known function symbol.
+_Avoid_: direct-call-only core, method dispatch
+
+**Closure Conversion**:
+A lowering step that makes captured lexical variables explicit in function values.
+_Avoid_: type checking, name resolution
 
 **Separated Namespaces**:
 The rule that type names and value names are resolved in distinct namespaces and may use the same spelling without conflict.
@@ -136,9 +308,29 @@ _Avoid_: rest pattern, spread pattern
 Reading a named field from a struct value with dot syntax.
 _Avoid_: field update, copy update
 
+**Resolved Field Access**:
+A typed core field access that references a field by field symbol identity.
+_Avoid_: string field lookup, raw field index only
+
 **Core Pattern**:
 A pattern form limited to wildcard, variable, literal, enum variant, or struct destructuring.
 _Avoid_: guard pattern, or-pattern, as-pattern
+
+**Checked Pattern**:
+A pattern in typed core whose constructors, binders, and covered type have been checked.
+_Avoid_: parse pattern, decision tree
+
+**Pattern Binder Uniqueness**:
+The rule that a single pattern cannot bind the same value name more than once.
+_Avoid_: implicit equality pattern, binder shadowing within a pattern
+
+**Pattern Matrix**:
+A semantic analysis model for match arms where rows are checked arms and columns are matched occurrences.
+_Avoid_: ad hoc arm scan, runtime matcher
+
+**Decision Tree**:
+A lowered representation of pattern matching as explicit tests and branches.
+_Avoid_: source pattern, checked pattern
 
 **Qualified Variant Pattern**:
 An enum variant pattern written with `Type::variant` so that bare identifiers remain variable bindings.
@@ -148,13 +340,21 @@ _Avoid_: unqualified variant pattern, capitalization-based pattern
 A match expression whose arms cover every possible value of the matched type.
 _Avoid_: best-effort match, runtime match failure
 
+**Useful Match Arm**:
+A match arm that can be selected by at least one value not already covered by earlier arms.
+_Avoid_: unreachable arm, redundant arm
+
+**First-Match Arm Order**:
+The rule that match arms are considered in source order and the first matching arm is selected.
+_Avoid_: unordered pattern set, priority-free match
+
 **Arrow Match Arm**:
 A match arm written as `pattern => expression`.
 _Avoid_: case arm, arrow statement
 
 **Pipeline Expression**:
 An expression `value |> call` that rewrites by passing `value` as the first argument to the call.
-_Avoid_: method call, placeholder pipeline
+_Avoid_: core pipeline node, method call, placeholder pipeline
 
 **Trailing Comma**:
 An optional final comma in a comma-separated syntax list.
@@ -204,6 +404,10 @@ _Avoid_: local recursive group, local forward declaration
 A built-in type provided by the language core: `Int`, `Bool`, `String`, or `Unit`.
 _Avoid_: standard library type, numeric tower
 
+**Primitive Inhabitant**:
+A value belonging to a primitive type, such as an integer literal, boolean literal, string literal, or `()`.
+_Avoid_: enum variant, nominal constructor
+
 **ASCII String**:
 An immutable sequence of ASCII bytes.
 _Avoid_: Unicode string, UTF-16 string
@@ -211,6 +415,14 @@ _Avoid_: Unicode string, UTF-16 string
 **Short-Circuit Boolean Operation**:
 A boolean operation whose right-hand expression is delayed as a zero-argument function and evaluated only by the operation implementation.
 _Avoid_: generic logical operation, ordinary strict binary function
+
+**Thunked Operator Call**:
+A typed core call to a resolved operation where a delayed operand is represented as a zero-argument function value.
+_Avoid_: direct if lowering, strict binary call
+
+**Resolved Operator Call**:
+A typed core call produced from an operator alias after resolving the operation value.
+_Avoid_: special operator node, primitive operator
 
 **Integer Undefined Behavior**:
 Undefined behavior caused by invalid `Int` arithmetic such as signed overflow or division by zero.
@@ -256,6 +468,22 @@ _Avoid_: compiler-only operator magic, user-defined operator trait
 An intrinsic expression whose meaning is supplied outside Lane2, whose type is taken from direct context, and whose incorrect use can produce undefined behavior.
 _Avoid_: typed intrinsic, safe primitive
 
+**Typed Unsafe Builtin**:
+A typed core representation of an unsafe builtin whose intrinsic name is uninterpreted but whose expected type is explicit.
+_Avoid_: intrinsic lookup during type checking, safe builtin
+
+**Builtin Runtime Plugin**:
+An execution-time extension that supplies behavior for unsafe builtin intrinsic names according to the compiler core contract.
+_Avoid_: compiler intrinsic table, hard-coded primitive
+
+**Builtin Dispatch Key**:
+The intrinsic name and typed core expected type used to select or call a builtin runtime plugin entry.
+_Avoid_: name-only builtin lookup, type-checked intrinsic
+
+**Runtime Error Report**:
+An execution-target diagnostic result that reports interpreter or plugin failure without becoming a Lane2 language-level exception.
+_Avoid_: catchable exception, panic
+
 **Required Intrinsic**:
 An intrinsic name that every conforming Lane2/Core v1 implementation must provide for portable programs.
 _Avoid_: placeholder builtin, implementation-only primitive
@@ -263,6 +491,10 @@ _Avoid_: placeholder builtin, implementation-only primitive
 **Preopen Namespace**:
 A default-open namespace populated by anonymous top-level values.
 _Avoid_: implicit instance search, operation-only prelude
+
+**Preopen Exposure**:
+Checked metadata describing which field values an anonymous top-level value contributes to the preopen namespace.
+_Avoid_: anonymous runtime binding, open syntax node
 
 **Anonymous Top-Level Value**:
 A top-level value declaration without a name whose fields are exposed through the **Preopen Namespace**.
@@ -276,6 +508,32 @@ _Avoid_: module system, imports
 
 - The **Pure Core** excludes observable effects.
 - An **Algebraic Effect** is the planned boundary for effectful behavior outside the **Pure Core**.
+- **Type Objects** are distinct from source type syntax.
+- **Nominal Type Symbols** and **Type Parameter Identities** are distinct.
+- Every **Type Parameter Identity** has a **Kind**; v1 supports only `Type`.
+- A **Syntax AST** is resolved into a **Resolved AST** before type checking.
+- A **Resolved AST** attaches **Symbol Identity** to resolved names while preserving source names for diagnostics.
+- Lane2 compiler IR uses **Separated Symbol Identity**.
+- Field and variant identities use **Owned Symbol Metadata**.
+- Value references use **Value Symbols**.
+- A **Resolved AST** is checked and simplified into **Typed Core IR**.
+- Every compiler IR layer has an **IR Pretty Printer**.
+- **Typed Core IR** uses **Symbol Identity** for references.
+- Expressions and bindings in **Typed Core IR** are **Typed Core Nodes**.
+- **Typed Core IR** may carry **Origin Spans** for diagnostics, but spans do not affect semantics.
+- **Semantic Lowering** removes **Open Scope Extensions**, **Preopen Namespace** lookups, and **Operator Aliases** from **Typed Core IR**.
+- **Typed Core IR** uses **Administrative Normal Form**.
+- **Typed Core IR** uses **Structured ANF**, not basic blocks.
+- **Core Atoms** may include function values and **Type Lambdas**.
+- **Typed Core IR** represents structs and enums as **Nominal Core Data**.
+- **Nominal Core Data** is introduced through **Dedicated Data Constructors**.
+- Struct values in **Typed Core IR** use **Declaration-Order Struct Construction**.
+- Enum values in **Typed Core IR** use **Resolved Variant Construction**.
+- The first **Execution Target** is the **Reference Interpreter** for **Typed Core IR**.
+- The **Reference Interpreter** uses **Interpreter Entry Selection** over a whole typed core program.
+- The **Reference Interpreter** separates the **Global Environment**, **Call Frame**, and **Closure Environment**.
+- Lane2 v1 does not require **Tail-Call Optimization**.
+- An **Execution Target** consumes checked compiler output rather than raw source syntax.
 - A Lane2 source file contains **Top-Level Definitions**, not an executable entrypoint.
 - An **Immutable Value Definition** is a kind of **Top-Level Definition**.
 - A top-level **Immutable Value Definition** must include an explicit type annotation.
@@ -293,7 +551,19 @@ _Avoid_: module system, imports
 - A function literal without an expected type must provide explicit parameter types.
 - A generic function literal without an expected type must provide both explicit type parameters and explicit value parameter types.
 - A polymorphic function value uses **Generic Function Type** syntax such as `[A](A) -> A`.
+- **Generic Function Type** syntax elaborates to a **Forall Type** over a non-generic function type.
+- **Forall Types** use **Type Alpha-Equivalence** for equality.
+- **Typed Core IR** preserves **Type Application** before **Runtime Type Erasure**.
+- **Typed Core IR** uses **First-Class Type Application**.
+- A **Generic Function Literal** elaborates to a **Type Lambda** over an ordinary function value.
+- Lane2 v1 has no **Runtime Typecase**.
+- Generic type arguments use **Runtime Type Erasure** before execution.
+- Execution targets use **Uniform Value Representation** for generic code.
+- The **Reference Interpreter** evaluates to **Interpreter Values**.
 - Lane2 functions are **Uncurried Functions**.
+- Lane2 has **First-Class Function Values**.
+- **Typed Core IR** uses **First-Class Calls**.
+- **Closure Conversion** happens after **Typed Core IR**.
 - Lane2 function types use **Parameter-List Function Type** syntax.
 - **Enum Type** and **Struct Type** declarations create **Nominal Types**.
 - A generic struct or enum uses **Generic Type Definition** syntax such as `struct Box[A]`.
@@ -309,23 +579,42 @@ _Avoid_: module system, imports
 - A **Struct Type** value is constructed with a **Qualified Struct Literal**.
 - `Type::member` syntax resolves `Type` in the type namespace.
 - A **Struct Type** supports **Field Access** but not field update syntax.
+- **Typed Core IR** represents **Field Access** as **Resolved Field Access**.
 - A **Qualified Struct Literal** supports **Struct Field Punning** but not spread, update, or default fields.
 - Struct patterns support **Struct Pattern Punning** and explicit field renaming, but not rest or spread.
 - Struct patterns must list all fields of the matched struct.
+- **Typed Core IR** represents struct patterns as **Declaration-Order Struct Patterns**.
 - Struct fields have no visibility modifier in v1 and are accessible wherever the struct value is visible.
 - Pattern matching in v1 uses **Core Patterns**.
+- **Core Patterns** include **Primitive Inhabitants** as literal patterns.
+- `Int` and `String` literal patterns require a wildcard or binding fallback for an **Exhaustive Match**.
+- `Bool` and `Unit` literal patterns can be exhaustive by covering all primitive inhabitants.
 - Enum variants in patterns use **Qualified Variant Pattern** syntax.
 - A payloadless **Qualified Variant Pattern** is written without parentheses.
+- **Typed Core IR** represents enum patterns as **Resolved Variant Patterns**.
 - A match expression must be an **Exhaustive Match**.
+- **Typed Core IR** represents match arms with **Checked Patterns** rather than a **Decision Tree**.
+- Semantic analysis uses a **Pattern Matrix** for match exhaustiveness and usefulness checking.
+- Every match arm must be a **Useful Match Arm**.
+- A wildcard or binding match arm makes later arms for the same remaining space unreachable.
+- Repeated literal or variant coverage makes later duplicate arms unreachable.
+- Match arm usefulness is checked over nested patterns, not only top-level patterns.
+- **Pattern Binder Uniqueness** is required.
+- Pattern binders may shadow outer value names.
+- A pattern binder is scoped only over its match arm body.
+- Match evaluation uses **First-Match Arm Order**.
+- **Decision Trees** are a lowered execution model for pattern matching, not the typed core representation.
 - Match expressions use **Arrow Match Arms**.
 - Pattern matching is expressed with `match`; v1 has no `is` pattern expression.
 - Lane2 supports **Pipeline Expressions** but not method calls.
 - A **Pipeline Expression** requires a call or function literal on its right-hand side.
+- **Pipeline Expressions** do not appear in **Typed Core IR**.
 - Comma-separated lists allow a **Trailing Comma**.
 - Lane2 uses **MoonBit-Like Syntax** without mutation or assignment.
 - Lane2 uses **Type Annotation Spacing** for type annotations; struct literal field assignment remains `field: expression`.
 - Lane2 uses a **Keyword-Delimited Top Level**.
 - Lane2 has **Conditional Expressions**, not statement-only conditionals.
+- A **Conditional Expression** requires a `Bool` condition; Lane2 has no truthiness conversion.
 - A **Block Expression** may contain local value and function bindings, but not local type definitions.
 - A **Block Expression** has local items followed by exactly one final expression, not multiple expression statements or an implicit unit result.
 - `open` is a local item and must appear before the final expression in a **Block Expression**.
@@ -337,6 +626,8 @@ _Avoid_: module system, imports
 - A local named function is a **Sequential Local Function**.
 - Local value names may shadow earlier value names.
 - Lane2 v1 has four **Primitive Types**: `Int`, `Bool`, `String`, and `Unit`.
+- **Primitive Types** are core type constants with **Primitive Inhabitants**, not nominal enum or struct types.
+- `true`, `false`, integer literals, string literals, and `()` are matched as **Primitive Inhabitants**, not **Qualified Variant Patterns**.
 - `String` is an **ASCII String** in v1.
 - `Bool` has only `true` and `false`, and `&&` and `||` are **Short-Circuit Boolean Operations**.
 - `Int` is a signed 64-bit integer, and invalid integer arithmetic is **Integer Undefined Behavior**.
@@ -363,12 +654,19 @@ _Avoid_: module system, imports
 - Ordering operators are provided by a `Compare` prelude operation that may forward an `Equal` operation.
 - Recognized operator mappings are `Add::add` for `+`, `Sub::sub` for `-`, `Mul::mul` for `*`, `Div::div` for `/`, `Rem::rem` for `%`, `Neg::neg` for unary `-`, `Equal::equal` for `==`, `Equal::not_equal` for `!=`, `Compare::less` for `<`, `Compare::less_eq` for `<=`, `Compare::greater` for `>`, `Compare::greater_eq` for `>=`, `And::and` for `&&`, `Or::or` for `||`, and `Not::not` for `!`.
 - `&&` and `||` are recognized **Short-Circuit Boolean Operations** whose right operand is thunked before calling `And::and` or `Or::or`.
+- In **Typed Core IR**, `&&` and `||` lower to **Thunked Operator Calls**, not direct `if` expressions.
+- Other operator aliases lower to **Resolved Operator Calls**.
 - Primitive operators are not special-cased; even primitive `+` and `==` require the relevant **Prelude Operation** to be opened.
 - An **Unsafe Builtin** is outside Lane2's safety guarantee and requires a direct expected type.
+- **Typed Core IR** represents an **Unsafe Builtin** as a **Typed Unsafe Builtin**.
+- **Builtin Runtime Plugins** provide execution behavior for unsafe builtins while the **Compiler Project** defines the core contract.
+- A **Builtin Runtime Plugin** receives a **Builtin Dispatch Key**.
+- A **Builtin Runtime Plugin** may produce a **Runtime Error Report**, but builtin misuse remains outside Lane2's safety guarantee.
 - A **Required Intrinsic** is a portable builtin name; other builtin names are implementation-defined unsafe intrinsics.
 - `%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not **Required Intrinsics**; the corresponding boolean prelude operations are implemented through ordinary `if`.
 - The **Preopen Namespace** is open by default.
 - An **Anonymous Top-Level Value** must have a struct type; its fields are exposed through the **Preopen Namespace**.
+- In **Typed Core IR**, an **Anonymous Top-Level Value** becomes checked value data plus **Preopen Exposure**, not a source-shaped anonymous binding.
 - **Preopen Namespace** name conflicts are errors; exposed fields do not override ordinary names or other exposed fields.
 - The **Preopen Namespace** exposes field values, not generated field accessors.
 - A **Prelude** may contribute anonymous top-level values to the **Preopen Namespace**.
