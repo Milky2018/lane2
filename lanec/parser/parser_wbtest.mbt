@@ -125,14 +125,7 @@ test "parse rejects equals function body syntax" {
       parse_error_messages("fn add(a : Int, b : Int) -> Int = a + b"),
     ),
     content=(
-      #|[
-      #|  "Expected `{`.",
-      #|  "Expected expression.",
-      #|  "Expected `}`.",
-      #|  "Expected top-level declaration.",
-      #|  "Expected top-level declaration.",
-      #|  "Expected top-level declaration."
-      #|]
+      #|["Unexpected token."]
     ),
   )
 }
@@ -144,7 +137,7 @@ test "parse rejects empty enum variant payload syntax" {
       parse_error_messages("enum Option[A] { none() some(A) }"),
     ),
     content=(
-      #|["Expected at least one enum variant payload type."]
+      #|["Unexpected token."]
     ),
   )
 }
@@ -161,7 +154,7 @@ test "parse rejects empty qualified variant argument syntax" {
       ),
     ),
     content=(
-      #|["Expected at least one enum variant argument."]
+      #|["Unexpected token."]
     ),
   )
 }

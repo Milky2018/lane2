@@ -14,4 +14,9 @@ description = "A MoonBit implementation of the Lane2 programming language."
 
 import {
   "moonbit-community/prettyprinter@0.4.10",
+  "moonbitlang/yacc@0.7.13",
 }
+
+options(
+  "bin-deps": { "moonbitlang/yacc": "0.7.13" },
+)
