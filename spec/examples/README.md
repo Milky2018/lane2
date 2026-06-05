@@ -7,6 +7,5 @@ type checker, and AST interpreter.
 - `invalid/*.lane` should be rejected for the reason stated in the leading
   comment.
 
-The examples assume the v1 prelude described in `docs/prelude-v1.md` is loaded
-before user source.
-
+The examples assume the v1 prelude described in `../../docs/prelude-v1.md` is
+loaded before user source.
