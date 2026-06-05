@@ -1,0 +1,81 @@
+///|
+pub(all) struct SourceSpan {
+  start_offset : Int
+  end_offset : Int
+  start_line : Int
+  start_column : Int
+  end_line : Int
+  end_column : Int
+} derive(Debug, Eq)
+
+///|
+pub(all) enum Token {
+  CHAR(String)
+  INT(String)
+  STRING(String)
+  IDENT(String)
+  RESERVED(String)
+  EOF
+  FALSE
+  TRUE
+  STRUCT
+  ENUM
+  FN
+  LET
+  OPEN
+  IF
+  ELSE
+  MATCH
+  BUILTIN
+  PLUS
+  MINUS
+  STAR
+  SLASH
+  PERCENT
+  EQEQ
+  BANGEQ
+  LT
+  LTEQ
+  GT
+  GTEQ
+  AMPAMP
+  BARBAR
+  BANG
+  PIPE
+  LPAREN
+  RPAREN
+  LBRACE
+  RBRACE
+  LBRACKET
+  RBRACKET
+  COMMA
+  DOT
+  COLON
+  COLONCOLON
+  THIN_ARROW
+  FAT_ARROW
+  EQUAL
+  UNDERSCORE
+} derive(Debug, Eq)
+
+///|
+pub(all) enum LexicalError {
+  IllegalCharacter(String)
+  UnterminatedBlockComment
+  UnterminatedString
+  InvalidStringEscape(String)
+  InvalidHexEscape(String)
+  NonAsciiStringCharacter
+} derive(Debug, Eq)
+
+///|
+pub(all) struct LexError {
+  error : LexicalError
+  span : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub struct LexResult {
+  tokens : Array[(Token, SourceSpan)]
+  errors : Array[LexError]
+} derive(Debug, Eq)
