@@ -133,6 +133,29 @@ test "resolve unqualified variant calls after nominal member collection" {
 }
 
 ///|
+test "report unresolved type and qualified variant diagnostics" {
+  let file = expect_parse_ok(
+    (
+      #|enum Option {
+      #|  none
+      #|}
+      #|fn bad(value : Missing) -> Int {
+      #|  Option::some(0)
+      #|}
+    ),
+  )
+  let result = resolve_source_file_result(file)
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="unresolved_type Missing",
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[1]),
+    content="unresolved_variant Option::some",
+  )
+}
+
+///|
 test "resolve ambiguous unqualified variant calls" {
   let file = expect_parse_ok(
     (
@@ -181,6 +204,11 @@ test "resolve ambiguous unqualified variant calls" {
       #|}
     ),
   )
+  let result = resolve_source_file_result(file)
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="ambiguous_variant same [variant#0, variant#1]",
+  )
 }
 
 ///|
@@ -213,5 +241,10 @@ test "keep unknown calls as unresolved value calls" {
       #|  }
       #|}
     ),
+  )
+  let result = resolve_source_file_result(file)
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="unresolved_value missing",
   )
 }

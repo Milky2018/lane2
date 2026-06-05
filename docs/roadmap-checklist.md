@@ -38,8 +38,9 @@ module tasks should live in issues or implementation notes.
   information is available.
 - [ ] Resolve type names, value names, variants, field access, `open`, preopen,
   struct field forwarding, and operator aliases.
-- [ ] Reject ambiguous unqualified variants and conflicting open/preopen
-  exposure.
+- [x] Report diagnostics for unresolved types, unresolved values, unresolved
+  qualified variants, and ambiguous unqualified variants.
+- [ ] Reject conflicting open/preopen exposure.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
 

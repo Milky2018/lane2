@@ -13,9 +13,31 @@ import {
 // Values
 pub fn resolve_source_file(@syntax.SourceFile) -> ResolvedSourceFile
 
+pub fn resolve_source_file_result(@syntax.SourceFile) -> ResolveResult
+
 // Errors
 
 // Types and methods
+pub(all) struct ResolveDiagnostic {
+  kind : ResolveDiagnosticKind
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolveDiagnostic
+
+pub(all) enum ResolveDiagnosticKind {
+  UnresolvedType(String)
+  UnresolvedValue(String)
+  UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
+  AmbiguousUnqualifiedVariant(name~ : String, candidates~ : Array[@symbol.VariantSymbolId])
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolveDiagnosticKind
+
+pub(all) struct ResolveResult {
+  source : ResolvedSourceFile
+  diagnostics : Array[ResolveDiagnostic]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolveResult
+
 pub(all) struct ResolvedEnumDeclaration {
   symbol : @symbol.TypeSymbolId
   name : String

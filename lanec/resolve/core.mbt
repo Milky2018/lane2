@@ -6,6 +6,29 @@ pub(all) struct ResolvedSourceFile {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct ResolveResult {
+  source : ResolvedSourceFile
+  diagnostics : Array[ResolveDiagnostic]
+} derive(Debug, Eq)
+
+///|
+pub(all) struct ResolveDiagnostic {
+  kind : ResolveDiagnosticKind
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) enum ResolveDiagnosticKind {
+  UnresolvedType(String)
+  UnresolvedValue(String)
+  UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
+  AmbiguousUnqualifiedVariant(
+    name~ : String,
+    candidates~ : Array[VariantSymbolId]
+  )
+} derive(Debug, Eq)
+
+///|
 pub(all) enum ResolvedTopLevelDeclaration {
   Struct(ResolvedStructDeclaration)
   Enum(ResolvedEnumDeclaration)

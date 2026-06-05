@@ -14,22 +14,29 @@ priv struct ResolveScope {
 priv struct Resolver {
   registry : SymbolRegistry
   top_values : Array[ValueBinding]
+  diagnostics : Array[ResolveDiagnostic]
 }
 
 ///|
 pub fn resolve_source_file(source : @syntax.SourceFile) -> ResolvedSourceFile {
+  resolve_source_file_result(source).source
+}
+
+///|
+pub fn resolve_source_file_result(source : @syntax.SourceFile) -> ResolveResult {
   let resolver = Resolver::Resolver(SymbolRegistry())
   resolver.collect_top_level_headers(source)
   resolver.collect_nominal_members(source)
   let declarations = source.declarations.map(fn(declaration) {
     declaration.resolve_top_level(resolver)
   })
-  { symbols: resolver.registry, declarations, loc: source.loc }
+  let resolved = { symbols: resolver.registry, declarations, loc: source.loc }
+  { source: resolved, diagnostics: resolver.diagnostics }
 }
 
 ///|
 fn Resolver::Resolver(registry : SymbolRegistry) -> Resolver {
-  { registry, top_values: [] }
+  { registry, top_values: [], diagnostics: [] }
 }
 
 ///|
@@ -318,7 +325,10 @@ fn @syntax.Type::resolve_type(
               match resolver.registry.type_named(name) {
                 Some(symbol) =>
                   Nominal(symbol~, name~, arguments=resolved_arguments, loc~)
-                None => Unresolved(name~, arguments=resolved_arguments, loc~)
+                None => {
+                  resolver.report(UnresolvedType(name), loc)
+                  Unresolved(name~, arguments=resolved_arguments, loc~)
+                }
               }
           }
       }
@@ -352,7 +362,11 @@ fn @syntax.Expr::resolve_expr(
     StringLiteral(value, loc~) => StringLiteral(value, loc~)
     BoolLiteral(value, loc~) => BoolLiteral(value, loc~)
     UnitLiteral(loc~) => UnitLiteral(loc~)
-    Var(name, loc~) => Var(name~, reference=scope.value_reference(name), loc~)
+    Var(name, loc~) => {
+      let reference = scope.value_reference(name)
+      resolver.report_unresolved_value(reference, loc)
+      Var(name~, reference~, loc~)
+    }
     QualifiedVariant(type_name~, type_arguments~, variant~, arguments~, loc~) =>
       QualifiedVariant(
         type_name~,
@@ -360,7 +374,7 @@ fn @syntax.Expr::resolve_expr(
           type_.resolve_type(resolver, scope)
         }),
         variant~,
-        reference=resolver.variant_reference(type_name, variant),
+        reference=resolver.variant_reference(type_name, variant, loc),
         arguments=arguments.map(fn(argument) {
           argument.resolve_expr(resolver, scope)
         }),
@@ -462,7 +476,7 @@ fn @syntax.Expr::resolve_call(
             loc~,
           )
         Unresolved(_) =>
-          match resolver.unqualified_variant_reference(name) {
+          match resolver.unqualified_variant_reference(name, loc) {
             Symbol(_) | Ambiguous(_) as reference =>
               UnqualifiedVariant(
                 variant=name,
@@ -472,7 +486,8 @@ fn @syntax.Expr::resolve_call(
                 }),
                 loc~,
               )
-            UnresolvedUnqualified(_) =>
+            UnresolvedUnqualified(_) => {
+              resolver.report(UnresolvedValue(name), loc)
               Call(
                 callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
                 arguments=arguments.map(fn(argument) {
@@ -480,6 +495,7 @@ fn @syntax.Expr::resolve_call(
                 }),
                 loc~,
               )
+            }
             Unresolved(..) =>
               Call(
                 callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
@@ -584,7 +600,7 @@ fn @syntax.Pattern::resolve_pattern(
       QualifiedVariant(
         type_name~,
         variant~,
-        reference=resolver.variant_reference(type_name, variant),
+        reference=resolver.variant_reference(type_name, variant, loc),
         arguments=arguments.map(fn(argument) {
           argument.resolve_pattern(resolver, scope)
         }),
@@ -686,14 +702,21 @@ fn Resolver::variant_reference(
   self : Resolver,
   type_name : String,
   variant : String,
+  loc : SourceSpan,
 ) -> ResolvedVariantReference {
   match self.registry.type_named(type_name) {
     Some(owner) =>
       match self.registry.variant_named(owner, variant) {
         Some(symbol) => Symbol(symbol)
-        None => Unresolved(type_name~, variant~)
+        None => {
+          resolver_report_qualified_variant(self, type_name, variant, loc)
+          Unresolved(type_name~, variant~)
+        }
       }
-    None => Unresolved(type_name~, variant~)
+    None => {
+      resolver_report_qualified_variant(self, type_name, variant, loc)
+      Unresolved(type_name~, variant~)
+    }
   }
 }
 
@@ -701,13 +724,48 @@ fn Resolver::variant_reference(
 fn Resolver::unqualified_variant_reference(
   self : Resolver,
   name : String,
+  loc : SourceSpan,
 ) -> ResolvedVariantReference {
   let candidates = self.registry.variants_named(name)
   match candidates.length() {
     0 => UnresolvedUnqualified(name)
     1 => Symbol(candidates[0])
-    _ => Ambiguous(name~, candidates~)
+    _ => {
+      self.report(AmbiguousUnqualifiedVariant(name~, candidates~), loc)
+      Ambiguous(name~, candidates~)
+    }
   }
+}
+
+///|
+fn Resolver::report(
+  self : Resolver,
+  kind : ResolveDiagnosticKind,
+  loc : SourceSpan,
+) -> Unit {
+  self.diagnostics.push({ kind, loc })
+}
+
+///|
+fn Resolver::report_unresolved_value(
+  self : Resolver,
+  reference : ResolvedValueReference,
+  loc : SourceSpan,
+) -> Unit {
+  match reference {
+    Symbol(_) => ()
+    Unresolved(name) => self.report(UnresolvedValue(name), loc)
+  }
+}
+
+///|
+fn resolver_report_qualified_variant(
+  resolver : Resolver,
+  type_name : String,
+  variant : String,
+  loc : SourceSpan,
+) -> Unit {
+  resolver.report(UnresolvedQualifiedVariant(type_name~, variant~), loc)
 }
 
 ///|

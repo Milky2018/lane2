@@ -27,6 +27,50 @@ pub impl @prettyprinter.Pretty for ResolvedTopLevelDeclaration with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for ResolveResult with fn pretty(
+  result : ResolveResult,
+) {
+  text("resolve_result") +
+  space +
+  @pretty.braced_block([
+    result.source.pretty(),
+    @pretty.section(
+      "diagnostics",
+      result.diagnostics.map(ResolveDiagnostic::pretty),
+    ),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolveDiagnostic with fn pretty(
+  diagnostic : ResolveDiagnostic,
+) {
+  diagnostic.kind.pretty()
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolveDiagnosticKind with fn pretty(
+  kind : ResolveDiagnosticKind,
+) {
+  match kind {
+    UnresolvedType(name) => text("unresolved_type") + space + text(name)
+    UnresolvedValue(name) => text("unresolved_value") + space + text(name)
+    UnresolvedQualifiedVariant(type_name~, variant~) =>
+      text("unresolved_variant") +
+      space +
+      text(type_name) +
+      text("::") +
+      text(variant)
+    AmbiguousUnqualifiedVariant(name~, candidates~) =>
+      text("ambiguous_variant") +
+      space +
+      text(name) +
+      space +
+      @pretty.bracketed_inline(candidates.map(VariantSymbolId::pretty))
+  }
+}
+
+///|
 pub impl @prettyprinter.Pretty for ResolvedStructDeclaration with fn pretty(
   declaration : ResolvedStructDeclaration,
 ) {
