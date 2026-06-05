@@ -66,8 +66,15 @@ pub impl @prettyprinter.Pretty for ResolveDiagnosticKind with fn pretty(
       space +
       text(name) +
       space +
-      @pretty.bracketed_inline(candidates.map(VariantSymbolId::pretty))
+      @pretty.bracketed_inline(candidates.map(ResolveVariantCandidate::pretty))
   }
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolveVariantCandidate with fn pretty(
+  candidate : ResolveVariantCandidate,
+) {
+  text(candidate.owner) + text("::") + text(candidate.variant)
 }
 
 ///|

@@ -731,9 +731,32 @@ fn Resolver::unqualified_variant_reference(
     0 => UnresolvedUnqualified(name)
     1 => Symbol(candidates[0])
     _ => {
-      self.report(AmbiguousUnqualifiedVariant(name~, candidates~), loc)
+      self.report(
+        AmbiguousUnqualifiedVariant(
+          name~,
+          candidates=candidates.map(fn(candidate) {
+            self.variant_candidate(candidate)
+          }),
+        ),
+        loc,
+      )
       Ambiguous(name~, candidates~)
     }
+  }
+}
+
+///|
+fn Resolver::variant_candidate(
+  self : Resolver,
+  symbol : VariantSymbolId,
+) -> ResolveVariantCandidate {
+  match self.registry.variant_metadata(symbol) {
+    Some(variant) =>
+      match self.registry.type_metadata(variant.owner) {
+        Some(owner) => { owner: owner.name, variant: variant.name }
+        None => { owner: "<unknown>", variant: variant.name }
+      }
+    None => { owner: "<unknown>", variant: "<unknown>" }
   }
 }
 

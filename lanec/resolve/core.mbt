@@ -18,13 +18,19 @@ pub(all) struct ResolveDiagnostic {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct ResolveVariantCandidate {
+  owner : String
+  variant : String
+} derive(Debug, Eq)
+
+///|
 pub(all) enum ResolveDiagnosticKind {
   UnresolvedType(String)
   UnresolvedValue(String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
   AmbiguousUnqualifiedVariant(
     name~ : String,
-    candidates~ : Array[VariantSymbolId]
+    candidates~ : Array[ResolveVariantCandidate]
   )
 } derive(Debug, Eq)
 

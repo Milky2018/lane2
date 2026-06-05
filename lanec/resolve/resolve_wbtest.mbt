@@ -207,7 +207,7 @@ test "resolve ambiguous unqualified variant calls" {
   let result = resolve_source_file_result(file)
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="ambiguous_variant same [variant#0, variant#1]",
+    content="ambiguous_variant same [Left::same, Right::same]",
   )
 }
 

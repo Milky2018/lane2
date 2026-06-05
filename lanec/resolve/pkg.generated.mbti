@@ -28,7 +28,7 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedType(String)
   UnresolvedValue(String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
-  AmbiguousUnqualifiedVariant(name~ : String, candidates~ : Array[@symbol.VariantSymbolId])
+  AmbiguousUnqualifiedVariant(name~ : String, candidates~ : Array[ResolveVariantCandidate])
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolveDiagnosticKind
 
@@ -37,6 +37,12 @@ pub(all) struct ResolveResult {
   diagnostics : Array[ResolveDiagnostic]
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolveResult
+
+pub(all) struct ResolveVariantCandidate {
+  owner : String
+  variant : String
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolveVariantCandidate
 
 pub(all) struct ResolvedEnumDeclaration {
   symbol : @symbol.TypeSymbolId
