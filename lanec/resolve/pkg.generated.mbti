@@ -1,0 +1,113 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/lane2/resolve"
+
+import {
+  "Milky2018/lane2/basic",
+  "Milky2018/lane2/symbol",
+  "Milky2018/lane2/syntax",
+  "moonbit-community/prettyprinter",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn resolve_source_file(@syntax.SourceFile) -> ResolvedSourceFile
+
+// Errors
+
+// Types and methods
+pub(all) struct ResolvedEnumDeclaration {
+  symbol : @symbol.TypeSymbolId
+  name : String
+  type_parameters : Array[ResolvedTypeParameter]
+  variants : Array[ResolvedEnumVariant]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedEnumDeclaration
+
+pub(all) struct ResolvedEnumVariant {
+  symbol : @symbol.VariantSymbolId
+  name : String
+  index : Int
+  payload_count : Int
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedEnumVariant
+
+pub(all) struct ResolvedFieldDeclaration {
+  symbol : @symbol.FieldSymbolId
+  name : String
+  index : Int
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedFieldDeclaration
+
+pub(all) struct ResolvedFunctionDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String
+  type_parameters : Array[ResolvedTypeParameter]
+  parameters : Array[ResolvedValueParameter]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedFunctionDeclaration
+
+pub(all) struct ResolvedLetDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String?
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedLetDeclaration
+
+pub(all) struct ResolvedOpenDeclaration {
+  name : String
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedOpenDeclaration
+
+pub(all) struct ResolvedSourceFile {
+  symbols : @symbol.SymbolRegistry
+  declarations : Array[ResolvedTopLevelDeclaration]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedSourceFile
+
+pub(all) struct ResolvedStructDeclaration {
+  symbol : @symbol.TypeSymbolId
+  name : String
+  type_parameters : Array[ResolvedTypeParameter]
+  members : Array[ResolvedStructMember]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedStructDeclaration
+
+pub(all) enum ResolvedStructMember {
+  Field(ResolvedFieldDeclaration)
+  Open(ResolvedOpenDeclaration)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedStructMember
+
+pub(all) enum ResolvedTopLevelDeclaration {
+  Struct(ResolvedStructDeclaration)
+  Enum(ResolvedEnumDeclaration)
+  Function(ResolvedFunctionDeclaration)
+  Let(ResolvedLetDeclaration)
+  Open(ResolvedOpenDeclaration)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedTopLevelDeclaration
+
+pub(all) struct ResolvedTypeParameter {
+  symbol : @symbol.TypeParameterId
+  name : String
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedTypeParameter
+
+pub(all) struct ResolvedValueParameter {
+  symbol : @symbol.ValueSymbolId
+  name : String
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedValueParameter
+
+// Type aliases
+
+// Traits

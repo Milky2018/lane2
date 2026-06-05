@@ -127,36 +127,21 @@ pub impl @prettyprinter.Pretty for VariantSymbolMetadata with fn pretty(
 }
 
 ///|
-fn braced_block(docs : Array[Document]) -> Document {
-  if docs.is_empty() {
-    surround(char('{'), char('}'), empty)
-  } else {
-    surround(
-      char('{'),
-      hardline + char('}'),
-      nest(hardline + separate(hardline, docs)),
-    )
-  }
-}
-
-///|
-fn section(title : String, docs : Array[Document]) -> Document {
-  text(title) + space + braced_block(docs)
-}
-
-///|
 pub impl @prettyprinter.Pretty for SymbolRegistry with fn pretty(
   registry : SymbolRegistry,
 ) {
   let sections = [
-    section("types", registry.types.map(TypeSymbolMetadata::pretty)),
-    section(
+    @pretty.section("types", registry.types.map(TypeSymbolMetadata::pretty)),
+    @pretty.section(
       "type_parameters",
       registry.type_parameters.map(TypeParameterMetadata::pretty),
     ),
-    section("values", registry.values.map(ValueSymbolMetadata::pretty)),
-    section("fields", registry.fields.map(FieldSymbolMetadata::pretty)),
-    section("variants", registry.variants.map(VariantSymbolMetadata::pretty)),
+    @pretty.section("values", registry.values.map(ValueSymbolMetadata::pretty)),
+    @pretty.section("fields", registry.fields.map(FieldSymbolMetadata::pretty)),
+    @pretty.section(
+      "variants",
+      registry.variants.map(VariantSymbolMetadata::pretty),
+    ),
   ]
-  text("symbols") + space + braced_block(sections)
+  text("symbols") + space + @pretty.braced_block(sections)
 }

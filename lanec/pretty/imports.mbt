@@ -1,0 +1,14 @@
+///|
+using @prettyprinter {
+  type Document,
+  char,
+  empty,
+  group,
+  hardline,
+  line,
+  nest,
+  separate,
+  space,
+  surround,
+  text,
+}
