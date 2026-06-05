@@ -12,7 +12,7 @@ import {
 // Errors
 
 // Types and methods
-pub(all) struct FieldSymbolId {
+pub struct FieldSymbolId {
   index : Int
 } derive(Compare, Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for FieldSymbolId
@@ -32,7 +32,7 @@ pub(all) enum NominalTypeKind {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for NominalTypeKind
 
-pub(all) struct SymbolRegistry {
+pub struct SymbolRegistry {
   types : Array[TypeSymbolMetadata]
   type_parameters : Array[TypeParameterMetadata]
   values : Array[ValueSymbolMetadata]
@@ -52,7 +52,7 @@ pub fn SymbolRegistry::value_metadata(Self, ValueSymbolId) -> ValueSymbolMetadat
 pub fn SymbolRegistry::variant_metadata(Self, VariantSymbolId) -> VariantSymbolMetadata?
 pub impl @prettyprinter.Pretty for SymbolRegistry
 
-pub(all) struct TypeParameterId {
+pub struct TypeParameterId {
   index : Int
 } derive(Compare, Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for TypeParameterId
@@ -64,7 +64,7 @@ pub(all) struct TypeParameterMetadata {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for TypeParameterMetadata
 
-pub(all) struct TypeSymbolId {
+pub struct TypeSymbolId {
   index : Int
 } derive(Compare, Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for TypeSymbolId
@@ -78,7 +78,7 @@ pub(all) struct TypeSymbolMetadata {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for TypeSymbolMetadata
 
-pub(all) struct ValueSymbolId {
+pub struct ValueSymbolId {
   index : Int
 } derive(Compare, Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ValueSymbolId
@@ -101,7 +101,7 @@ pub(all) struct ValueSymbolMetadata {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ValueSymbolMetadata
 
-pub(all) struct VariantSymbolId {
+pub struct VariantSymbolId {
   index : Int
 } derive(Compare, Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for VariantSymbolId

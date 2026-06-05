@@ -45,7 +45,7 @@ pub(all) struct TypeParameter {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for TypeParameter
 
-pub(all) struct TypeSubstitution {
+pub struct TypeSubstitution {
   entries : Array[TypeSubstitutionEntry]
 } derive(Eq, @debug.Debug)
 pub fn TypeSubstitution::TypeSubstitution() -> Self
@@ -53,11 +53,10 @@ pub fn TypeSubstitution::insert(Self, @symbol.TypeParameterId, Type) -> Unit
 pub fn TypeSubstitution::single(@symbol.TypeParameterId, Type) -> Self
 pub impl @prettyprinter.Pretty for TypeSubstitution
 
-pub(all) struct TypeSubstitutionEntry {
+pub struct TypeSubstitutionEntry {
   parameter : @symbol.TypeParameterId
   replacement : Type
 } derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for TypeSubstitutionEntry
 
 // Type aliases
 

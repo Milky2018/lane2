@@ -1,22 +1,16 @@
 ///|
-fn type_id(index : Int) -> TypeSymbolId {
-  { index, }
-}
-
-///|
-fn tparam_id(index : Int) -> TypeParameterId {
-  { index, }
-}
-
-///|
-fn tparam(index : Int, name : String) -> TypeParameter {
-  { id: tparam_id(index), name, kind: Type }
+fn test_symbols() -> (TypeSymbolId, TypeParameter, TypeParameter) {
+  let registry = @symbol.SymbolRegistry::SymbolRegistry()
+  let loc = @basic.SourceSpan::dummy()
+  let option = registry.define_type("Option", Struct, 1, loc)
+  let a = registry.define_type_parameter("A", loc)
+  let b = registry.define_type_parameter("B", loc)
+  (option, { id: a, name: "A", kind: Type }, { id: b, name: "B", kind: Type })
 }
 
 ///|
 test "pretty prints checked type objects" {
-  let option = type_id(0)
-  let a = tparam(0, "A")
+  let (option, a, _) = test_symbols()
   let type_ = Forall(
     [a],
     Function(
@@ -34,8 +28,7 @@ test "pretty prints checked type objects" {
 
 ///|
 test "substitutes free type parameters but not forall-bound parameters" {
-  let a = tparam(0, "A")
-  let b = tparam(1, "B")
+  let (_, a, b) = test_symbols()
   let substitution = TypeSubstitution::single(a.id, Primitive(Int))
   let free = Function([Parameter(a.id)], Parameter(b.id))
   let bound = Forall([a], Function([Parameter(a.id)], Parameter(b.id)))
@@ -51,8 +44,7 @@ test "substitutes free type parameters but not forall-bound parameters" {
 
 ///|
 test "forall equality is alpha-equivalent" {
-  let a = tparam(0, "A")
-  let b = tparam(1, "B")
+  let (_, a, b) = test_symbols()
   let left = Forall([a], Function([Parameter(a.id)], Parameter(a.id)))
   let right = Forall([b], Function([Parameter(b.id)], Parameter(b.id)))
   let free_mismatch = Forall([a], Function([Parameter(a.id)], Parameter(b.id)))

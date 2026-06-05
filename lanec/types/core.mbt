@@ -28,13 +28,13 @@ pub(all) enum Type {
 } derive(Debug)
 
 ///|
-pub(all) struct TypeSubstitutionEntry {
+pub struct TypeSubstitutionEntry {
   parameter : TypeParameterId
   replacement : Type
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct TypeSubstitution {
+pub struct TypeSubstitution {
   entries : Array[TypeSubstitutionEntry]
 } derive(Debug, Eq)
 

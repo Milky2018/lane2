@@ -2,3 +2,7 @@ import {
   "Milky2018/lane2/symbol",
   "moonbit-community/prettyprinter",
 }
+
+import {
+  "Milky2018/lane2/basic",
+} for "wbtest"

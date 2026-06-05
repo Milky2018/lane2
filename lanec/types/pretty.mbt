@@ -77,7 +77,7 @@ pub impl @prettyprinter.Pretty for Type with fn pretty(type_ : Type) {
 }
 
 ///|
-pub impl @prettyprinter.Pretty for TypeSubstitutionEntry with fn pretty(
+impl @prettyprinter.Pretty for TypeSubstitutionEntry with fn pretty(
   entry : TypeSubstitutionEntry,
 ) {
   entry.parameter.pretty() +

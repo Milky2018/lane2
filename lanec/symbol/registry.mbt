@@ -1,5 +1,5 @@
 ///|
-pub(all) struct SymbolRegistry {
+pub struct SymbolRegistry {
   types : Array[TypeSymbolMetadata]
   type_parameters : Array[TypeParameterMetadata]
   values : Array[ValueSymbolMetadata]

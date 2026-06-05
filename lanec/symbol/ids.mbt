@@ -1,24 +1,24 @@
 ///|
-pub(all) struct TypeSymbolId {
+pub struct TypeSymbolId {
   index : Int
 } derive(Debug, Eq, Compare)
 
 ///|
-pub(all) struct TypeParameterId {
+pub struct TypeParameterId {
   index : Int
 } derive(Debug, Eq, Compare)
 
 ///|
-pub(all) struct ValueSymbolId {
+pub struct ValueSymbolId {
   index : Int
 } derive(Debug, Eq, Compare)
 
 ///|
-pub(all) struct FieldSymbolId {
+pub struct FieldSymbolId {
   index : Int
 } derive(Debug, Eq, Compare)
 
 ///|
-pub(all) struct VariantSymbolId {
+pub struct VariantSymbolId {
   index : Int
 } derive(Debug, Eq, Compare)
