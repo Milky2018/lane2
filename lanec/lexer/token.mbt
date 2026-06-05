@@ -1,6 +1,5 @@
 ///|
 pub(all) enum Token {
-  CHAR(String)
   INT(String)
   STRING(String)
   IDENT(String)

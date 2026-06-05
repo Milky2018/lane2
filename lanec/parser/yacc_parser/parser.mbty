@@ -7,7 +7,6 @@
 
 %start source_file
 
-%token<String> CHAR
 %token<String> INT
 %token<String> STRING
 %token<String> IDENT

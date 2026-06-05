@@ -1,6 +1,5 @@
 ///|
 pub(all) enum Token {
-  CHAR(String)
   INT(String)
   STRING(String)
   IDENT(String)
@@ -51,7 +50,6 @@ pub(all) enum Token {
 ///|
 pub fn Token::kind(self : Token) -> TokenKind {
   match self {
-    CHAR(_) => TK_CHAR
     INT(_) => TK_INT
     STRING(_) => TK_STRING
     IDENT(_) => TK_IDENT
@@ -102,7 +100,6 @@ pub fn Token::kind(self : Token) -> TokenKind {
 
 ///|
 pub(all) enum TokenKind {
-  TK_CHAR
   TK_INT
   TK_STRING
   TK_IDENT
@@ -154,7 +151,6 @@ pub(all) enum TokenKind {
 pub impl Show for TokenKind with fn output(self, logger) {
   logger.write_string(
     match self {
-      TK_CHAR => "CHAR"
       TK_INT => "INT"
       TK_STRING => "STRING"
       TK_IDENT => "IDENT"
@@ -207,7 +203,6 @@ pub impl Show for TokenKind with fn output(self, logger) {
 ///|
 pub impl Debug for TokenKind with fn to_repr(self) {
   match self {
-    TK_CHAR => to_repr("CHAR")
     TK_INT => to_repr("INT")
     TK_STRING => to_repr("STRING")
     TK_IDENT => to_repr("IDENT")
@@ -455,7 +450,6 @@ priv enum YYDecision {
 
 ///|
 priv enum YYSymbol {
-  T_CHAR
   T_INT
   T_STRING
   T_IDENT
@@ -570,9 +564,9 @@ fn init {
 }
 
 // file:///./parser.mbty
-// 70|    top_level_declarations EOF {
-// 71|    { declarations: $1, loc: span($sloc) }
-// 72|  }
+// 69|    top_level_declarations EOF {
+// 70|    { declarations: $1, loc: span($sloc) }
+// 71|  }
 
 ///|
 fn yy_action_0(
@@ -595,7 +589,7 @@ fn yy_action_0(
 }
 
 // file:///./parser.mbty
-// 77|    top_level_declarations top_level_declaration { comma_push($1, $2) }
+// 76|    top_level_declarations top_level_declaration { comma_push($1, $2) }
 
 ///|
 fn yy_action_1(
@@ -613,7 +607,7 @@ fn yy_action_1(
 }
 
 // file:///./parser.mbty
-// 81|    struct_declaration { Struct($1) }
+// 80|    struct_declaration { Struct($1) }
 
 ///|
 fn yy_action_2(
@@ -630,7 +624,7 @@ fn yy_action_2(
 }
 
 // file:///./parser.mbty
-// 82|    enum_declaration { Enum($1) }
+// 81|    enum_declaration { Enum($1) }
 
 ///|
 fn yy_action_3(
@@ -647,7 +641,7 @@ fn yy_action_3(
 }
 
 // file:///./parser.mbty
-// 83|    function_declaration { Function($1) }
+// 82|    function_declaration { Function($1) }
 
 ///|
 fn yy_action_4(
@@ -664,7 +658,7 @@ fn yy_action_4(
 }
 
 // file:///./parser.mbty
-// 84|    top_level_let_declaration { Let($1) }
+// 83|    top_level_let_declaration { Let($1) }
 
 ///|
 fn yy_action_5(
@@ -681,7 +675,7 @@ fn yy_action_5(
 }
 
 // file:///./parser.mbty
-// 85|    open_declaration { Open($1) }
+// 84|    open_declaration { Open($1) }
 
 ///|
 fn yy_action_6(
@@ -698,9 +692,9 @@ fn yy_action_6(
 }
 
 // file:///./parser.mbty
-// 89|    "struct" IDENT type_parameters "{" struct_members "}" {
-// 90|    { name: $2, type_parameters: $3, members: $5, loc: span($sloc) }
-// 91|  }
+// 88|    "struct" IDENT type_parameters "{" struct_members "}" {
+// 89|    { name: $2, type_parameters: $3, members: $5, loc: span($sloc) }
+// 90|  }
 
 ///|
 fn yy_action_7(
@@ -730,7 +724,7 @@ fn yy_action_7(
 }
 
 // file:///./parser.mbty
-// 96|    struct_members struct_member { comma_push($1, $2) }
+// 95|    struct_members struct_member { comma_push($1, $2) }
 
 ///|
 fn yy_action_8(
@@ -748,7 +742,7 @@ fn yy_action_8(
 }
 
 // file:///./parser.mbty
-// 100|    field_declaration { Field($1) }
+// 99|    field_declaration { Field($1) }
 
 ///|
 fn yy_action_9(
@@ -765,7 +759,7 @@ fn yy_action_9(
 }
 
 // file:///./parser.mbty
-// 101|    open_declaration { Open($1) }
+// 100|    open_declaration { Open($1) }
 
 ///|
 fn yy_action_10(
@@ -782,9 +776,9 @@ fn yy_action_10(
 }
 
 // file:///./parser.mbty
-// 105|    IDENT ":" type {
-// 106|    { name: $1, type_: $3, loc: span($sloc) }
-// 107|  }
+// 104|    IDENT ":" type {
+// 105|    { name: $1, type_: $3, loc: span($sloc) }
+// 106|  }
 
 ///|
 fn yy_action_11(
@@ -812,7 +806,7 @@ fn yy_action_11(
 }
 
 // file:///./parser.mbty
-// 95|    { [] }
+// 94|    { [] }
 
 ///|
 fn yy_action_12(
@@ -828,9 +822,9 @@ fn yy_action_12(
 }
 
 // file:///./parser.mbty
-// 111|    "enum" IDENT type_parameters "{" enum_variants "}" {
-// 112|    { name: $2, type_parameters: $3, variants: $5, loc: span($sloc) }
-// 113|  }
+// 110|    "enum" IDENT type_parameters "{" enum_variants "}" {
+// 111|    { name: $2, type_parameters: $3, variants: $5, loc: span($sloc) }
+// 112|  }
 
 ///|
 fn yy_action_13(
@@ -860,7 +854,7 @@ fn yy_action_13(
 }
 
 // file:///./parser.mbty
-// 118|    enum_variants enum_variant { comma_push($1, $2) }
+// 117|    enum_variants enum_variant { comma_push($1, $2) }
 
 ///|
 fn yy_action_14(
@@ -878,9 +872,9 @@ fn yy_action_14(
 }
 
 // file:///./parser.mbty
-// 125|    IDENT "(" non_empty_type_list ")" {
-// 126|    { name: $1, payload: $3, loc: span($sloc) }
-// 127|  }
+// 124|    IDENT "(" non_empty_type_list ")" {
+// 125|    { name: $1, payload: $3, loc: span($sloc) }
+// 126|  }
 
 ///|
 fn yy_action_15(
@@ -908,9 +902,9 @@ fn yy_action_15(
 }
 
 // file:///./parser.mbty
-// 122|    IDENT {
-// 123|    { name: $1, payload: [], loc: span($sloc) }
-// 124|  }
+// 121|    IDENT {
+// 122|    { name: $1, payload: [], loc: span($sloc) }
+// 123|  }
 
 ///|
 fn yy_action_16(
@@ -933,7 +927,7 @@ fn yy_action_16(
 }
 
 // file:///./parser.mbty
-// 117|    { [] }
+// 116|    { [] }
 
 ///|
 fn yy_action_17(
@@ -949,9 +943,9 @@ fn yy_action_17(
 }
 
 // file:///./parser.mbty
-// 160|    "let" IDENT ":" type "=" expression {
-// 161|    { name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
-// 162|  }
+// 159|    "let" IDENT ":" type "=" expression {
+// 160|    { name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
+// 161|  }
 
 ///|
 fn yy_action_18(
@@ -981,9 +975,9 @@ fn yy_action_18(
 }
 
 // file:///./parser.mbty
-// 163|    "let" ":" type "=" expression {
-// 164|    { name: None, type_annotation: Some($3), initializer: $5, loc: span($sloc) }
-// 165|  }
+// 162|    "let" ":" type "=" expression {
+// 163|    { name: None, type_annotation: Some($3), initializer: $5, loc: span($sloc) }
+// 164|  }
 
 ///|
 fn yy_action_19(
@@ -1012,16 +1006,16 @@ fn yy_action_19(
 }
 
 // file:///./parser.mbty
-// 131|    "fn" type_parameters IDENT parameters "->" type block_expression {
-// 132|    {
-// 133|      type_parameters: $2,
-// 134|      name: $3,
-// 135|      parameters: $4,
-// 136|      return_type: $6,
-// 137|      body: $7,
-// 138|      loc: span($sloc),
-// 139|    }
-// 140|  }
+// 130|    "fn" type_parameters IDENT parameters "->" type block_expression {
+// 131|    {
+// 132|      type_parameters: $2,
+// 133|      name: $3,
+// 134|      parameters: $4,
+// 135|      return_type: $6,
+// 136|      body: $7,
+// 137|      loc: span($sloc),
+// 138|    }
+// 139|  }
 
 ///|
 fn yy_action_20(
@@ -1055,7 +1049,7 @@ fn yy_action_20(
 }
 
 // file:///./parser.mbty
-// 144|    "(" ")" { [] }
+// 143|    "(" ")" { [] }
 
 ///|
 fn yy_action_21(
@@ -1071,7 +1065,7 @@ fn yy_action_21(
 }
 
 // file:///./parser.mbty
-// 145|    "(" non_empty_parameter_list ")" { $2 }
+// 144|    "(" non_empty_parameter_list ")" { $2 }
 
 ///|
 fn yy_action_22(
@@ -1088,7 +1082,7 @@ fn yy_action_22(
 }
 
 // file:///./parser.mbty
-// 150|    non_empty_parameter_list "," parameter { comma_push($1, $3) }
+// 149|    non_empty_parameter_list "," parameter { comma_push($1, $3) }
 
 ///|
 fn yy_action_23(
@@ -1106,7 +1100,7 @@ fn yy_action_23(
 }
 
 // file:///./parser.mbty
-// 149|    parameter { [ $1 ] }
+// 148|    parameter { [ $1 ] }
 
 ///|
 fn yy_action_24(
@@ -1123,9 +1117,9 @@ fn yy_action_24(
 }
 
 // file:///./parser.mbty
-// 154|    IDENT ":" type {
-// 155|    { name: $1, type_: $3, loc: span($sloc) }
-// 156|  }
+// 153|    IDENT ":" type {
+// 154|    { name: $1, type_: $3, loc: span($sloc) }
+// 155|  }
 
 ///|
 fn yy_action_25(
@@ -1153,7 +1147,7 @@ fn yy_action_25(
 }
 
 // file:///./parser.mbty
-// 187|    "[" non_empty_ident_list "]" { $2 }
+// 186|    "[" non_empty_ident_list "]" { $2 }
 
 ///|
 fn yy_action_26(
@@ -1170,9 +1164,9 @@ fn yy_action_26(
 }
 
 // file:///./parser.mbty
-// 169|    "let" IDENT local_type_annotation "=" expression {
-// 170|    { name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
-// 171|  }
+// 168|    "let" IDENT local_type_annotation "=" expression {
+// 169|    { name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
+// 170|  }
 
 ///|
 fn yy_action_27(
@@ -1202,9 +1196,9 @@ fn yy_action_27(
 }
 
 // file:///./parser.mbty
-// 354|    "{" local_items expression "}" {
-// 355|    Block(items=$2, result=$3, loc=span($sloc))
-// 356|  }
+// 353|    "{" local_items expression "}" {
+// 354|    Block(items=$2, result=$3, loc=span($sloc))
+// 355|  }
 
 ///|
 fn yy_action_28(
@@ -1232,7 +1226,7 @@ fn yy_action_28(
 }
 
 // file:///./parser.mbty
-// 361|    local_items local_item { comma_push($1, $2) }
+// 360|    local_items local_item { comma_push($1, $2) }
 
 ///|
 fn yy_action_29(
@@ -1250,7 +1244,7 @@ fn yy_action_29(
 }
 
 // file:///./parser.mbty
-// 365|    local_let_declaration { Let($1) }
+// 364|    local_let_declaration { Let($1) }
 
 ///|
 fn yy_action_30(
@@ -1267,7 +1261,7 @@ fn yy_action_30(
 }
 
 // file:///./parser.mbty
-// 366|    function_declaration { Function($1) }
+// 365|    function_declaration { Function($1) }
 
 ///|
 fn yy_action_31(
@@ -1284,7 +1278,7 @@ fn yy_action_31(
 }
 
 // file:///./parser.mbty
-// 367|    open_declaration { Open($1) }
+// 366|    open_declaration { Open($1) }
 
 ///|
 fn yy_action_32(
@@ -1301,9 +1295,9 @@ fn yy_action_32(
 }
 
 // file:///./parser.mbty
-// 377|    "match" expression "{" match_arms "}" {
-// 378|    Match(scrutinee=$2, arms=$4, loc=span($sloc))
-// 379|  }
+// 376|    "match" expression "{" match_arms "}" {
+// 377|    Match(scrutinee=$2, arms=$4, loc=span($sloc))
+// 378|  }
 
 ///|
 fn yy_action_33(
@@ -1331,7 +1325,7 @@ fn yy_action_33(
 }
 
 // file:///./parser.mbty
-// 384|    match_arms match_arm { comma_push($1, $2) }
+// 383|    match_arms match_arm { comma_push($1, $2) }
 
 ///|
 fn yy_action_34(
@@ -1349,9 +1343,9 @@ fn yy_action_34(
 }
 
 // file:///./parser.mbty
-// 388|    pattern "=>" expression {
-// 389|    { pattern: $1, body: $3, loc: span($sloc) }
-// 390|  }
+// 387|    pattern "=>" expression {
+// 388|    { pattern: $1, body: $3, loc: span($sloc) }
+// 389|  }
 
 ///|
 fn yy_action_35(
@@ -1379,9 +1373,9 @@ fn yy_action_35(
 }
 
 // file:///./parser.mbty
-// 433|    IDENT "::" "{" struct_pattern_fields "}" {
-// 434|    Struct(type_name=$1, fields=$4, loc=span($sloc))
-// 435|  }
+// 432|    IDENT "::" "{" struct_pattern_fields "}" {
+// 433|    Struct(type_name=$1, fields=$4, loc=span($sloc))
+// 434|  }
 
 ///|
 fn yy_action_36(
@@ -1409,7 +1403,7 @@ fn yy_action_36(
 }
 
 // file:///./parser.mbty
-// 464|    non_empty_struct_pattern_fields "," struct_pattern_field { comma_push($1, $3) }
+// 463|    non_empty_struct_pattern_fields "," struct_pattern_field { comma_push($1, $3) }
 
 ///|
 fn yy_action_37(
@@ -1427,7 +1421,7 @@ fn yy_action_37(
 }
 
 // file:///./parser.mbty
-// 465|    non_empty_struct_pattern_fields "," { $1 }
+// 464|    non_empty_struct_pattern_fields "," { $1 }
 
 ///|
 fn yy_action_38(
@@ -1444,7 +1438,7 @@ fn yy_action_38(
 }
 
 // file:///./parser.mbty
-// 459|    non_empty_struct_pattern_fields { $1 }
+// 458|    non_empty_struct_pattern_fields { $1 }
 
 ///|
 fn yy_action_39(
@@ -1461,7 +1455,7 @@ fn yy_action_39(
 }
 
 // file:///./parser.mbty
-// 463|    struct_pattern_field { [ $1 ] }
+// 462|    struct_pattern_field { [ $1 ] }
 
 ///|
 fn yy_action_40(
@@ -1478,9 +1472,9 @@ fn yy_action_40(
 }
 
 // file:///./parser.mbty
-// 472|    IDENT ":" pattern {
-// 473|    { name: $1, pattern: Some($3), loc: span($sloc) }
-// 474|  }
+// 471|    IDENT ":" pattern {
+// 472|    { name: $1, pattern: Some($3), loc: span($sloc) }
+// 473|  }
 
 ///|
 fn yy_action_41(
@@ -1508,9 +1502,9 @@ fn yy_action_41(
 }
 
 // file:///./parser.mbty
-// 469|    IDENT {
-// 470|    { name: $1, pattern: None, loc: span($sloc) }
-// 471|  }
+// 468|    IDENT {
+// 469|    { name: $1, pattern: None, loc: span($sloc) }
+// 470|  }
 
 ///|
 fn yy_action_42(
@@ -1537,7 +1531,7 @@ fn yy_action_42(
 }
 
 // file:///./parser.mbty
-// 458|    { [] }
+// 457|    { [] }
 
 ///|
 fn yy_action_43(
@@ -1553,9 +1547,9 @@ fn yy_action_43(
 }
 
 // file:///./parser.mbty
-// 436|    IDENT "::" IDENT pattern_arguments {
-// 437|    QualifiedVariant(type_name=$1, variant=$3, arguments=$4, loc=span($sloc))
-// 438|  }
+// 435|    IDENT "::" IDENT pattern_arguments {
+// 436|    QualifiedVariant(type_name=$1, variant=$3, arguments=$4, loc=span($sloc))
+// 437|  }
 
 ///|
 fn yy_action_44(
@@ -1585,7 +1579,7 @@ fn yy_action_44(
 }
 
 // file:///./parser.mbty
-// 443|    "(" pattern_list ")" { $2 }
+// 442|    "(" pattern_list ")" { $2 }
 
 ///|
 fn yy_action_45(
@@ -1602,7 +1596,7 @@ fn yy_action_45(
 }
 
 // file:///./parser.mbty
-// 427|    "_" { Wildcard(span($sloc)) }
+// 426|    "_" { Wildcard(span($sloc)) }
 
 ///|
 fn yy_action_46(
@@ -1624,7 +1618,7 @@ fn yy_action_46(
 }
 
 // file:///./parser.mbty
-// 428|    INT { IntLiteral($1, loc=span($sloc)) }
+// 427|    INT { IntLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_47(
@@ -1647,7 +1641,7 @@ fn yy_action_47(
 }
 
 // file:///./parser.mbty
-// 429|    STRING { StringLiteral($1, loc=span($sloc)) }
+// 428|    STRING { StringLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_48(
@@ -1670,7 +1664,7 @@ fn yy_action_48(
 }
 
 // file:///./parser.mbty
-// 430|    "true" { BoolLiteral(true, loc=span($sloc)) }
+// 429|    "true" { BoolLiteral(true, loc=span($sloc)) }
 
 ///|
 fn yy_action_49(
@@ -1692,7 +1686,7 @@ fn yy_action_49(
 }
 
 // file:///./parser.mbty
-// 431|    "false" { BoolLiteral(false, loc=span($sloc)) }
+// 430|    "false" { BoolLiteral(false, loc=span($sloc)) }
 
 ///|
 fn yy_action_50(
@@ -1714,7 +1708,7 @@ fn yy_action_50(
 }
 
 // file:///./parser.mbty
-// 453|    non_empty_pattern_list "," pattern { comma_push($1, $3) }
+// 452|    non_empty_pattern_list "," pattern { comma_push($1, $3) }
 
 ///|
 fn yy_action_51(
@@ -1732,7 +1726,7 @@ fn yy_action_51(
 }
 
 // file:///./parser.mbty
-// 454|    non_empty_pattern_list "," { $1 }
+// 453|    non_empty_pattern_list "," { $1 }
 
 ///|
 fn yy_action_52(
@@ -1749,7 +1743,7 @@ fn yy_action_52(
 }
 
 // file:///./parser.mbty
-// 448|    non_empty_pattern_list { $1 }
+// 447|    non_empty_pattern_list { $1 }
 
 ///|
 fn yy_action_53(
@@ -1766,7 +1760,7 @@ fn yy_action_53(
 }
 
 // file:///./parser.mbty
-// 452|    pattern { [ $1 ] }
+// 451|    pattern { [ $1 ] }
 
 ///|
 fn yy_action_54(
@@ -1783,7 +1777,7 @@ fn yy_action_54(
 }
 
 // file:///./parser.mbty
-// 447|    { [] }
+// 446|    { [] }
 
 ///|
 fn yy_action_55(
@@ -1799,7 +1793,7 @@ fn yy_action_55(
 }
 
 // file:///./parser.mbty
-// 442|    { [] }
+// 441|    { [] }
 
 ///|
 fn yy_action_56(
@@ -1815,7 +1809,7 @@ fn yy_action_56(
 }
 
 // file:///./parser.mbty
-// 432|    IDENT { Binding($1, loc=span($sloc)) }
+// 431|    IDENT { Binding($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_57(
@@ -1838,7 +1832,7 @@ fn yy_action_57(
 }
 
 // file:///./parser.mbty
-// 383|    { [] }
+// 382|    { [] }
 
 ///|
 fn yy_action_58(
@@ -1854,9 +1848,9 @@ fn yy_action_58(
 }
 
 // file:///./parser.mbty
-// 371|    "if" expression block_expression "else" block_expression {
-// 372|    If(condition=$2, then_branch=$3, else_branch=$5, loc=span($sloc))
-// 373|  }
+// 370|    "if" expression block_expression "else" block_expression {
+// 371|    If(condition=$2, then_branch=$3, else_branch=$5, loc=span($sloc))
+// 372|  }
 
 ///|
 fn yy_action_59(
@@ -1886,7 +1880,7 @@ fn yy_action_59(
 }
 
 // file:///./parser.mbty
-// 295|    "(" expression ")" { $2 }
+// 294|    "(" expression ")" { $2 }
 
 ///|
 fn yy_action_60(
@@ -1903,9 +1897,9 @@ fn yy_action_60(
 }
 
 // file:///./parser.mbty
-// 304|    IDENT type_arguments "::" "{" struct_literal_fields "}" {
-// 305|    StructLiteral(type_name=$1, type_arguments=$2, fields=$5, loc=span($sloc))
-// 306|  }
+// 303|    IDENT type_arguments "::" "{" struct_literal_fields "}" {
+// 304|    StructLiteral(type_name=$1, type_arguments=$2, fields=$5, loc=span($sloc))
+// 305|  }
 
 ///|
 fn yy_action_61(
@@ -1935,7 +1929,7 @@ fn yy_action_61(
 }
 
 // file:///./parser.mbty
-// 324|    non_empty_struct_literal_fields "," struct_literal_field { comma_push($1, $3) }
+// 323|    non_empty_struct_literal_fields "," struct_literal_field { comma_push($1, $3) }
 
 ///|
 fn yy_action_62(
@@ -1953,7 +1947,7 @@ fn yy_action_62(
 }
 
 // file:///./parser.mbty
-// 325|    non_empty_struct_literal_fields "," { $1 }
+// 324|    non_empty_struct_literal_fields "," { $1 }
 
 ///|
 fn yy_action_63(
@@ -1970,7 +1964,7 @@ fn yy_action_63(
 }
 
 // file:///./parser.mbty
-// 319|    non_empty_struct_literal_fields { $1 }
+// 318|    non_empty_struct_literal_fields { $1 }
 
 ///|
 fn yy_action_64(
@@ -1987,7 +1981,7 @@ fn yy_action_64(
 }
 
 // file:///./parser.mbty
-// 323|    struct_literal_field { [ $1 ] }
+// 322|    struct_literal_field { [ $1 ] }
 
 ///|
 fn yy_action_65(
@@ -2004,9 +1998,9 @@ fn yy_action_65(
 }
 
 // file:///./parser.mbty
-// 332|    IDENT ":" expression {
-// 333|    { name: $1, value: Some($3), loc: span($sloc) }
-// 334|  }
+// 331|    IDENT ":" expression {
+// 332|    { name: $1, value: Some($3), loc: span($sloc) }
+// 333|  }
 
 ///|
 fn yy_action_66(
@@ -2034,9 +2028,9 @@ fn yy_action_66(
 }
 
 // file:///./parser.mbty
-// 329|    IDENT {
-// 330|    { name: $1, value: None, loc: span($sloc) }
-// 331|  }
+// 328|    IDENT {
+// 329|    { name: $1, value: None, loc: span($sloc) }
+// 330|  }
 
 ///|
 fn yy_action_67(
@@ -2059,7 +2053,7 @@ fn yy_action_67(
 }
 
 // file:///./parser.mbty
-// 318|    { [] }
+// 317|    { [] }
 
 ///|
 fn yy_action_68(
@@ -2075,9 +2069,9 @@ fn yy_action_68(
 }
 
 // file:///./parser.mbty
-// 307|    IDENT type_arguments "::" IDENT variant_arguments {
-// 308|    QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, arguments=$5, loc=span($sloc))
-// 309|  }
+// 306|    IDENT type_arguments "::" IDENT variant_arguments {
+// 307|    QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, arguments=$5, loc=span($sloc))
+// 308|  }
 
 ///|
 fn yy_action_69(
@@ -2109,7 +2103,7 @@ fn yy_action_69(
 }
 
 // file:///./parser.mbty
-// 339|    "(" non_empty_argument_list ")" { $2 }
+// 338|    "(" non_empty_argument_list ")" { $2 }
 
 ///|
 fn yy_action_70(
@@ -2126,7 +2120,7 @@ fn yy_action_70(
 }
 
 // file:///./parser.mbty
-// 349|    non_empty_argument_list "," expression { comma_push($1, $3) }
+// 348|    non_empty_argument_list "," expression { comma_push($1, $3) }
 
 ///|
 fn yy_action_71(
@@ -2144,9 +2138,9 @@ fn yy_action_71(
 }
 
 // file:///./parser.mbty
-// 275|    "!" expression %prec UNARY {
-// 276|    Unary(operator=Not, operand=$2, loc=span($sloc))
-// 277|  }
+// 274|    "!" expression %prec UNARY {
+// 275|    Unary(operator=Not, operand=$2, loc=span($sloc))
+// 276|  }
 
 ///|
 fn yy_action_72(
@@ -2173,9 +2167,9 @@ fn yy_action_72(
 }
 
 // file:///./parser.mbty
-// 230|    expression "|>" expression {
-// 231|    Pipeline(left=$1, right=$3, loc=span($sloc))
-// 232|  }
+// 229|    expression "|>" expression {
+// 230|    Pipeline(left=$1, right=$3, loc=span($sloc))
+// 231|  }
 
 ///|
 fn yy_action_73(
@@ -2203,9 +2197,9 @@ fn yy_action_73(
 }
 
 // file:///./parser.mbty
-// 233|    expression "||" expression {
-// 234|    Binary(operator=Or, left=$1, right=$3, loc=span($sloc))
-// 235|  }
+// 232|    expression "||" expression {
+// 233|    Binary(operator=Or, left=$1, right=$3, loc=span($sloc))
+// 234|  }
 
 ///|
 fn yy_action_74(
@@ -2234,9 +2228,9 @@ fn yy_action_74(
 }
 
 // file:///./parser.mbty
-// 236|    expression "&&" expression {
-// 237|    Binary(operator=And, left=$1, right=$3, loc=span($sloc))
-// 238|  }
+// 235|    expression "&&" expression {
+// 236|    Binary(operator=And, left=$1, right=$3, loc=span($sloc))
+// 237|  }
 
 ///|
 fn yy_action_75(
@@ -2265,9 +2259,9 @@ fn yy_action_75(
 }
 
 // file:///./parser.mbty
-// 239|    expression "==" expression {
-// 240|    Binary(operator=Equal, left=$1, right=$3, loc=span($sloc))
-// 241|  }
+// 238|    expression "==" expression {
+// 239|    Binary(operator=Equal, left=$1, right=$3, loc=span($sloc))
+// 240|  }
 
 ///|
 fn yy_action_76(
@@ -2296,9 +2290,9 @@ fn yy_action_76(
 }
 
 // file:///./parser.mbty
-// 242|    expression "!=" expression {
-// 243|    Binary(operator=NotEqual, left=$1, right=$3, loc=span($sloc))
-// 244|  }
+// 241|    expression "!=" expression {
+// 242|    Binary(operator=NotEqual, left=$1, right=$3, loc=span($sloc))
+// 243|  }
 
 ///|
 fn yy_action_77(
@@ -2327,9 +2321,9 @@ fn yy_action_77(
 }
 
 // file:///./parser.mbty
-// 245|    expression "<" expression {
-// 246|    Binary(operator=Less, left=$1, right=$3, loc=span($sloc))
-// 247|  }
+// 244|    expression "<" expression {
+// 245|    Binary(operator=Less, left=$1, right=$3, loc=span($sloc))
+// 246|  }
 
 ///|
 fn yy_action_78(
@@ -2358,9 +2352,9 @@ fn yy_action_78(
 }
 
 // file:///./parser.mbty
-// 248|    expression "<=" expression {
-// 249|    Binary(operator=LessEqual, left=$1, right=$3, loc=span($sloc))
-// 250|  }
+// 247|    expression "<=" expression {
+// 248|    Binary(operator=LessEqual, left=$1, right=$3, loc=span($sloc))
+// 249|  }
 
 ///|
 fn yy_action_79(
@@ -2389,9 +2383,9 @@ fn yy_action_79(
 }
 
 // file:///./parser.mbty
-// 251|    expression ">" expression {
-// 252|    Binary(operator=Greater, left=$1, right=$3, loc=span($sloc))
-// 253|  }
+// 250|    expression ">" expression {
+// 251|    Binary(operator=Greater, left=$1, right=$3, loc=span($sloc))
+// 252|  }
 
 ///|
 fn yy_action_80(
@@ -2420,9 +2414,9 @@ fn yy_action_80(
 }
 
 // file:///./parser.mbty
-// 254|    expression ">=" expression {
-// 255|    Binary(operator=GreaterEqual, left=$1, right=$3, loc=span($sloc))
-// 256|  }
+// 253|    expression ">=" expression {
+// 254|    Binary(operator=GreaterEqual, left=$1, right=$3, loc=span($sloc))
+// 255|  }
 
 ///|
 fn yy_action_81(
@@ -2451,9 +2445,9 @@ fn yy_action_81(
 }
 
 // file:///./parser.mbty
-// 257|    expression "+" expression {
-// 258|    Binary(operator=Add, left=$1, right=$3, loc=span($sloc))
-// 259|  }
+// 256|    expression "+" expression {
+// 257|    Binary(operator=Add, left=$1, right=$3, loc=span($sloc))
+// 258|  }
 
 ///|
 fn yy_action_82(
@@ -2482,9 +2476,9 @@ fn yy_action_82(
 }
 
 // file:///./parser.mbty
-// 260|    expression "-" expression {
-// 261|    Binary(operator=Sub, left=$1, right=$3, loc=span($sloc))
-// 262|  }
+// 259|    expression "-" expression {
+// 260|    Binary(operator=Sub, left=$1, right=$3, loc=span($sloc))
+// 261|  }
 
 ///|
 fn yy_action_83(
@@ -2513,9 +2507,9 @@ fn yy_action_83(
 }
 
 // file:///./parser.mbty
-// 263|    expression "*" expression {
-// 264|    Binary(operator=Mul, left=$1, right=$3, loc=span($sloc))
-// 265|  }
+// 262|    expression "*" expression {
+// 263|    Binary(operator=Mul, left=$1, right=$3, loc=span($sloc))
+// 264|  }
 
 ///|
 fn yy_action_84(
@@ -2544,9 +2538,9 @@ fn yy_action_84(
 }
 
 // file:///./parser.mbty
-// 266|    expression "/" expression {
-// 267|    Binary(operator=Div, left=$1, right=$3, loc=span($sloc))
-// 268|  }
+// 265|    expression "/" expression {
+// 266|    Binary(operator=Div, left=$1, right=$3, loc=span($sloc))
+// 267|  }
 
 ///|
 fn yy_action_85(
@@ -2575,9 +2569,9 @@ fn yy_action_85(
 }
 
 // file:///./parser.mbty
-// 269|    expression "%" expression {
-// 270|    Binary(operator=Rem, left=$1, right=$3, loc=span($sloc))
-// 271|  }
+// 268|    expression "%" expression {
+// 269|    Binary(operator=Rem, left=$1, right=$3, loc=span($sloc))
+// 270|  }
 
 ///|
 fn yy_action_86(
@@ -2606,7 +2600,7 @@ fn yy_action_86(
 }
 
 // file:///./parser.mbty
-// 348|    expression { [ $1 ] }
+// 347|    expression { [ $1 ] }
 
 ///|
 fn yy_action_87(
@@ -2623,9 +2617,9 @@ fn yy_action_87(
 }
 
 // file:///./parser.mbty
-// 278|    expression "(" argument_list ")" {
-// 279|    Call(callee=$1, arguments=$3, loc=span($sloc))
-// 280|  }
+// 277|    expression "(" argument_list ")" {
+// 278|    Call(callee=$1, arguments=$3, loc=span($sloc))
+// 279|  }
 
 ///|
 fn yy_action_88(
@@ -2653,7 +2647,7 @@ fn yy_action_88(
 }
 
 // file:///./parser.mbty
-// 344|    non_empty_argument_list { $1 }
+// 343|    non_empty_argument_list { $1 }
 
 ///|
 fn yy_action_89(
@@ -2670,7 +2664,7 @@ fn yy_action_89(
 }
 
 // file:///./parser.mbty
-// 343|    { [] }
+// 342|    { [] }
 
 ///|
 fn yy_action_90(
@@ -2686,9 +2680,9 @@ fn yy_action_90(
 }
 
 // file:///./parser.mbty
-// 281|    expression "." IDENT {
-// 282|    Field(base=$1, name=$3, loc=span($sloc))
-// 283|  }
+// 280|    expression "." IDENT {
+// 281|    Field(base=$1, name=$3, loc=span($sloc))
+// 282|  }
 
 ///|
 fn yy_action_91(
@@ -2716,9 +2710,9 @@ fn yy_action_91(
 }
 
 // file:///./parser.mbty
-// 272|    "-" expression %prec UNARY {
-// 273|    Unary(operator=Neg, operand=$2, loc=span($sloc))
-// 274|  }
+// 271|    "-" expression %prec UNARY {
+// 272|    Unary(operator=Neg, operand=$2, loc=span($sloc))
+// 273|  }
 
 ///|
 fn yy_action_92(
@@ -2745,7 +2739,7 @@ fn yy_action_92(
 }
 
 // file:///./parser.mbty
-// 284|    primary_expression { $1 }
+// 283|    primary_expression { $1 }
 
 ///|
 fn yy_action_93(
@@ -2762,7 +2756,7 @@ fn yy_action_93(
 }
 
 // file:///./parser.mbty
-// 288|    INT { IntLiteral($1, loc=span($sloc)) }
+// 287|    INT { IntLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_94(
@@ -2785,7 +2779,7 @@ fn yy_action_94(
 }
 
 // file:///./parser.mbty
-// 289|    STRING { StringLiteral($1, loc=span($sloc)) }
+// 288|    STRING { StringLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_95(
@@ -2808,7 +2802,7 @@ fn yy_action_95(
 }
 
 // file:///./parser.mbty
-// 290|    "true" { BoolLiteral(true, loc=span($sloc)) }
+// 289|    "true" { BoolLiteral(true, loc=span($sloc)) }
 
 ///|
 fn yy_action_96(
@@ -2830,7 +2824,7 @@ fn yy_action_96(
 }
 
 // file:///./parser.mbty
-// 291|    "false" { BoolLiteral(false, loc=span($sloc)) }
+// 290|    "false" { BoolLiteral(false, loc=span($sloc)) }
 
 ///|
 fn yy_action_97(
@@ -2852,7 +2846,7 @@ fn yy_action_97(
 }
 
 // file:///./parser.mbty
-// 350|    non_empty_argument_list "," { $1 }
+// 349|    non_empty_argument_list "," { $1 }
 
 ///|
 fn yy_action_98(
@@ -2869,7 +2863,7 @@ fn yy_action_98(
 }
 
 // file:///./parser.mbty
-// 338|    { [] }
+// 337|    { [] }
 
 ///|
 fn yy_action_99(
@@ -2885,7 +2879,7 @@ fn yy_action_99(
 }
 
 // file:///./parser.mbty
-// 314|    "[" type_list "]" { $2 }
+// 313|    "[" type_list "]" { $2 }
 
 ///|
 fn yy_action_100(
@@ -2902,7 +2896,7 @@ fn yy_action_100(
 }
 
 // file:///./parser.mbty
-// 313|    { [] }
+// 312|    { [] }
 
 ///|
 fn yy_action_101(
@@ -2918,7 +2912,7 @@ fn yy_action_101(
 }
 
 // file:///./parser.mbty
-// 292|    IDENT { Var($1, loc=span($sloc)) }
+// 291|    IDENT { Var($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_102(
@@ -2941,7 +2935,7 @@ fn yy_action_102(
 }
 
 // file:///./parser.mbty
-// 293|    qualified_expression { $1 }
+// 292|    qualified_expression { $1 }
 
 ///|
 fn yy_action_103(
@@ -2958,7 +2952,7 @@ fn yy_action_103(
 }
 
 // file:///./parser.mbty
-// 294|    "(" ")" { UnitLiteral(loc=span($sloc)) }
+// 293|    "(" ")" { UnitLiteral(loc=span($sloc)) }
 
 ///|
 fn yy_action_104(
@@ -2980,7 +2974,7 @@ fn yy_action_104(
 }
 
 // file:///./parser.mbty
-// 296|    block_expression { $1 }
+// 295|    block_expression { $1 }
 
 ///|
 fn yy_action_105(
@@ -2997,7 +2991,7 @@ fn yy_action_105(
 }
 
 // file:///./parser.mbty
-// 297|    if_expression { $1 }
+// 296|    if_expression { $1 }
 
 ///|
 fn yy_action_106(
@@ -3014,7 +3008,7 @@ fn yy_action_106(
 }
 
 // file:///./parser.mbty
-// 298|    match_expression { $1 }
+// 297|    match_expression { $1 }
 
 ///|
 fn yy_action_107(
@@ -3031,7 +3025,7 @@ fn yy_action_107(
 }
 
 // file:///./parser.mbty
-// 299|    function_literal { $1 }
+// 298|    function_literal { $1 }
 
 ///|
 fn yy_action_108(
@@ -3048,7 +3042,7 @@ fn yy_action_108(
 }
 
 // file:///./parser.mbty
-// 300|    builtin_expression { $1 }
+// 299|    builtin_expression { $1 }
 
 ///|
 fn yy_action_109(
@@ -3065,7 +3059,7 @@ fn yy_action_109(
 }
 
 // file:///./parser.mbty
-// 360|    { [] }
+// 359|    { [] }
 
 ///|
 fn yy_action_110(
@@ -3081,9 +3075,9 @@ fn yy_action_110(
 }
 
 // file:///./parser.mbty
-// 394|    "fn" type_parameters "(" function_literal_parameters ")" return_type_annotation block_expression {
-// 395|    FunctionLiteral(type_parameters=$2, parameters=$4, return_type=$6, body=$7, loc=span($sloc))
-// 396|  }
+// 393|    "fn" type_parameters "(" function_literal_parameters ")" return_type_annotation block_expression {
+// 394|    FunctionLiteral(type_parameters=$2, parameters=$4, return_type=$6, body=$7, loc=span($sloc))
+// 395|  }
 
 ///|
 fn yy_action_111(
@@ -3115,7 +3109,7 @@ fn yy_action_111(
 }
 
 // file:///./parser.mbty
-// 417|    "->" type { Some($2) }
+// 416|    "->" type { Some($2) }
 
 ///|
 fn yy_action_112(
@@ -3132,7 +3126,7 @@ fn yy_action_112(
 }
 
 // file:///./parser.mbty
-// 416|    { None }
+// 415|    { None }
 
 ///|
 fn yy_action_113(
@@ -3148,7 +3142,7 @@ fn yy_action_113(
 }
 
 // file:///./parser.mbty
-// 406|    non_empty_function_literal_parameters "," function_literal_parameter { comma_push($1, $3) }
+// 405|    non_empty_function_literal_parameters "," function_literal_parameter { comma_push($1, $3) }
 
 ///|
 fn yy_action_114(
@@ -3166,7 +3160,7 @@ fn yy_action_114(
 }
 
 // file:///./parser.mbty
-// 401|    non_empty_function_literal_parameters { $1 }
+// 400|    non_empty_function_literal_parameters { $1 }
 
 ///|
 fn yy_action_115(
@@ -3183,7 +3177,7 @@ fn yy_action_115(
 }
 
 // file:///./parser.mbty
-// 405|    function_literal_parameter { [ $1 ] }
+// 404|    function_literal_parameter { [ $1 ] }
 
 ///|
 fn yy_action_116(
@@ -3200,7 +3194,7 @@ fn yy_action_116(
 }
 
 // file:///./parser.mbty
-// 176|    ":" type { Some($2) }
+// 175|    ":" type { Some($2) }
 
 ///|
 fn yy_action_117(
@@ -3217,9 +3211,9 @@ fn yy_action_117(
 }
 
 // file:///./parser.mbty
-// 410|    IDENT local_type_annotation {
-// 411|    { name: $1, type_annotation: $2, loc: span($sloc) }
-// 412|  }
+// 409|    IDENT local_type_annotation {
+// 410|    { name: $1, type_annotation: $2, loc: span($sloc) }
+// 411|  }
 
 ///|
 fn yy_action_118(
@@ -3247,7 +3241,7 @@ fn yy_action_118(
 }
 
 // file:///./parser.mbty
-// 175|    { None }
+// 174|    { None }
 
 ///|
 fn yy_action_119(
@@ -3263,7 +3257,7 @@ fn yy_action_119(
 }
 
 // file:///./parser.mbty
-// 400|    { [] }
+// 399|    { [] }
 
 ///|
 fn yy_action_120(
@@ -3279,7 +3273,7 @@ fn yy_action_120(
 }
 
 // file:///./parser.mbty
-// 186|    { [] }
+// 185|    { [] }
 
 ///|
 fn yy_action_121(
@@ -3295,9 +3289,9 @@ fn yy_action_121(
 }
 
 // file:///./parser.mbty
-// 421|    "builtin" "(" STRING ")" {
-// 422|    Builtin($3, loc=span($sloc))
-// 423|  }
+// 420|    "builtin" "(" STRING ")" {
+// 421|    Builtin($3, loc=span($sloc))
+// 422|  }
 
 ///|
 fn yy_action_122(
@@ -3320,9 +3314,9 @@ fn yy_action_122(
 }
 
 // file:///./parser.mbty
-// 214|    "(" type_list ")" "->" type {
-// 215|    Function(type_parameters=[], parameters=$2, result=$5, loc=span($sloc))
-// 216|  }
+// 213|    "(" type_list ")" "->" type {
+// 214|    Function(type_parameters=[], parameters=$2, result=$5, loc=span($sloc))
+// 215|  }
 
 ///|
 fn yy_action_123(
@@ -3351,7 +3345,7 @@ fn yy_action_123(
 }
 
 // file:///./parser.mbty
-// 196|    named_type { $1 }
+// 195|    named_type { $1 }
 
 ///|
 fn yy_action_124(
@@ -3368,7 +3362,7 @@ fn yy_action_124(
 }
 
 // file:///./parser.mbty
-// 197|    function_type { $1 }
+// 196|    function_type { $1 }
 
 ///|
 fn yy_action_125(
@@ -3385,7 +3379,7 @@ fn yy_action_125(
 }
 
 // file:///./parser.mbty
-// 191|    IDENT { [ $1 ] }
+// 190|    IDENT { [ $1 ] }
 
 ///|
 fn yy_action_126(
@@ -3402,7 +3396,7 @@ fn yy_action_126(
 }
 
 // file:///./parser.mbty
-// 192|    non_empty_ident_list "," IDENT { comma_push($1, $3) }
+// 191|    non_empty_ident_list "," IDENT { comma_push($1, $3) }
 
 ///|
 fn yy_action_127(
@@ -3420,10 +3414,10 @@ fn yy_action_127(
 }
 
 // file:///./parser.mbty
-// 198|    "[" non_empty_ident_list "]" function_type {
-// 199|    guard $4 is Function(type_parameters=_, parameters~, result~, loc~)
-// 200|    Function(type_parameters=$2, parameters~, result~, loc~)
-// 201|  }
+// 197|    "[" non_empty_ident_list "]" function_type {
+// 198|    guard $4 is Function(type_parameters=_, parameters~, result~, loc~)
+// 199|    Function(type_parameters=$2, parameters~, result~, loc~)
+// 200|  }
 
 ///|
 fn yy_action_128(
@@ -3442,9 +3436,9 @@ fn yy_action_128(
 }
 
 // file:///./parser.mbty
-// 208|    IDENT "[" type_list "]" {
-// 209|    Name(name=$1, arguments=$3, loc=span($sloc))
-// 210|  }
+// 207|    IDENT "[" type_list "]" {
+// 208|    Name(name=$1, arguments=$3, loc=span($sloc))
+// 209|  }
 
 ///|
 fn yy_action_129(
@@ -3472,9 +3466,9 @@ fn yy_action_129(
 }
 
 // file:///./parser.mbty
-// 205|    IDENT {
-// 206|    Name(name=$1, arguments=[], loc=span($sloc))
-// 207|  }
+// 204|    IDENT {
+// 205|    Name(name=$1, arguments=[], loc=span($sloc))
+// 206|  }
 
 ///|
 fn yy_action_130(
@@ -3497,7 +3491,7 @@ fn yy_action_130(
 }
 
 // file:///./parser.mbty
-// 226|    non_empty_type_list "," type { comma_push($1, $3) }
+// 225|    non_empty_type_list "," type { comma_push($1, $3) }
 
 ///|
 fn yy_action_131(
@@ -3515,7 +3509,7 @@ fn yy_action_131(
 }
 
 // file:///./parser.mbty
-// 221|    non_empty_type_list { $1 }
+// 220|    non_empty_type_list { $1 }
 
 ///|
 fn yy_action_132(
@@ -3532,7 +3526,7 @@ fn yy_action_132(
 }
 
 // file:///./parser.mbty
-// 225|    type { [ $1 ] }
+// 224|    type { [ $1 ] }
 
 ///|
 fn yy_action_133(
@@ -3549,7 +3543,7 @@ fn yy_action_133(
 }
 
 // file:///./parser.mbty
-// 220|    { [] }
+// 219|    { [] }
 
 ///|
 fn yy_action_134(
@@ -3565,9 +3559,9 @@ fn yy_action_134(
 }
 
 // file:///./parser.mbty
-// 180|    "open" IDENT {
-// 181|    { name: $2, loc: span($sloc) }
-// 182|  }
+// 179|    "open" IDENT {
+// 180|    { name: $2, loc: span($sloc) }
+// 181|  }
 
 ///|
 fn yy_action_135(
@@ -3590,7 +3584,7 @@ fn yy_action_135(
 }
 
 // file:///./parser.mbty
-// 76|    { [] }
+// 75|    { [] }
 
 ///|
 fn yy_action_136(
@@ -3612,7 +3606,6 @@ fn yy_input(
   _end_pos : SourceSpan,
 ) -> (YYSymbol, YYObj) {
   match token {
-    CHAR(data) => (T_CHAR, YYObj_String(data))
     INT(data) => (T_INT, YYObj_String(data))
     STRING(data) => (T_STRING, YYObj_String(data))
     IDENT(data) => (T_IDENT, YYObj_String(data))
@@ -7076,7 +7069,6 @@ fn error(
   for
     term in (
       [
-        (T_CHAR, TK_CHAR),
         (T_INT, TK_INT),
         (T_STRING, TK_STRING),
         (T_IDENT, TK_IDENT),
