@@ -68,7 +68,7 @@
 
 source_file -> SourceFile
   : top_level_declarations EOF {
-    SourceFile::{ declarations: $1, loc: span($sloc) }
+    { declarations: $1, loc: span($sloc) }
   }
   ;
 
@@ -78,16 +78,16 @@ top_level_declarations -> Array[TopLevelDeclaration]
   ;
 
 top_level_declaration -> TopLevelDeclaration
-  : struct_declaration { TopLevelDeclaration::Struct($1) }
-  | enum_declaration { TopLevelDeclaration::Enum($1) }
-  | function_declaration { TopLevelDeclaration::Function($1) }
-  | top_level_let_declaration { TopLevelDeclaration::Let($1) }
-  | open_declaration { TopLevelDeclaration::Open($1) }
+  : struct_declaration { Struct($1) }
+  | enum_declaration { Enum($1) }
+  | function_declaration { Function($1) }
+  | top_level_let_declaration { Let($1) }
+  | open_declaration { Open($1) }
   ;
 
 struct_declaration -> StructDeclaration
   : "struct" IDENT type_parameters "{" struct_members "}" {
-    StructDeclaration::{ name: $2, type_parameters: $3, members: $5, loc: span($sloc) }
+    { name: $2, type_parameters: $3, members: $5, loc: span($sloc) }
   }
   ;
 
@@ -97,19 +97,19 @@ struct_members -> Array[StructMember]
   ;
 
 struct_member -> StructMember
-  : field_declaration { StructMember::Field($1) }
-  | open_declaration { StructMember::Open($1) }
+  : field_declaration { Field($1) }
+  | open_declaration { Open($1) }
   ;
 
 field_declaration -> FieldDeclaration
   : IDENT ":" type {
-    FieldDeclaration::{ name: $1, type_: $3, loc: span($sloc) }
+    { name: $1, type_: $3, loc: span($sloc) }
   }
   ;
 
 enum_declaration -> EnumDeclaration
   : "enum" IDENT type_parameters "{" enum_variants "}" {
-    EnumDeclaration::{ name: $2, type_parameters: $3, variants: $5, loc: span($sloc) }
+    { name: $2, type_parameters: $3, variants: $5, loc: span($sloc) }
   }
   ;
 
@@ -120,16 +120,16 @@ enum_variants -> Array[EnumVariant]
 
 enum_variant -> EnumVariant
   : IDENT {
-    EnumVariant::{ name: $1, payload: [], loc: span($sloc) }
+    { name: $1, payload: [], loc: span($sloc) }
   }
   | IDENT "(" non_empty_type_list ")" {
-    EnumVariant::{ name: $1, payload: $3, loc: span($sloc) }
+    { name: $1, payload: $3, loc: span($sloc) }
   }
   ;
 
 function_declaration -> FunctionDeclaration
   : "fn" type_parameters IDENT parameters "->" type block_expression {
-    FunctionDeclaration::{
+    {
       type_parameters: $2,
       name: $3,
       parameters: $4,
@@ -152,22 +152,22 @@ non_empty_parameter_list -> Array[Parameter]
 
 parameter -> Parameter
   : IDENT ":" type {
-    Parameter::{ name: $1, type_: $3, loc: span($sloc) }
+    { name: $1, type_: $3, loc: span($sloc) }
   }
   ;
 
 top_level_let_declaration -> LetDeclaration
   : "let" IDENT ":" type "=" expression {
-    LetDeclaration::{ name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
+    { name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
   }
   | "let" ":" type "=" expression {
-    LetDeclaration::{ name: None, type_annotation: Some($3), initializer: $5, loc: span($sloc) }
+    { name: None, type_annotation: Some($3), initializer: $5, loc: span($sloc) }
   }
   ;
 
 local_let_declaration -> LetDeclaration
   : "let" IDENT local_type_annotation "=" expression {
-    LetDeclaration::{ name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
+    { name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
   }
   ;
 
@@ -178,7 +178,7 @@ local_type_annotation -> Type?
 
 open_declaration -> OpenDeclaration
   : "open" IDENT {
-    OpenDeclaration::{ name: $2, loc: span($sloc) }
+    { name: $2, loc: span($sloc) }
   }
   ;
 
@@ -196,23 +196,23 @@ type -> Type
   : named_type { $1 }
   | function_type { $1 }
   | "[" non_empty_ident_list "]" function_type {
-    guard $4 is Type::Function(type_parameters=_, parameters~, result~, loc~)
-    Type::Function(type_parameters=$2, parameters~, result~, loc~)
+    guard $4 is Function(type_parameters=_, parameters~, result~, loc~)
+    Function(type_parameters=$2, parameters~, result~, loc~)
   }
   ;
 
 named_type -> Type
   : IDENT {
-    Type::Name(name=$1, arguments=[], loc=span($sloc))
+    Name(name=$1, arguments=[], loc=span($sloc))
   }
   | IDENT "[" type_list "]" {
-    Type::Name(name=$1, arguments=$3, loc=span($sloc))
+    Name(name=$1, arguments=$3, loc=span($sloc))
   }
   ;
 
 function_type -> Type
   : "(" type_list ")" "->" type {
-    Type::Function(type_parameters=[], parameters=$2, result=$5, loc=span($sloc))
+    Function(type_parameters=[], parameters=$2, result=$5, loc=span($sloc))
   }
   ;
 
@@ -228,70 +228,70 @@ non_empty_type_list -> Array[Type]
 
 expression -> Expr
   : expression "|>" expression {
-    Expr::Pipeline(left=$1, right=$3, loc=span($sloc))
+    Pipeline(left=$1, right=$3, loc=span($sloc))
   }
   | expression "||" expression {
-    Expr::Binary(operator=BinaryOperator::Or, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Or, left=$1, right=$3, loc=span($sloc))
   }
   | expression "&&" expression {
-    Expr::Binary(operator=BinaryOperator::And, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=And, left=$1, right=$3, loc=span($sloc))
   }
   | expression "==" expression {
-    Expr::Binary(operator=BinaryOperator::Equal, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Equal, left=$1, right=$3, loc=span($sloc))
   }
   | expression "!=" expression {
-    Expr::Binary(operator=BinaryOperator::NotEqual, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=NotEqual, left=$1, right=$3, loc=span($sloc))
   }
   | expression "<" expression {
-    Expr::Binary(operator=BinaryOperator::Less, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Less, left=$1, right=$3, loc=span($sloc))
   }
   | expression "<=" expression {
-    Expr::Binary(operator=BinaryOperator::LessEqual, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=LessEqual, left=$1, right=$3, loc=span($sloc))
   }
   | expression ">" expression {
-    Expr::Binary(operator=BinaryOperator::Greater, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Greater, left=$1, right=$3, loc=span($sloc))
   }
   | expression ">=" expression {
-    Expr::Binary(operator=BinaryOperator::GreaterEqual, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=GreaterEqual, left=$1, right=$3, loc=span($sloc))
   }
   | expression "+" expression {
-    Expr::Binary(operator=BinaryOperator::Add, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Add, left=$1, right=$3, loc=span($sloc))
   }
   | expression "-" expression {
-    Expr::Binary(operator=BinaryOperator::Sub, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Sub, left=$1, right=$3, loc=span($sloc))
   }
   | expression "*" expression {
-    Expr::Binary(operator=BinaryOperator::Mul, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Mul, left=$1, right=$3, loc=span($sloc))
   }
   | expression "/" expression {
-    Expr::Binary(operator=BinaryOperator::Div, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Div, left=$1, right=$3, loc=span($sloc))
   }
   | expression "%" expression {
-    Expr::Binary(operator=BinaryOperator::Rem, left=$1, right=$3, loc=span($sloc))
+    Binary(operator=Rem, left=$1, right=$3, loc=span($sloc))
   }
   | "-" expression %prec UNARY {
-    Expr::Unary(operator=UnaryOperator::Neg, operand=$2, loc=span($sloc))
+    Unary(operator=Neg, operand=$2, loc=span($sloc))
   }
   | "!" expression %prec UNARY {
-    Expr::Unary(operator=UnaryOperator::Not, operand=$2, loc=span($sloc))
+    Unary(operator=Not, operand=$2, loc=span($sloc))
   }
   | expression "(" argument_list ")" {
-    Expr::Call(callee=$1, arguments=$3, loc=span($sloc))
+    Call(callee=$1, arguments=$3, loc=span($sloc))
   }
   | expression "." IDENT {
-    Expr::Field(base=$1, name=$3, loc=span($sloc))
+    Field(base=$1, name=$3, loc=span($sloc))
   }
   | primary_expression { $1 }
   ;
 
 primary_expression -> Expr
-  : INT { Expr::IntLiteral($1, loc=span($sloc)) }
-  | STRING { Expr::StringLiteral($1, loc=span($sloc)) }
-  | "true" { Expr::BoolLiteral(true, loc=span($sloc)) }
-  | "false" { Expr::BoolLiteral(false, loc=span($sloc)) }
-  | IDENT { Expr::Var($1, loc=span($sloc)) }
+  : INT { IntLiteral($1, loc=span($sloc)) }
+  | STRING { StringLiteral($1, loc=span($sloc)) }
+  | "true" { BoolLiteral(true, loc=span($sloc)) }
+  | "false" { BoolLiteral(false, loc=span($sloc)) }
+  | IDENT { Var($1, loc=span($sloc)) }
   | qualified_expression { $1 }
-  | "(" ")" { Expr::UnitLiteral(loc=span($sloc)) }
+  | "(" ")" { UnitLiteral(loc=span($sloc)) }
   | "(" expression ")" { $2 }
   | block_expression { $1 }
   | if_expression { $1 }
@@ -302,10 +302,10 @@ primary_expression -> Expr
 
 qualified_expression -> Expr
   : IDENT type_arguments "::" "{" struct_literal_fields "}" {
-    Expr::StructLiteral(type_name=$1, type_arguments=$2, fields=$5, loc=span($sloc))
+    StructLiteral(type_name=$1, type_arguments=$2, fields=$5, loc=span($sloc))
   }
   | IDENT type_arguments "::" IDENT variant_arguments {
-    Expr::QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, arguments=$5, loc=span($sloc))
+    QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, arguments=$5, loc=span($sloc))
   }
   ;
 
@@ -327,10 +327,10 @@ non_empty_struct_literal_fields -> Array[StructLiteralField]
 
 struct_literal_field -> StructLiteralField
   : IDENT {
-    StructLiteralField::{ name: $1, value: None, loc: span($sloc) }
+    { name: $1, value: None, loc: span($sloc) }
   }
   | IDENT ":" expression {
-    StructLiteralField::{ name: $1, value: Some($3), loc: span($sloc) }
+    { name: $1, value: Some($3), loc: span($sloc) }
   }
   ;
 
@@ -352,7 +352,7 @@ non_empty_argument_list -> Array[Expr]
 
 block_expression -> Expr
   : "{" local_items expression "}" {
-    Expr::Block(items=$2, result=$3, loc=span($sloc))
+    Block(items=$2, result=$3, loc=span($sloc))
   }
   ;
 
@@ -362,20 +362,20 @@ local_items -> Array[LocalItem]
   ;
 
 local_item -> LocalItem
-  : local_let_declaration { LocalItem::Let($1) }
-  | function_declaration { LocalItem::Function($1) }
-  | open_declaration { LocalItem::Open($1) }
+  : local_let_declaration { Let($1) }
+  | function_declaration { Function($1) }
+  | open_declaration { Open($1) }
   ;
 
 if_expression -> Expr
   : "if" expression block_expression "else" block_expression {
-    Expr::If(condition=$2, then_branch=$3, else_branch=$5, loc=span($sloc))
+    If(condition=$2, then_branch=$3, else_branch=$5, loc=span($sloc))
   }
   ;
 
 match_expression -> Expr
   : "match" expression "{" match_arms "}" {
-    Expr::Match(scrutinee=$2, arms=$4, loc=span($sloc))
+    Match(scrutinee=$2, arms=$4, loc=span($sloc))
   }
   ;
 
@@ -386,13 +386,13 @@ match_arms -> Array[MatchArm]
 
 match_arm -> MatchArm
   : pattern "=>" expression {
-    MatchArm::{ pattern: $1, body: $3, loc: span($sloc) }
+    { pattern: $1, body: $3, loc: span($sloc) }
   }
   ;
 
 function_literal -> Expr
   : "fn" type_parameters "(" function_literal_parameters ")" return_type_annotation block_expression {
-    Expr::FunctionLiteral(type_parameters=$2, parameters=$4, return_type=$6, body=$7, loc=span($sloc))
+    FunctionLiteral(type_parameters=$2, parameters=$4, return_type=$6, body=$7, loc=span($sloc))
   }
   ;
 
@@ -408,7 +408,7 @@ non_empty_function_literal_parameters -> Array[FunctionLiteralParameter]
 
 function_literal_parameter -> FunctionLiteralParameter
   : IDENT local_type_annotation {
-    FunctionLiteralParameter::{ name: $1, type_annotation: $2, loc: span($sloc) }
+    { name: $1, type_annotation: $2, loc: span($sloc) }
   }
   ;
 
@@ -419,22 +419,22 @@ return_type_annotation -> Type?
 
 builtin_expression -> Expr
   : "builtin" "(" STRING ")" {
-    Expr::Builtin($3, loc=span($sloc))
+    Builtin($3, loc=span($sloc))
   }
   ;
 
 pattern -> Pattern
-  : "_" { Pattern::Wildcard(span($sloc)) }
-  | INT { Pattern::IntLiteral($1, loc=span($sloc)) }
-  | STRING { Pattern::StringLiteral($1, loc=span($sloc)) }
-  | "true" { Pattern::BoolLiteral(true, loc=span($sloc)) }
-  | "false" { Pattern::BoolLiteral(false, loc=span($sloc)) }
-  | IDENT { Pattern::Binding($1, loc=span($sloc)) }
+  : "_" { Wildcard(span($sloc)) }
+  | INT { IntLiteral($1, loc=span($sloc)) }
+  | STRING { StringLiteral($1, loc=span($sloc)) }
+  | "true" { BoolLiteral(true, loc=span($sloc)) }
+  | "false" { BoolLiteral(false, loc=span($sloc)) }
+  | IDENT { Binding($1, loc=span($sloc)) }
   | IDENT "::" "{" struct_pattern_fields "}" {
-    Pattern::Struct(type_name=$1, fields=$4, loc=span($sloc))
+    Struct(type_name=$1, fields=$4, loc=span($sloc))
   }
   | IDENT "::" IDENT pattern_arguments {
-    Pattern::QualifiedVariant(type_name=$1, variant=$3, arguments=$4, loc=span($sloc))
+    QualifiedVariant(type_name=$1, variant=$3, arguments=$4, loc=span($sloc))
   }
   ;
 
@@ -467,9 +467,9 @@ non_empty_struct_pattern_fields -> Array[StructPatternField]
 
 struct_pattern_field -> StructPatternField
   : IDENT {
-    StructPatternField::{ name: $1, pattern: None, loc: span($sloc) }
+    { name: $1, pattern: None, loc: span($sloc) }
   }
   | IDENT ":" pattern {
-    StructPatternField::{ name: $1, pattern: Some($3), loc: span($sloc) }
+    { name: $1, pattern: Some($3), loc: span($sloc) }
   }
   ;

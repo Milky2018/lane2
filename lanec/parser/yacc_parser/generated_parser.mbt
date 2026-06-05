@@ -571,7 +571,7 @@ fn init {
 
 // file:///./parser.mbty
 // 70|    top_level_declarations EOF {
-// 71|    SourceFile::{ declarations: $1, loc: span($sloc) }
+// 71|    { declarations: $1, loc: span($sloc) }
 // 72|  }
 
 ///|
@@ -589,10 +589,7 @@ fn yy_action_0(
   YYObj_SourceFile(
     {
       ()
-      SourceFile::{
-        declarations: _dollar1,
-        loc: span((_symbol_start_pos, _end_pos)),
-      }
+      { declarations: _dollar1, loc: span((_symbol_start_pos, _end_pos)) }
     },
   )
 }
@@ -616,7 +613,7 @@ fn yy_action_1(
 }
 
 // file:///./parser.mbty
-// 81|    struct_declaration { TopLevelDeclaration::Struct($1) }
+// 81|    struct_declaration { Struct($1) }
 
 ///|
 fn yy_action_2(
@@ -627,13 +624,13 @@ fn yy_action_2(
   YYObj_TopLevelDeclaration(
     {
       ()
-      TopLevelDeclaration::Struct(_dollar1)
+      Struct(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
-// 82|    enum_declaration { TopLevelDeclaration::Enum($1) }
+// 82|    enum_declaration { Enum($1) }
 
 ///|
 fn yy_action_3(
@@ -644,13 +641,13 @@ fn yy_action_3(
   YYObj_TopLevelDeclaration(
     {
       ()
-      TopLevelDeclaration::Enum(_dollar1)
+      Enum(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
-// 83|    function_declaration { TopLevelDeclaration::Function($1) }
+// 83|    function_declaration { Function($1) }
 
 ///|
 fn yy_action_4(
@@ -661,13 +658,13 @@ fn yy_action_4(
   YYObj_TopLevelDeclaration(
     {
       ()
-      TopLevelDeclaration::Function(_dollar1)
+      Function(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
-// 84|    top_level_let_declaration { TopLevelDeclaration::Let($1) }
+// 84|    top_level_let_declaration { Let($1) }
 
 ///|
 fn yy_action_5(
@@ -678,13 +675,13 @@ fn yy_action_5(
   YYObj_TopLevelDeclaration(
     {
       ()
-      TopLevelDeclaration::Let(_dollar1)
+      Let(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
-// 85|    open_declaration { TopLevelDeclaration::Open($1) }
+// 85|    open_declaration { Open($1) }
 
 ///|
 fn yy_action_6(
@@ -695,14 +692,14 @@ fn yy_action_6(
   YYObj_TopLevelDeclaration(
     {
       ()
-      TopLevelDeclaration::Open(_dollar1)
+      Open(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
 // 89|    "struct" IDENT type_parameters "{" struct_members "}" {
-// 90|    StructDeclaration::{ name: $2, type_parameters: $3, members: $5, loc: span($sloc) }
+// 90|    { name: $2, type_parameters: $3, members: $5, loc: span($sloc) }
 // 91|  }
 
 ///|
@@ -722,7 +719,7 @@ fn yy_action_7(
   YYObj_StructDeclaration(
     {
       ()
-      StructDeclaration::{
+      {
         name: _dollar2,
         type_parameters: _dollar3,
         members: _dollar5,
@@ -751,7 +748,7 @@ fn yy_action_8(
 }
 
 // file:///./parser.mbty
-// 100|    field_declaration { StructMember::Field($1) }
+// 100|    field_declaration { Field($1) }
 
 ///|
 fn yy_action_9(
@@ -762,13 +759,13 @@ fn yy_action_9(
   YYObj_StructMember(
     {
       ()
-      StructMember::Field(_dollar1)
+      Field(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
-// 101|    open_declaration { StructMember::Open($1) }
+// 101|    open_declaration { Open($1) }
 
 ///|
 fn yy_action_10(
@@ -779,14 +776,14 @@ fn yy_action_10(
   YYObj_StructMember(
     {
       ()
-      StructMember::Open(_dollar1)
+      Open(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
 // 105|    IDENT ":" type {
-// 106|    FieldDeclaration::{ name: $1, type_: $3, loc: span($sloc) }
+// 106|    { name: $1, type_: $3, loc: span($sloc) }
 // 107|  }
 
 ///|
@@ -805,7 +802,7 @@ fn yy_action_11(
   YYObj_FieldDeclaration(
     {
       ()
-      FieldDeclaration::{
+      {
         name: _dollar1,
         type_: _dollar3,
         loc: span((_symbol_start_pos, _end_pos)),
@@ -832,7 +829,7 @@ fn yy_action_12(
 
 // file:///./parser.mbty
 // 111|    "enum" IDENT type_parameters "{" enum_variants "}" {
-// 112|    EnumDeclaration::{ name: $2, type_parameters: $3, variants: $5, loc: span($sloc) }
+// 112|    { name: $2, type_parameters: $3, variants: $5, loc: span($sloc) }
 // 113|  }
 
 ///|
@@ -852,7 +849,7 @@ fn yy_action_13(
   YYObj_EnumDeclaration(
     {
       ()
-      EnumDeclaration::{
+      {
         name: _dollar2,
         type_parameters: _dollar3,
         variants: _dollar5,
@@ -882,7 +879,7 @@ fn yy_action_14(
 
 // file:///./parser.mbty
 // 125|    IDENT "(" non_empty_type_list ")" {
-// 126|    EnumVariant::{ name: $1, payload: $3, loc: span($sloc) }
+// 126|    { name: $1, payload: $3, loc: span($sloc) }
 // 127|  }
 
 ///|
@@ -901,7 +898,7 @@ fn yy_action_15(
   YYObj_EnumVariant(
     {
       ()
-      EnumVariant::{
+      {
         name: _dollar1,
         payload: _dollar3,
         loc: span((_symbol_start_pos, _end_pos)),
@@ -912,7 +909,7 @@ fn yy_action_15(
 
 // file:///./parser.mbty
 // 122|    IDENT {
-// 123|    EnumVariant::{ name: $1, payload: [], loc: span($sloc) }
+// 123|    { name: $1, payload: [], loc: span($sloc) }
 // 124|  }
 
 ///|
@@ -930,11 +927,7 @@ fn yy_action_16(
   YYObj_EnumVariant(
     {
       ()
-      EnumVariant::{
-        name: _dollar1,
-        payload: [],
-        loc: span((_symbol_start_pos, _end_pos)),
-      }
+      { name: _dollar1, payload: [], loc: span((_symbol_start_pos, _end_pos)) }
     },
   )
 }
@@ -957,7 +950,7 @@ fn yy_action_17(
 
 // file:///./parser.mbty
 // 160|    "let" IDENT ":" type "=" expression {
-// 161|    LetDeclaration::{ name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
+// 161|    { name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
 // 162|  }
 
 ///|
@@ -977,7 +970,7 @@ fn yy_action_18(
   YYObj_LetDeclaration(
     {
       ()
-      LetDeclaration::{
+      {
         name: Some(_dollar2),
         type_annotation: Some(_dollar4),
         initializer: _dollar6,
@@ -989,7 +982,7 @@ fn yy_action_18(
 
 // file:///./parser.mbty
 // 163|    "let" ":" type "=" expression {
-// 164|    LetDeclaration::{ name: None, type_annotation: Some($3), initializer: $5, loc: span($sloc) }
+// 164|    { name: None, type_annotation: Some($3), initializer: $5, loc: span($sloc) }
 // 165|  }
 
 ///|
@@ -1008,7 +1001,7 @@ fn yy_action_19(
   YYObj_LetDeclaration(
     {
       ()
-      LetDeclaration::{
+      {
         name: None,
         type_annotation: Some(_dollar3),
         initializer: _dollar5,
@@ -1020,7 +1013,7 @@ fn yy_action_19(
 
 // file:///./parser.mbty
 // 131|    "fn" type_parameters IDENT parameters "->" type block_expression {
-// 132|    FunctionDeclaration::{
+// 132|    {
 // 133|      type_parameters: $2,
 // 134|      name: $3,
 // 135|      parameters: $4,
@@ -1049,7 +1042,7 @@ fn yy_action_20(
   YYObj_FunctionDeclaration(
     {
       ()
-      FunctionDeclaration::{
+      {
         type_parameters: _dollar2,
         name: _dollar3,
         parameters: _dollar4,
@@ -1131,7 +1124,7 @@ fn yy_action_24(
 
 // file:///./parser.mbty
 // 154|    IDENT ":" type {
-// 155|    Parameter::{ name: $1, type_: $3, loc: span($sloc) }
+// 155|    { name: $1, type_: $3, loc: span($sloc) }
 // 156|  }
 
 ///|
@@ -1150,7 +1143,7 @@ fn yy_action_25(
   YYObj_Parameter(
     {
       ()
-      Parameter::{
+      {
         name: _dollar1,
         type_: _dollar3,
         loc: span((_symbol_start_pos, _end_pos)),
@@ -1178,7 +1171,7 @@ fn yy_action_26(
 
 // file:///./parser.mbty
 // 169|    "let" IDENT local_type_annotation "=" expression {
-// 170|    LetDeclaration::{ name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
+// 170|    { name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
 // 171|  }
 
 ///|
@@ -1198,7 +1191,7 @@ fn yy_action_27(
   YYObj_LetDeclaration(
     {
       ()
-      LetDeclaration::{
+      {
         name: Some(_dollar2),
         type_annotation: _dollar3,
         initializer: _dollar5,
@@ -1210,7 +1203,7 @@ fn yy_action_27(
 
 // file:///./parser.mbty
 // 354|    "{" local_items expression "}" {
-// 355|    Expr::Block(items=$2, result=$3, loc=span($sloc))
+// 355|    Block(items=$2, result=$3, loc=span($sloc))
 // 356|  }
 
 ///|
@@ -1229,7 +1222,7 @@ fn yy_action_28(
   YYObj_Expr(
     {
       ()
-      Expr::Block(
+      Block(
         items=_dollar2,
         result=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -1257,7 +1250,7 @@ fn yy_action_29(
 }
 
 // file:///./parser.mbty
-// 365|    local_let_declaration { LocalItem::Let($1) }
+// 365|    local_let_declaration { Let($1) }
 
 ///|
 fn yy_action_30(
@@ -1268,13 +1261,13 @@ fn yy_action_30(
   YYObj_LocalItem(
     {
       ()
-      LocalItem::Let(_dollar1)
+      Let(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
-// 366|    function_declaration { LocalItem::Function($1) }
+// 366|    function_declaration { Function($1) }
 
 ///|
 fn yy_action_31(
@@ -1285,13 +1278,13 @@ fn yy_action_31(
   YYObj_LocalItem(
     {
       ()
-      LocalItem::Function(_dollar1)
+      Function(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
-// 367|    open_declaration { LocalItem::Open($1) }
+// 367|    open_declaration { Open($1) }
 
 ///|
 fn yy_action_32(
@@ -1302,14 +1295,14 @@ fn yy_action_32(
   YYObj_LocalItem(
     {
       ()
-      LocalItem::Open(_dollar1)
+      Open(_dollar1)
     },
   )
 }
 
 // file:///./parser.mbty
 // 377|    "match" expression "{" match_arms "}" {
-// 378|    Expr::Match(scrutinee=$2, arms=$4, loc=span($sloc))
+// 378|    Match(scrutinee=$2, arms=$4, loc=span($sloc))
 // 379|  }
 
 ///|
@@ -1328,7 +1321,7 @@ fn yy_action_33(
   YYObj_Expr(
     {
       ()
-      Expr::Match(
+      Match(
         scrutinee=_dollar2,
         arms=_dollar4,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -1357,7 +1350,7 @@ fn yy_action_34(
 
 // file:///./parser.mbty
 // 388|    pattern "=>" expression {
-// 389|    MatchArm::{ pattern: $1, body: $3, loc: span($sloc) }
+// 389|    { pattern: $1, body: $3, loc: span($sloc) }
 // 390|  }
 
 ///|
@@ -1376,7 +1369,7 @@ fn yy_action_35(
   YYObj_MatchArm(
     {
       ()
-      MatchArm::{
+      {
         pattern: _dollar1,
         body: _dollar3,
         loc: span((_symbol_start_pos, _end_pos)),
@@ -1387,7 +1380,7 @@ fn yy_action_35(
 
 // file:///./parser.mbty
 // 433|    IDENT "::" "{" struct_pattern_fields "}" {
-// 434|    Pattern::Struct(type_name=$1, fields=$4, loc=span($sloc))
+// 434|    Struct(type_name=$1, fields=$4, loc=span($sloc))
 // 435|  }
 
 ///|
@@ -1406,7 +1399,7 @@ fn yy_action_36(
   YYObj_Pattern(
     {
       ()
-      Pattern::Struct(
+      Struct(
         type_name=_dollar1,
         fields=_dollar4,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -1486,7 +1479,7 @@ fn yy_action_40(
 
 // file:///./parser.mbty
 // 472|    IDENT ":" pattern {
-// 473|    StructPatternField::{ name: $1, pattern: Some($3), loc: span($sloc) }
+// 473|    { name: $1, pattern: Some($3), loc: span($sloc) }
 // 474|  }
 
 ///|
@@ -1505,7 +1498,7 @@ fn yy_action_41(
   YYObj_StructPatternField(
     {
       ()
-      StructPatternField::{
+      {
         name: _dollar1,
         pattern: Some(_dollar3),
         loc: span((_symbol_start_pos, _end_pos)),
@@ -1516,7 +1509,7 @@ fn yy_action_41(
 
 // file:///./parser.mbty
 // 469|    IDENT {
-// 470|    StructPatternField::{ name: $1, pattern: None, loc: span($sloc) }
+// 470|    { name: $1, pattern: None, loc: span($sloc) }
 // 471|  }
 
 ///|
@@ -1534,7 +1527,7 @@ fn yy_action_42(
   YYObj_StructPatternField(
     {
       ()
-      StructPatternField::{
+      {
         name: _dollar1,
         pattern: None,
         loc: span((_symbol_start_pos, _end_pos)),
@@ -1561,7 +1554,7 @@ fn yy_action_43(
 
 // file:///./parser.mbty
 // 436|    IDENT "::" IDENT pattern_arguments {
-// 437|    Pattern::QualifiedVariant(type_name=$1, variant=$3, arguments=$4, loc=span($sloc))
+// 437|    QualifiedVariant(type_name=$1, variant=$3, arguments=$4, loc=span($sloc))
 // 438|  }
 
 ///|
@@ -1581,7 +1574,7 @@ fn yy_action_44(
   YYObj_Pattern(
     {
       ()
-      Pattern::QualifiedVariant(
+      QualifiedVariant(
         type_name=_dollar1,
         variant=_dollar3,
         arguments=_dollar4,
@@ -1609,7 +1602,7 @@ fn yy_action_45(
 }
 
 // file:///./parser.mbty
-// 427|    "_" { Pattern::Wildcard(span($sloc)) }
+// 427|    "_" { Wildcard(span($sloc)) }
 
 ///|
 fn yy_action_46(
@@ -1625,13 +1618,13 @@ fn yy_action_46(
   YYObj_Pattern(
     {
       ()
-      Pattern::Wildcard(span((_symbol_start_pos, _end_pos)))
+      Wildcard(span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
-// 428|    INT { Pattern::IntLiteral($1, loc=span($sloc)) }
+// 428|    INT { IntLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_47(
@@ -1648,13 +1641,13 @@ fn yy_action_47(
   YYObj_Pattern(
     {
       ()
-      Pattern::IntLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
+      IntLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
-// 429|    STRING { Pattern::StringLiteral($1, loc=span($sloc)) }
+// 429|    STRING { StringLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_48(
@@ -1671,13 +1664,13 @@ fn yy_action_48(
   YYObj_Pattern(
     {
       ()
-      Pattern::StringLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
+      StringLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
-// 430|    "true" { Pattern::BoolLiteral(true, loc=span($sloc)) }
+// 430|    "true" { BoolLiteral(true, loc=span($sloc)) }
 
 ///|
 fn yy_action_49(
@@ -1693,13 +1686,13 @@ fn yy_action_49(
   YYObj_Pattern(
     {
       ()
-      Pattern::BoolLiteral(true, loc=span((_symbol_start_pos, _end_pos)))
+      BoolLiteral(true, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
-// 431|    "false" { Pattern::BoolLiteral(false, loc=span($sloc)) }
+// 431|    "false" { BoolLiteral(false, loc=span($sloc)) }
 
 ///|
 fn yy_action_50(
@@ -1715,7 +1708,7 @@ fn yy_action_50(
   YYObj_Pattern(
     {
       ()
-      Pattern::BoolLiteral(false, loc=span((_symbol_start_pos, _end_pos)))
+      BoolLiteral(false, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
@@ -1822,7 +1815,7 @@ fn yy_action_56(
 }
 
 // file:///./parser.mbty
-// 432|    IDENT { Pattern::Binding($1, loc=span($sloc)) }
+// 432|    IDENT { Binding($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_57(
@@ -1839,7 +1832,7 @@ fn yy_action_57(
   YYObj_Pattern(
     {
       ()
-      Pattern::Binding(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
+      Binding(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
@@ -1862,7 +1855,7 @@ fn yy_action_58(
 
 // file:///./parser.mbty
 // 371|    "if" expression block_expression "else" block_expression {
-// 372|    Expr::If(condition=$2, then_branch=$3, else_branch=$5, loc=span($sloc))
+// 372|    If(condition=$2, then_branch=$3, else_branch=$5, loc=span($sloc))
 // 373|  }
 
 ///|
@@ -1882,7 +1875,7 @@ fn yy_action_59(
   YYObj_Expr(
     {
       ()
-      Expr::If(
+      If(
         condition=_dollar2,
         then_branch=_dollar3,
         else_branch=_dollar5,
@@ -1911,7 +1904,7 @@ fn yy_action_60(
 
 // file:///./parser.mbty
 // 304|    IDENT type_arguments "::" "{" struct_literal_fields "}" {
-// 305|    Expr::StructLiteral(type_name=$1, type_arguments=$2, fields=$5, loc=span($sloc))
+// 305|    StructLiteral(type_name=$1, type_arguments=$2, fields=$5, loc=span($sloc))
 // 306|  }
 
 ///|
@@ -1931,7 +1924,7 @@ fn yy_action_61(
   YYObj_Expr(
     {
       ()
-      Expr::StructLiteral(
+      StructLiteral(
         type_name=_dollar1,
         type_arguments=_dollar2,
         fields=_dollar5,
@@ -2012,7 +2005,7 @@ fn yy_action_65(
 
 // file:///./parser.mbty
 // 332|    IDENT ":" expression {
-// 333|    StructLiteralField::{ name: $1, value: Some($3), loc: span($sloc) }
+// 333|    { name: $1, value: Some($3), loc: span($sloc) }
 // 334|  }
 
 ///|
@@ -2031,7 +2024,7 @@ fn yy_action_66(
   YYObj_StructLiteralField(
     {
       ()
-      StructLiteralField::{
+      {
         name: _dollar1,
         value: Some(_dollar3),
         loc: span((_symbol_start_pos, _end_pos)),
@@ -2042,7 +2035,7 @@ fn yy_action_66(
 
 // file:///./parser.mbty
 // 329|    IDENT {
-// 330|    StructLiteralField::{ name: $1, value: None, loc: span($sloc) }
+// 330|    { name: $1, value: None, loc: span($sloc) }
 // 331|  }
 
 ///|
@@ -2060,11 +2053,7 @@ fn yy_action_67(
   YYObj_StructLiteralField(
     {
       ()
-      StructLiteralField::{
-        name: _dollar1,
-        value: None,
-        loc: span((_symbol_start_pos, _end_pos)),
-      }
+      { name: _dollar1, value: None, loc: span((_symbol_start_pos, _end_pos)) }
     },
   )
 }
@@ -2087,7 +2076,7 @@ fn yy_action_68(
 
 // file:///./parser.mbty
 // 307|    IDENT type_arguments "::" IDENT variant_arguments {
-// 308|    Expr::QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, arguments=$5, loc=span($sloc))
+// 308|    QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, arguments=$5, loc=span($sloc))
 // 309|  }
 
 ///|
@@ -2108,7 +2097,7 @@ fn yy_action_69(
   YYObj_Expr(
     {
       ()
-      Expr::QualifiedVariant(
+      QualifiedVariant(
         type_name=_dollar1,
         type_arguments=_dollar2,
         variant=_dollar4,
@@ -2156,7 +2145,7 @@ fn yy_action_71(
 
 // file:///./parser.mbty
 // 275|    "!" expression %prec UNARY {
-// 276|    Expr::Unary(operator=UnaryOperator::Not, operand=$2, loc=span($sloc))
+// 276|    Unary(operator=Not, operand=$2, loc=span($sloc))
 // 277|  }
 
 ///|
@@ -2174,8 +2163,8 @@ fn yy_action_72(
   YYObj_Expr(
     {
       ()
-      Expr::Unary(
-        operator=UnaryOperator::Not,
+      Unary(
+        operator=Not,
         operand=_dollar2,
         loc=span((_symbol_start_pos, _end_pos)),
       )
@@ -2185,7 +2174,7 @@ fn yy_action_72(
 
 // file:///./parser.mbty
 // 230|    expression "|>" expression {
-// 231|    Expr::Pipeline(left=$1, right=$3, loc=span($sloc))
+// 231|    Pipeline(left=$1, right=$3, loc=span($sloc))
 // 232|  }
 
 ///|
@@ -2204,7 +2193,7 @@ fn yy_action_73(
   YYObj_Expr(
     {
       ()
-      Expr::Pipeline(
+      Pipeline(
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2215,7 +2204,7 @@ fn yy_action_73(
 
 // file:///./parser.mbty
 // 233|    expression "||" expression {
-// 234|    Expr::Binary(operator=BinaryOperator::Or, left=$1, right=$3, loc=span($sloc))
+// 234|    Binary(operator=Or, left=$1, right=$3, loc=span($sloc))
 // 235|  }
 
 ///|
@@ -2234,8 +2223,8 @@ fn yy_action_74(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Or,
+      Binary(
+        operator=Or,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2246,7 +2235,7 @@ fn yy_action_74(
 
 // file:///./parser.mbty
 // 236|    expression "&&" expression {
-// 237|    Expr::Binary(operator=BinaryOperator::And, left=$1, right=$3, loc=span($sloc))
+// 237|    Binary(operator=And, left=$1, right=$3, loc=span($sloc))
 // 238|  }
 
 ///|
@@ -2265,8 +2254,8 @@ fn yy_action_75(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::And,
+      Binary(
+        operator=And,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2277,7 +2266,7 @@ fn yy_action_75(
 
 // file:///./parser.mbty
 // 239|    expression "==" expression {
-// 240|    Expr::Binary(operator=BinaryOperator::Equal, left=$1, right=$3, loc=span($sloc))
+// 240|    Binary(operator=Equal, left=$1, right=$3, loc=span($sloc))
 // 241|  }
 
 ///|
@@ -2296,8 +2285,8 @@ fn yy_action_76(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Equal,
+      Binary(
+        operator=Equal,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2308,7 +2297,7 @@ fn yy_action_76(
 
 // file:///./parser.mbty
 // 242|    expression "!=" expression {
-// 243|    Expr::Binary(operator=BinaryOperator::NotEqual, left=$1, right=$3, loc=span($sloc))
+// 243|    Binary(operator=NotEqual, left=$1, right=$3, loc=span($sloc))
 // 244|  }
 
 ///|
@@ -2327,8 +2316,8 @@ fn yy_action_77(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::NotEqual,
+      Binary(
+        operator=NotEqual,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2339,7 +2328,7 @@ fn yy_action_77(
 
 // file:///./parser.mbty
 // 245|    expression "<" expression {
-// 246|    Expr::Binary(operator=BinaryOperator::Less, left=$1, right=$3, loc=span($sloc))
+// 246|    Binary(operator=Less, left=$1, right=$3, loc=span($sloc))
 // 247|  }
 
 ///|
@@ -2358,8 +2347,8 @@ fn yy_action_78(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Less,
+      Binary(
+        operator=Less,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2370,7 +2359,7 @@ fn yy_action_78(
 
 // file:///./parser.mbty
 // 248|    expression "<=" expression {
-// 249|    Expr::Binary(operator=BinaryOperator::LessEqual, left=$1, right=$3, loc=span($sloc))
+// 249|    Binary(operator=LessEqual, left=$1, right=$3, loc=span($sloc))
 // 250|  }
 
 ///|
@@ -2389,8 +2378,8 @@ fn yy_action_79(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::LessEqual,
+      Binary(
+        operator=LessEqual,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2401,7 +2390,7 @@ fn yy_action_79(
 
 // file:///./parser.mbty
 // 251|    expression ">" expression {
-// 252|    Expr::Binary(operator=BinaryOperator::Greater, left=$1, right=$3, loc=span($sloc))
+// 252|    Binary(operator=Greater, left=$1, right=$3, loc=span($sloc))
 // 253|  }
 
 ///|
@@ -2420,8 +2409,8 @@ fn yy_action_80(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Greater,
+      Binary(
+        operator=Greater,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2432,7 +2421,7 @@ fn yy_action_80(
 
 // file:///./parser.mbty
 // 254|    expression ">=" expression {
-// 255|    Expr::Binary(operator=BinaryOperator::GreaterEqual, left=$1, right=$3, loc=span($sloc))
+// 255|    Binary(operator=GreaterEqual, left=$1, right=$3, loc=span($sloc))
 // 256|  }
 
 ///|
@@ -2451,8 +2440,8 @@ fn yy_action_81(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::GreaterEqual,
+      Binary(
+        operator=GreaterEqual,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2463,7 +2452,7 @@ fn yy_action_81(
 
 // file:///./parser.mbty
 // 257|    expression "+" expression {
-// 258|    Expr::Binary(operator=BinaryOperator::Add, left=$1, right=$3, loc=span($sloc))
+// 258|    Binary(operator=Add, left=$1, right=$3, loc=span($sloc))
 // 259|  }
 
 ///|
@@ -2482,8 +2471,8 @@ fn yy_action_82(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Add,
+      Binary(
+        operator=Add,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2494,7 +2483,7 @@ fn yy_action_82(
 
 // file:///./parser.mbty
 // 260|    expression "-" expression {
-// 261|    Expr::Binary(operator=BinaryOperator::Sub, left=$1, right=$3, loc=span($sloc))
+// 261|    Binary(operator=Sub, left=$1, right=$3, loc=span($sloc))
 // 262|  }
 
 ///|
@@ -2513,8 +2502,8 @@ fn yy_action_83(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Sub,
+      Binary(
+        operator=Sub,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2525,7 +2514,7 @@ fn yy_action_83(
 
 // file:///./parser.mbty
 // 263|    expression "*" expression {
-// 264|    Expr::Binary(operator=BinaryOperator::Mul, left=$1, right=$3, loc=span($sloc))
+// 264|    Binary(operator=Mul, left=$1, right=$3, loc=span($sloc))
 // 265|  }
 
 ///|
@@ -2544,8 +2533,8 @@ fn yy_action_84(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Mul,
+      Binary(
+        operator=Mul,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2556,7 +2545,7 @@ fn yy_action_84(
 
 // file:///./parser.mbty
 // 266|    expression "/" expression {
-// 267|    Expr::Binary(operator=BinaryOperator::Div, left=$1, right=$3, loc=span($sloc))
+// 267|    Binary(operator=Div, left=$1, right=$3, loc=span($sloc))
 // 268|  }
 
 ///|
@@ -2575,8 +2564,8 @@ fn yy_action_85(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Div,
+      Binary(
+        operator=Div,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2587,7 +2576,7 @@ fn yy_action_85(
 
 // file:///./parser.mbty
 // 269|    expression "%" expression {
-// 270|    Expr::Binary(operator=BinaryOperator::Rem, left=$1, right=$3, loc=span($sloc))
+// 270|    Binary(operator=Rem, left=$1, right=$3, loc=span($sloc))
 // 271|  }
 
 ///|
@@ -2606,8 +2595,8 @@ fn yy_action_86(
   YYObj_Expr(
     {
       ()
-      Expr::Binary(
-        operator=BinaryOperator::Rem,
+      Binary(
+        operator=Rem,
         left=_dollar1,
         right=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2635,7 +2624,7 @@ fn yy_action_87(
 
 // file:///./parser.mbty
 // 278|    expression "(" argument_list ")" {
-// 279|    Expr::Call(callee=$1, arguments=$3, loc=span($sloc))
+// 279|    Call(callee=$1, arguments=$3, loc=span($sloc))
 // 280|  }
 
 ///|
@@ -2654,7 +2643,7 @@ fn yy_action_88(
   YYObj_Expr(
     {
       ()
-      Expr::Call(
+      Call(
         callee=_dollar1,
         arguments=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2698,7 +2687,7 @@ fn yy_action_90(
 
 // file:///./parser.mbty
 // 281|    expression "." IDENT {
-// 282|    Expr::Field(base=$1, name=$3, loc=span($sloc))
+// 282|    Field(base=$1, name=$3, loc=span($sloc))
 // 283|  }
 
 ///|
@@ -2717,7 +2706,7 @@ fn yy_action_91(
   YYObj_Expr(
     {
       ()
-      Expr::Field(
+      Field(
         base=_dollar1,
         name=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -2728,7 +2717,7 @@ fn yy_action_91(
 
 // file:///./parser.mbty
 // 272|    "-" expression %prec UNARY {
-// 273|    Expr::Unary(operator=UnaryOperator::Neg, operand=$2, loc=span($sloc))
+// 273|    Unary(operator=Neg, operand=$2, loc=span($sloc))
 // 274|  }
 
 ///|
@@ -2746,8 +2735,8 @@ fn yy_action_92(
   YYObj_Expr(
     {
       ()
-      Expr::Unary(
-        operator=UnaryOperator::Neg,
+      Unary(
+        operator=Neg,
         operand=_dollar2,
         loc=span((_symbol_start_pos, _end_pos)),
       )
@@ -2773,7 +2762,7 @@ fn yy_action_93(
 }
 
 // file:///./parser.mbty
-// 288|    INT { Expr::IntLiteral($1, loc=span($sloc)) }
+// 288|    INT { IntLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_94(
@@ -2790,13 +2779,13 @@ fn yy_action_94(
   YYObj_Expr(
     {
       ()
-      Expr::IntLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
+      IntLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
-// 289|    STRING { Expr::StringLiteral($1, loc=span($sloc)) }
+// 289|    STRING { StringLiteral($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_95(
@@ -2813,13 +2802,13 @@ fn yy_action_95(
   YYObj_Expr(
     {
       ()
-      Expr::StringLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
+      StringLiteral(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
-// 290|    "true" { Expr::BoolLiteral(true, loc=span($sloc)) }
+// 290|    "true" { BoolLiteral(true, loc=span($sloc)) }
 
 ///|
 fn yy_action_96(
@@ -2835,13 +2824,13 @@ fn yy_action_96(
   YYObj_Expr(
     {
       ()
-      Expr::BoolLiteral(true, loc=span((_symbol_start_pos, _end_pos)))
+      BoolLiteral(true, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
-// 291|    "false" { Expr::BoolLiteral(false, loc=span($sloc)) }
+// 291|    "false" { BoolLiteral(false, loc=span($sloc)) }
 
 ///|
 fn yy_action_97(
@@ -2857,7 +2846,7 @@ fn yy_action_97(
   YYObj_Expr(
     {
       ()
-      Expr::BoolLiteral(false, loc=span((_symbol_start_pos, _end_pos)))
+      BoolLiteral(false, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
@@ -2929,7 +2918,7 @@ fn yy_action_101(
 }
 
 // file:///./parser.mbty
-// 292|    IDENT { Expr::Var($1, loc=span($sloc)) }
+// 292|    IDENT { Var($1, loc=span($sloc)) }
 
 ///|
 fn yy_action_102(
@@ -2946,7 +2935,7 @@ fn yy_action_102(
   YYObj_Expr(
     {
       ()
-      Expr::Var(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
+      Var(_dollar1, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
@@ -2969,7 +2958,7 @@ fn yy_action_103(
 }
 
 // file:///./parser.mbty
-// 294|    "(" ")" { Expr::UnitLiteral(loc=span($sloc)) }
+// 294|    "(" ")" { UnitLiteral(loc=span($sloc)) }
 
 ///|
 fn yy_action_104(
@@ -2985,7 +2974,7 @@ fn yy_action_104(
   YYObj_Expr(
     {
       ()
-      Expr::UnitLiteral(loc=span((_symbol_start_pos, _end_pos)))
+      UnitLiteral(loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
@@ -3093,7 +3082,7 @@ fn yy_action_110(
 
 // file:///./parser.mbty
 // 394|    "fn" type_parameters "(" function_literal_parameters ")" return_type_annotation block_expression {
-// 395|    Expr::FunctionLiteral(type_parameters=$2, parameters=$4, return_type=$6, body=$7, loc=span($sloc))
+// 395|    FunctionLiteral(type_parameters=$2, parameters=$4, return_type=$6, body=$7, loc=span($sloc))
 // 396|  }
 
 ///|
@@ -3114,7 +3103,7 @@ fn yy_action_111(
   YYObj_Expr(
     {
       ()
-      Expr::FunctionLiteral(
+      FunctionLiteral(
         type_parameters=_dollar2,
         parameters=_dollar4,
         return_type=_dollar6,
@@ -3229,7 +3218,7 @@ fn yy_action_117(
 
 // file:///./parser.mbty
 // 410|    IDENT local_type_annotation {
-// 411|    FunctionLiteralParameter::{ name: $1, type_annotation: $2, loc: span($sloc) }
+// 411|    { name: $1, type_annotation: $2, loc: span($sloc) }
 // 412|  }
 
 ///|
@@ -3248,7 +3237,7 @@ fn yy_action_118(
   YYObj_FunctionLiteralParameter(
     {
       ()
-      FunctionLiteralParameter::{
+      {
         name: _dollar1,
         type_annotation: _dollar2,
         loc: span((_symbol_start_pos, _end_pos)),
@@ -3307,7 +3296,7 @@ fn yy_action_121(
 
 // file:///./parser.mbty
 // 421|    "builtin" "(" STRING ")" {
-// 422|    Expr::Builtin($3, loc=span($sloc))
+// 422|    Builtin($3, loc=span($sloc))
 // 423|  }
 
 ///|
@@ -3325,14 +3314,14 @@ fn yy_action_122(
   YYObj_Expr(
     {
       ()
-      Expr::Builtin(_dollar3, loc=span((_symbol_start_pos, _end_pos)))
+      Builtin(_dollar3, loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
 
 // file:///./parser.mbty
 // 214|    "(" type_list ")" "->" type {
-// 215|    Type::Function(type_parameters=[], parameters=$2, result=$5, loc=span($sloc))
+// 215|    Function(type_parameters=[], parameters=$2, result=$5, loc=span($sloc))
 // 216|  }
 
 ///|
@@ -3351,7 +3340,7 @@ fn yy_action_123(
   YYObj_Type(
     {
       ()
-      Type::Function(
+      Function(
         type_parameters=[],
         parameters=_dollar2,
         result=_dollar5,
@@ -3432,8 +3421,8 @@ fn yy_action_127(
 
 // file:///./parser.mbty
 // 198|    "[" non_empty_ident_list "]" function_type {
-// 199|    guard $4 is Type::Function(type_parameters=_, parameters~, result~, loc~)
-// 200|    Type::Function(type_parameters=$2, parameters~, result~, loc~)
+// 199|    guard $4 is Function(type_parameters=_, parameters~, result~, loc~)
+// 200|    Function(type_parameters=$2, parameters~, result~, loc~)
 // 201|  }
 
 ///|
@@ -3446,16 +3435,15 @@ fn yy_action_128(
   YYObj_Type(
     {
       ()
-      guard _dollar4
-        is Type::Function(type_parameters=_, parameters~, result~, loc~)
-      Type::Function(type_parameters=_dollar2, parameters~, result~, loc~)
+      guard _dollar4 is Function(type_parameters=_, parameters~, result~, loc~)
+      Function(type_parameters=_dollar2, parameters~, result~, loc~)
     },
   )
 }
 
 // file:///./parser.mbty
 // 208|    IDENT "[" type_list "]" {
-// 209|    Type::Name(name=$1, arguments=$3, loc=span($sloc))
+// 209|    Name(name=$1, arguments=$3, loc=span($sloc))
 // 210|  }
 
 ///|
@@ -3474,7 +3462,7 @@ fn yy_action_129(
   YYObj_Type(
     {
       ()
-      Type::Name(
+      Name(
         name=_dollar1,
         arguments=_dollar3,
         loc=span((_symbol_start_pos, _end_pos)),
@@ -3485,7 +3473,7 @@ fn yy_action_129(
 
 // file:///./parser.mbty
 // 205|    IDENT {
-// 206|    Type::Name(name=$1, arguments=[], loc=span($sloc))
+// 206|    Name(name=$1, arguments=[], loc=span($sloc))
 // 207|  }
 
 ///|
@@ -3503,11 +3491,7 @@ fn yy_action_130(
   YYObj_Type(
     {
       ()
-      Type::Name(
-        name=_dollar1,
-        arguments=[],
-        loc=span((_symbol_start_pos, _end_pos)),
-      )
+      Name(name=_dollar1, arguments=[], loc=span((_symbol_start_pos, _end_pos)))
     },
   )
 }
@@ -3582,7 +3566,7 @@ fn yy_action_134(
 
 // file:///./parser.mbty
 // 180|    "open" IDENT {
-// 181|    OpenDeclaration::{ name: $2, loc: span($sloc) }
+// 181|    { name: $2, loc: span($sloc) }
 // 182|  }
 
 ///|
@@ -3600,10 +3584,7 @@ fn yy_action_135(
   YYObj_OpenDeclaration(
     {
       ()
-      OpenDeclaration::{
-        name: _dollar2,
-        loc: span((_symbol_start_pos, _end_pos)),
-      }
+      { name: _dollar2, loc: span((_symbol_start_pos, _end_pos)) }
     },
   )
 }

@@ -3,7 +3,6 @@ using @basic {type SourceSpan}
 
 ///|
 using @syntax {
-  type BinaryOperator,
   type EnumDeclaration,
   type EnumVariant,
   type Expr,
@@ -23,7 +22,6 @@ using @syntax {
   type StructPatternField,
   type TopLevelDeclaration,
   type Type,
-  type UnaryOperator,
 }
 
 ///|

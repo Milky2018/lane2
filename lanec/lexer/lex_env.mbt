@@ -17,7 +17,7 @@ fn LexEnv::calc_offset(
 
 ///|
 fn LexEnv::span(self : LexEnv, start~ : Int, end~ : Int) -> SourceSpan {
-  SourceSpan::{
+  {
     start_offset: start,
     end_offset: end,
     start_line: self.current_line,
@@ -44,7 +44,7 @@ fn LexEnv::add_error(
   start~ : Int,
   end~ : Int,
 ) -> Unit {
-  self.errors.push(LexError::{ error, span: self.span(start~, end~) })
+  self.errors.push({ error, span: self.span(start~, end~) })
 }
 
 ///|

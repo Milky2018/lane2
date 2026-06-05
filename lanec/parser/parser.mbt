@@ -2,14 +2,10 @@
 pub fn parse_string(source : String) -> ParseResult {
   let lexed = @lexer.tokens_from_string(source)
   if !lexed.errors.is_empty() {
-    ParseResult::{
-      source: None,
-      lexical_errors: lexed.errors,
-      parse_errors: [],
-    }
+    { source: None, lexical_errors: lexed.errors, parse_errors: [] }
   } else {
     let result = parse_tokens(lexed.tokens)
-    ParseResult::{
+    {
       source: result.source,
       lexical_errors: [],
       parse_errors: result.parse_errors,
@@ -25,22 +21,19 @@ pub fn parse_tokens(tokens : Array[(@lexer.Token, SourceSpan)]) -> ParseResult {
   })
   let source = @yacc_parser.source_file(yacc_tokens) catch {
     UnexpectedEndOfInput(loc, expected) =>
-      return ParseResult::{
+      return {
         source: None,
         lexical_errors: [],
         parse_errors: [
-          ParseError::{
-            kind: UnexpectedEndOfInput(expected_syntax(expected)),
-            loc,
-          },
+          { kind: UnexpectedEndOfInput(expected_syntax(expected)), loc },
         ],
       }
     UnexpectedToken(token, (start, end), expected) =>
-      return ParseResult::{
+      return {
         source: None,
         lexical_errors: [],
         parse_errors: [
-          ParseError::{
+          {
             kind: UnexpectedToken(
               token_summary(token),
               expected_syntax(expected),
@@ -50,12 +43,12 @@ pub fn parse_tokens(tokens : Array[(@lexer.Token, SourceSpan)]) -> ParseResult {
         ],
       }
   }
-  ParseResult::{ source: Some(source), lexical_errors: [], parse_errors: [] }
+  { source: Some(source), lexical_errors: [], parse_errors: [] }
 }
 
 ///|
 fn token_summary(token : @yacc_parser.Token) -> TokenSummary {
-  TokenSummary::{ label: token_label(token) }
+  { label: token_label(token) }
 }
 
 ///|
@@ -64,7 +57,7 @@ fn expected_syntax(
 ) -> Array[ExpectedSyntax] {
   let result = []
   for kind in kinds {
-    let syntax = ExpectedSyntax::{ label: token_kind_label(kind) }
+    let syntax : ExpectedSyntax = { label: token_kind_label(kind) }
     if !result.contains(syntax) {
       result.push(syntax)
     }

@@ -2,7 +2,7 @@
 pub fn tokens_from_string(source : String) -> LexResult {
   let env = LexEnv::{ tokens: [], errors: [], current_line: 1, current_bol: 0 }
   lex_tokens(source, base=source, env~)
-  LexResult::{ tokens: env.tokens, errors: env.errors }
+  { tokens: env.tokens, errors: env.errors }
 }
 
 ///|
