@@ -2,10 +2,10 @@
 package "Milky2018/lane2/parser"
 
 import {
-  "moonbitlang/core/debug",
   "Milky2018/lane2/basic",
   "Milky2018/lane2/lexer",
   "Milky2018/lane2/syntax",
+  "moonbitlang/core/debug",
 }
 
 // Values

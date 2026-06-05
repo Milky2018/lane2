@@ -1,95 +1,73 @@
 ///|
-fn text(value : String) -> @prettyprinter.Document {
-  @prettyprinter.text(value)
-}
-
-///|
-fn keyword(value : String) -> @prettyprinter.Document {
+fn keyword(value : String) -> Document {
   text(value)
 }
 
 ///|
-fn hardline() -> @prettyprinter.Document {
-  @prettyprinter.hardline
+fn comma_space() -> Document {
+  text(",") + space
 }
 
 ///|
-fn space() -> @prettyprinter.Document {
-  @prettyprinter.space
+fn comma_line() -> Document {
+  text(",") + line
 }
 
 ///|
-fn comma_space() -> @prettyprinter.Document {
-  text(",") + space()
+fn join_comma(docs : Array[Document]) -> Document {
+  separate(comma_space(), docs)
 }
 
 ///|
-fn comma_line() -> @prettyprinter.Document {
-  text(",") + @prettyprinter.line
+fn join_comma_group(docs : Array[Document]) -> Document {
+  group(separate(comma_line(), docs))
 }
 
 ///|
-fn join_comma(docs : Array[@prettyprinter.Document]) -> @prettyprinter.Document {
-  @prettyprinter.separate(comma_space(), docs)
-}
-
-///|
-fn join_comma_group(
-  docs : Array[@prettyprinter.Document],
-) -> @prettyprinter.Document {
-  @prettyprinter.group(@prettyprinter.separate(comma_line(), docs))
-}
-
-///|
-fn bracketed_type_parameters(
-  parameters : Array[String],
-) -> @prettyprinter.Document {
+fn bracketed_type_parameters(parameters : Array[String]) -> Document {
   if parameters.is_empty() {
-    @prettyprinter.empty
+    empty
   } else {
-    @prettyprinter.brackets(join_comma(parameters.map(text)))
+    brackets(join_comma(parameters.map(text)))
   }
 }
 
 ///|
-fn bracketed_type_arguments(arguments : Array[Type]) -> @prettyprinter.Document {
+fn bracketed_type_arguments(arguments : Array[Type]) -> Document {
   if arguments.is_empty() {
-    @prettyprinter.empty
+    empty
   } else {
-    @prettyprinter.brackets(join_comma(arguments.map(Type::to_doc)))
+    brackets(join_comma(arguments.map(Type::to_doc)))
   }
 }
 
 ///|
-fn parenthesized(
-  docs : Array[@prettyprinter.Document],
-) -> @prettyprinter.Document {
-  @prettyprinter.parens(join_comma_group(docs))
+fn parenthesized(docs : Array[Document]) -> Document {
+  parens(join_comma_group(docs))
 }
 
 ///|
-fn brace_block(
-  docs : Array[@prettyprinter.Document],
-) -> @prettyprinter.Document {
+fn brace_block(docs : Array[Document]) -> Document {
   if docs.is_empty() {
-    text("{}")
+    surround(char('{'), char('}'), empty)
   } else {
-    text("{") +
-    @prettyprinter.nest(hardline() + @prettyprinter.separate(hardline(), docs)) +
-    hardline() +
-    text("}")
+    surround(
+      char('{'),
+      hardline + char('}'),
+      nest(hardline + separate(hardline, docs)),
+    )
   }
 }
 
 ///|
-fn source_string(value : String) -> @prettyprinter.Document {
+fn source_string(value : String) -> Document {
   text(value.escape())
 }
 
 ///|
 pub impl @prettyprinter.Pretty for SourceFile with fn pretty(file : SourceFile) {
-  @prettyprinter.separate(
-    hardline() + hardline(),
+  separate(
+    hardline + hardline,
     file.declarations.map(TopLevelDeclaration::to_doc),
   )
 }
@@ -102,9 +80,7 @@ pub impl @prettyprinter.Pretty for TopLevelDeclaration with fn pretty(
 }
 
 ///|
-fn TopLevelDeclaration::to_doc(
-  self : TopLevelDeclaration,
-) -> @prettyprinter.Document {
+fn TopLevelDeclaration::to_doc(self : TopLevelDeclaration) -> Document {
   match self {
     Struct(declaration) => declaration.to_doc()
     Enum(declaration) => declaration.to_doc()
@@ -122,19 +98,17 @@ pub impl @prettyprinter.Pretty for StructDeclaration with fn pretty(
 }
 
 ///|
-fn StructDeclaration::to_doc(
-  self : StructDeclaration,
-) -> @prettyprinter.Document {
+fn StructDeclaration::to_doc(self : StructDeclaration) -> Document {
   keyword("struct") +
-  space() +
+  space +
   text(self.name) +
   bracketed_type_parameters(self.type_parameters) +
-  space() +
+  space +
   brace_block(self.members.map(StructMember::to_doc))
 }
 
 ///|
-fn StructMember::to_doc(self : StructMember) -> @prettyprinter.Document {
+fn StructMember::to_doc(self : StructMember) -> Document {
   match self {
     Field(field) => field.to_doc()
     Open(declaration) => declaration.to_doc()
@@ -156,8 +130,8 @@ pub impl @prettyprinter.Pretty for FieldDeclaration with fn pretty(
 }
 
 ///|
-fn FieldDeclaration::to_doc(self : FieldDeclaration) -> @prettyprinter.Document {
-  text(self.name) + space() + text(":") + space() + self.type_.to_doc()
+fn FieldDeclaration::to_doc(self : FieldDeclaration) -> Document {
+  text(self.name) + space + text(":") + space + self.type_.to_doc()
 }
 
 ///|
@@ -168,17 +142,17 @@ pub impl @prettyprinter.Pretty for EnumDeclaration with fn pretty(
 }
 
 ///|
-fn EnumDeclaration::to_doc(self : EnumDeclaration) -> @prettyprinter.Document {
+fn EnumDeclaration::to_doc(self : EnumDeclaration) -> Document {
   keyword("enum") +
-  space() +
+  space +
   text(self.name) +
   bracketed_type_parameters(self.type_parameters) +
-  space() +
+  space +
   brace_block(self.variants.map(EnumVariant::to_doc))
 }
 
 ///|
-fn EnumVariant::to_doc(self : EnumVariant) -> @prettyprinter.Document {
+fn EnumVariant::to_doc(self : EnumVariant) -> Document {
   if self.payload.is_empty() {
     text(self.name)
   } else {
@@ -201,25 +175,23 @@ pub impl @prettyprinter.Pretty for FunctionDeclaration with fn pretty(
 }
 
 ///|
-fn FunctionDeclaration::to_doc(
-  self : FunctionDeclaration,
-) -> @prettyprinter.Document {
+fn FunctionDeclaration::to_doc(self : FunctionDeclaration) -> Document {
   keyword("fn") +
   bracketed_type_parameters(self.type_parameters) +
-  space() +
+  space +
   text(self.name) +
   parenthesized(self.parameters.map(Parameter::to_doc)) +
-  space() +
+  space +
   text("->") +
-  space() +
+  space +
   self.return_type.to_doc() +
-  space() +
+  space +
   self.body.to_doc()
 }
 
 ///|
-fn Parameter::to_doc(self : Parameter) -> @prettyprinter.Document {
-  text(self.name) + space() + text(":") + space() + self.type_.to_doc()
+fn Parameter::to_doc(self : Parameter) -> Document {
+  text(self.name) + space + text(":") + space + self.type_.to_doc()
 }
 
 ///|
@@ -237,21 +209,21 @@ pub impl @prettyprinter.Pretty for LetDeclaration with fn pretty(
 }
 
 ///|
-fn LetDeclaration::to_doc(self : LetDeclaration) -> @prettyprinter.Document {
+fn LetDeclaration::to_doc(self : LetDeclaration) -> Document {
   let name_doc = match self.name {
-    Some(name) => space() + text(name)
-    None => @prettyprinter.empty
+    Some(name) => space + text(name)
+    None => empty
   }
   let type_doc = match self.type_annotation {
-    Some(type_) => space() + text(":") + space() + type_.to_doc()
-    None => @prettyprinter.empty
+    Some(type_) => space + text(":") + space + type_.to_doc()
+    None => empty
   }
   keyword("let") +
   name_doc +
   type_doc +
-  space() +
+  space +
   text("=") +
-  space() +
+  space +
   self.initializer.to_doc()
 }
 
@@ -263,8 +235,8 @@ pub impl @prettyprinter.Pretty for OpenDeclaration with fn pretty(
 }
 
 ///|
-fn OpenDeclaration::to_doc(self : OpenDeclaration) -> @prettyprinter.Document {
-  keyword("open") + space() + text(self.name)
+fn OpenDeclaration::to_doc(self : OpenDeclaration) -> Document {
+  keyword("open") + space + text(self.name)
 }
 
 ///|
@@ -273,16 +245,16 @@ pub impl @prettyprinter.Pretty for Type with fn pretty(type_ : Type) {
 }
 
 ///|
-fn Type::to_doc(self : Type) -> @prettyprinter.Document {
+fn Type::to_doc(self : Type) -> Document {
   match self {
     Name(name~, arguments~, ..) =>
       text(name) + bracketed_type_arguments(arguments)
     Function(type_parameters~, parameters~, result~, ..) =>
       bracketed_type_parameters(type_parameters) +
       parenthesized(parameters.map(Type::to_doc)) +
-      space() +
+      space +
       text("->") +
-      space() +
+      space +
       result.to_doc()
   }
 }
@@ -293,7 +265,7 @@ pub impl @prettyprinter.Pretty for Expr with fn pretty(expression : Expr) {
 }
 
 ///|
-fn Expr::to_doc(self : Expr) -> @prettyprinter.Document {
+fn Expr::to_doc(self : Expr) -> Document {
   self.to_doc_with_precedence(0)
 }
 
@@ -301,7 +273,7 @@ fn Expr::to_doc(self : Expr) -> @prettyprinter.Document {
 fn Expr::to_doc_with_precedence(
   self : Expr,
   context_precedence : Int,
-) -> @prettyprinter.Document {
+) -> Document {
   let (precedence, doc) = match self {
     IntLiteral(value, ..) => (10, text(value))
     StringLiteral(value, ..) => (10, source_string(value))
@@ -330,17 +302,17 @@ fn Expr::to_doc_with_precedence(
       (10, keyword("builtin") + parenthesized([source_string(name)]))
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, ..) => {
       let return_doc = match return_type {
-        Some(type_) => space() + text("->") + space() + type_.to_doc()
-        None => @prettyprinter.empty
+        Some(type_) => space + text("->") + space + type_.to_doc()
+        None => empty
       }
       (
         10,
         keyword("fn") +
         bracketed_type_parameters(type_parameters) +
-        space() +
+        space +
         parenthesized(parameters.map(FunctionLiteralParameter::to_doc)) +
         return_doc +
-        space() +
+        space +
         body.to_doc(),
       )
     }
@@ -353,22 +325,22 @@ fn Expr::to_doc_with_precedence(
       (
         10,
         keyword("if") +
-        space() +
+        space +
         condition.to_doc() +
-        space() +
+        space +
         then_branch.to_doc() +
-        space() +
+        space +
         keyword("else") +
-        space() +
+        space +
         else_branch.to_doc(),
       )
     Match(scrutinee~, arms~, ..) =>
       (
         10,
         keyword("match") +
-        space() +
+        space +
         scrutinee.to_doc() +
-        space() +
+        space +
         brace_block(arms.map(MatchArm::to_doc)),
       )
     Call(callee~, arguments~, ..) =>
@@ -386,9 +358,9 @@ fn Expr::to_doc_with_precedence(
       (
         precedence,
         left.to_doc_with_precedence(precedence) +
-        space() +
+        space +
         operator.to_doc() +
-        space() +
+        space +
         right.to_doc_with_precedence(precedence + 1),
       )
     }
@@ -396,25 +368,23 @@ fn Expr::to_doc_with_precedence(
       (
         1,
         left.to_doc_with_precedence(1) +
-        space() +
+        space +
         text("|>") +
-        space() +
+        space +
         right.to_doc_with_precedence(2),
       )
   }
   if precedence < context_precedence {
-    @prettyprinter.parens(doc)
+    parens(doc)
   } else {
     doc
   }
 }
 
 ///|
-fn StructLiteralField::to_doc(
-  self : StructLiteralField,
-) -> @prettyprinter.Document {
+fn StructLiteralField::to_doc(self : StructLiteralField) -> Document {
   match self.value {
-    Some(value) => text(self.name) + text(":") + space() + value.to_doc()
+    Some(value) => text(self.name) + text(":") + space + value.to_doc()
     None => text(self.name)
   }
 }
@@ -427,7 +397,7 @@ pub impl @prettyprinter.Pretty for StructLiteralField with fn pretty(
 }
 
 ///|
-fn LocalItem::to_doc(self : LocalItem) -> @prettyprinter.Document {
+fn LocalItem::to_doc(self : LocalItem) -> Document {
   match self {
     Let(declaration) => declaration.to_doc()
     Function(declaration) => declaration.to_doc()
@@ -443,10 +413,9 @@ pub impl @prettyprinter.Pretty for LocalItem with fn pretty(item : LocalItem) {
 ///|
 fn FunctionLiteralParameter::to_doc(
   self : FunctionLiteralParameter,
-) -> @prettyprinter.Document {
+) -> Document {
   match self.type_annotation {
-    Some(type_) =>
-      text(self.name) + space() + text(":") + space() + type_.to_doc()
+    Some(type_) => text(self.name) + space + text(":") + space + type_.to_doc()
     None => text(self.name)
   }
 }
@@ -459,8 +428,8 @@ pub impl @prettyprinter.Pretty for FunctionLiteralParameter with fn pretty(
 }
 
 ///|
-fn MatchArm::to_doc(self : MatchArm) -> @prettyprinter.Document {
-  self.pattern.to_doc() + space() + text("=>") + space() + self.body.to_doc()
+fn MatchArm::to_doc(self : MatchArm) -> Document {
+  self.pattern.to_doc() + space + text("=>") + space + self.body.to_doc()
 }
 
 ///|
@@ -474,7 +443,7 @@ pub impl @prettyprinter.Pretty for Pattern with fn pretty(pattern : Pattern) {
 }
 
 ///|
-fn Pattern::to_doc(self : Pattern) -> @prettyprinter.Document {
+fn Pattern::to_doc(self : Pattern) -> Document {
   match self {
     Wildcard(_) => text("_")
     Binding(name, ..) => text(name)
@@ -497,11 +466,9 @@ fn Pattern::to_doc(self : Pattern) -> @prettyprinter.Document {
 }
 
 ///|
-fn StructPatternField::to_doc(
-  self : StructPatternField,
-) -> @prettyprinter.Document {
+fn StructPatternField::to_doc(self : StructPatternField) -> Document {
   match self.pattern {
-    Some(pattern) => text(self.name) + text(":") + space() + pattern.to_doc()
+    Some(pattern) => text(self.name) + text(":") + space + pattern.to_doc()
     None => text(self.name)
   }
 }
@@ -514,7 +481,7 @@ pub impl @prettyprinter.Pretty for StructPatternField with fn pretty(
 }
 
 ///|
-fn UnaryOperator::to_doc(self : UnaryOperator) -> @prettyprinter.Document {
+fn UnaryOperator::to_doc(self : UnaryOperator) -> Document {
   match self {
     Neg => text("-")
     Not => text("!")
@@ -529,7 +496,7 @@ pub impl @prettyprinter.Pretty for UnaryOperator with fn pretty(
 }
 
 ///|
-fn BinaryOperator::to_doc(self : BinaryOperator) -> @prettyprinter.Document {
+fn BinaryOperator::to_doc(self : BinaryOperator) -> Document {
   match self {
     Add => text("+")
     Sub => text("-")

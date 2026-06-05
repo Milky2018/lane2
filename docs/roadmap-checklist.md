@@ -13,7 +13,7 @@ module tasks should live in issues or implementation notes.
 
 ## 1. Compiler Identity And Types
 
-- [ ] Introduce stable compiler identities for types, values, fields, variants,
+- [x] Introduce stable compiler identities for types, values, fields, variants,
   and type parameters.
 - [ ] Introduce checked type objects shared by semantic analysis, typed core,
   builtin dispatch, and the interpreter.

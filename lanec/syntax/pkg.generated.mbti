@@ -2,9 +2,9 @@
 package "Milky2018/lane2/syntax"
 
 import {
+  "Milky2018/lane2/basic",
   "moonbit-community/prettyprinter",
   "moonbitlang/core/debug",
-  "Milky2018/lane2/basic",
 }
 
 // Values

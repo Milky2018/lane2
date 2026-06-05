@@ -2,8 +2,8 @@
 package "Milky2018/lane2/lexer"
 
 import {
-  "moonbitlang/core/debug",
   "Milky2018/lane2/basic",
+  "moonbitlang/core/debug",
 }
 
 // Values
