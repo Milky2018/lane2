@@ -72,21 +72,19 @@ module tasks should live in issues or implementation notes.
   semantics before semantic lowering.
 - [ ] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.
+- Pattern analysis:
+  - [ ] Use a pattern matrix model for exhaustiveness and usefulness checking.
+  - [ ] Check primitive literal patterns, enum patterns, struct patterns,
+    binder uniqueness, binder scope, and unreachable arms.
+  - [ ] Produce checked patterns with resolved variants, resolved struct
+    fields, declaration-order struct fields, and typed binders.
+  - [ ] Keep checked patterns available for typed core.
+  - [ ] Defer decision tree generation to later lowered IR or VM work.
 - [ ] Produce a typed source-level semantic result that contains no unresolved
   names, open candidate sets, or source-only ambiguity states.
 - [ ] Produce stable diagnostics with origin spans.
 
-## 4. Pattern Analysis
-
-- [ ] Use a pattern matrix model for exhaustiveness and usefulness checking.
-- [ ] Check primitive literal patterns, enum patterns, struct patterns, binder
-  uniqueness, binder scope, and unreachable arms.
-- [ ] Produce checked patterns with resolved variants, resolved struct fields,
-  declaration-order struct fields, and typed binders.
-- [ ] Keep checked patterns available for typed core.
-- [ ] Defer decision tree generation to later lowered IR or VM work.
-
-## 5. Typed Core ANF
+## 4. Typed Core ANF
 
 - [ ] Define the typed core program representation after the source-level
   semantic checker has a closed typed result.
@@ -100,7 +98,7 @@ module tasks should live in issues or implementation notes.
   operator selection.
 - [ ] Provide a typed core pretty printer and tests based on typed core output.
 
-## 6. Reference Interpreter
+## 5. Reference Interpreter
 
 - [ ] Evaluate whole typed core programs without hard-coding `main`.
 - [ ] Use uniform interpreter values, global environments, call frames, and
@@ -110,7 +108,7 @@ module tasks should live in issues or implementation notes.
 - [ ] Define the builtin runtime plugin contract and runtime error reports.
 - [ ] Use the interpreter as the semantic oracle for later execution targets.
 
-## 7. Prelude And Conformance
+## 6. Prelude And Conformance
 
 - [ ] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial preopen namespace from prelude-provided open
