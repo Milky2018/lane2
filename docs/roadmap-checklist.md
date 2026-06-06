@@ -49,39 +49,56 @@ module tasks should live in issues or implementation notes.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
 
-## 3. Typed Core ANF
-
-- [ ] Define the typed core program representation.
-- [ ] Lower resolved syntax into structured ANF with typed nodes and origin
-  spans.
-- [ ] Preserve nominal data, first-class functions, type lambdas, type
-  applications, checked patterns, and typed unsafe builtins.
-- [ ] Remove source-only constructs such as pipeline, open/preopen lookup, and
-  ordinary operator aliases.
-- [ ] Provide a typed core pretty printer and tests based on typed core output.
-
-## 4. Semantic Checking
+## 3. Semantic Checking
 
 - [x] Build the checked declaration environment for custom types, including
   struct field types and enum variant payload types.
 - [x] Introduce the first source-level semantic checker slice for annotated
   values, direct calls, blocks, struct literals, and opened fields.
+- [x] Introduce type-directed candidate selection as an internal checker
+  package for expected-type and call-argument disambiguation.
 - [ ] Implement bidirectional local type checking and direct context inference.
+- [ ] Ensure candidate sets are eliminated by checking: every resolved value
+  candidate use must either select one concrete reference or produce a stable
+  ambiguity diagnostic.
 - [ ] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.
-- [ ] Check generic instantiation, forall introduction/elimination, primitive
-  operations, nominal construction, and field access.
+- [ ] Check generic instantiation, forall introduction/elimination, generic
+  candidate instantiation, primitive operations, nominal construction, and
+  field access.
+- [ ] Check enum variant construction and unqualified variant calls after type
+  information is available.
+- [ ] Check `if`, `match`, pipeline, operator aliases, and `&&` / `||` source
+  semantics before semantic lowering.
 - [ ] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.
+- [ ] Produce a typed source-level semantic result that contains no unresolved
+  names, open candidate sets, or source-only ambiguity states.
 - [ ] Produce stable diagnostics with origin spans.
 
-## 5. Pattern Analysis
+## 4. Pattern Analysis
 
 - [ ] Use a pattern matrix model for exhaustiveness and usefulness checking.
 - [ ] Check primitive literal patterns, enum patterns, struct patterns, binder
   uniqueness, binder scope, and unreachable arms.
-- [ ] Keep checked patterns in typed core.
+- [ ] Produce checked patterns with resolved variants, resolved struct fields,
+  declaration-order struct fields, and typed binders.
+- [ ] Keep checked patterns available for typed core.
 - [ ] Defer decision tree generation to later lowered IR or VM work.
+
+## 5. Typed Core ANF
+
+- [ ] Define the typed core program representation after the source-level
+  semantic checker has a closed typed result.
+- [ ] Lower checked source semantics into structured ANF with typed nodes and
+  origin spans.
+- [ ] Preserve nominal data, first-class functions, type lambdas, type
+  applications, checked patterns, and typed unsafe builtins.
+- [ ] Remove source-only constructs such as pipeline, open/preopen lookup,
+  candidate sets, and ordinary operator aliases.
+- [ ] Lower `&&` and `||` into thunked operator calls according to the checked
+  operator selection.
+- [ ] Provide a typed core pretty printer and tests based on typed core output.
 
 ## 6. Reference Interpreter
 
