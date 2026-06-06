@@ -108,23 +108,39 @@ fn DeclarationChecker::check_type(
   self : DeclarationChecker,
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
+  check_resolved_type(self.source, self.diagnostics, type_)
+}
+
+///|
+fn check_resolved_type(
+  source : @resolve.ResolvedSourceFile,
+  diagnostics : Array[CheckDiagnostic],
+  type_ : @resolve.ResolvedType,
+) -> @types.Type {
   match type_ {
     @resolve.ResolvedType::Primitive(primitive, ..) =>
       @types.Type::Primitive(primitive)
     @resolve.ResolvedType::Nominal(symbol~, name~, arguments~, loc~) => {
       let checked_arguments = arguments.map(fn(argument) {
-        self.check_type(argument)
+        check_resolved_type(source, diagnostics, argument)
       })
-      self.check_type_arity(symbol, name, checked_arguments.length(), loc)
+      check_type_arity(
+        source,
+        diagnostics,
+        symbol,
+        name,
+        checked_arguments.length(),
+        loc,
+      )
       @types.Type::Nominal(symbol, checked_arguments)
     }
     @resolve.ResolvedType::Parameter(symbol~, ..) =>
       @types.Type::Parameter(symbol)
     @resolve.ResolvedType::Function(type_parameters~, parameters~, result~, ..) => {
       let checked_parameters = parameters.map(fn(parameter) {
-        self.check_type(parameter)
+        check_resolved_type(source, diagnostics, parameter)
       })
-      let checked_result = self.check_type(result)
+      let checked_result = check_resolved_type(source, diagnostics, result)
       let function_type = @types.Type::Function(
         checked_parameters, checked_result,
       )
@@ -139,29 +155,27 @@ fn DeclarationChecker::check_type(
     }
     @resolve.ResolvedType::Unresolved(name~, arguments~, loc~) => {
       for argument in arguments {
-        ignore(self.check_type(argument))
+        ignore(check_resolved_type(source, diagnostics, argument))
       }
-      self.diagnostics.push({
-        kind: CheckDiagnosticKind::UnresolvedType(name),
-        loc,
-      })
+      diagnostics.push({ kind: CheckDiagnosticKind::UnresolvedType(name), loc })
       @types.Type::Error
     }
   }
 }
 
 ///|
-fn DeclarationChecker::check_type_arity(
-  self : DeclarationChecker,
+fn check_type_arity(
+  source : @resolve.ResolvedSourceFile,
+  diagnostics : Array[CheckDiagnostic],
   symbol : TypeSymbolId,
   name : String,
   actual : Int,
   loc : SourceSpan,
 ) -> Unit {
-  match self.source.symbols.type_metadata(symbol) {
+  match source.symbols.type_metadata(symbol) {
     Some(metadata) =>
       if metadata.arity != actual {
-        self.diagnostics.push({
+        diagnostics.push({
           kind: CheckDiagnosticKind::TypeArgumentArityMismatch(
             name~,
             expected=metadata.arity,

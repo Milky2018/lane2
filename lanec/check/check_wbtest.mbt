@@ -18,6 +18,13 @@ fn expect_check_result(source : String) -> CheckResult {
 }
 
 ///|
+fn expect_checked_source(source : String) -> CheckedSourceFile {
+  let file = expect_parse_ok(source)
+  let resolved = @resolve.resolve_source_file(file)
+  check_source_file(resolved)
+}
+
+///|
 test "check custom type declaration environment" {
   let result = expect_check_result(
     (
@@ -65,6 +72,115 @@ test "check custom type declaration environment" {
       #|  diagnostics {}
       #|}
     ),
+  )
+}
+
+///|
+test "check top level values and direct calls" {
+  let result = expect_checked_source(
+    (
+      #|fn id(value : Int) -> Int {
+      #|  value
+      #|}
+      #|let answer : Int = id(42)
+      #|fn use_answer() -> Int {
+      #|  answer
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 id : (Int) -> Int
+      #|    fn value#1 use_answer : () -> Int
+      #|    let value#3 answer : Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check local let inference and opened field reference" {
+  let result = expect_checked_source(
+    (
+      #|struct Box {
+      #|  value : Int
+      #|}
+      #|let box : Box = Box::{ value: 1 }
+      #|open box
+      #|fn use() -> Int {
+      #|  {
+      #|    let local = value
+      #|    local
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Box {
+      #|        field field#0 value : Int index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 value : Int index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
+      #|    let value#1 box : type#0
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check reports type mismatch" {
+  let result = expect_checked_source(
+    (
+      #|fn bad() -> Int {
+      #|  true
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="type_mismatch expected=Int actual=Bool",
+  )
+}
+
+///|
+test "check struct literal punning and required fields" {
+  let result = expect_checked_source(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|  y : Int
+      #|}
+      #|fn bad(x : Int) -> Point {
+      #|  Point::{ x }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="missing_field y",
   )
 }
 

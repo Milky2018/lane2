@@ -14,6 +14,22 @@ pub impl @prettyprinter.Pretty for CheckResult with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for CheckedSourceFile with fn pretty(
+  source : CheckedSourceFile,
+) {
+  text("checked_source") +
+  space +
+  @pretty.braced_block([
+    source.declarations.pretty(),
+    source.values.pretty(),
+    @pretty.section(
+      "diagnostics",
+      source.diagnostics.map(CheckDiagnostic::pretty),
+    ),
+  ])
+}
+
+///|
 pub impl @prettyprinter.Pretty for CheckedDeclarationEnvironment with fn pretty(
   environment : CheckedDeclarationEnvironment,
 ) {
@@ -36,12 +52,31 @@ pub impl @prettyprinter.Pretty for CheckedDeclarationEnvironment with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for CheckedValueEnvironment with fn pretty(
+  environment : CheckedValueEnvironment,
+) {
+  text("checked_values") +
+  space +
+  @pretty.braced_block(environment.values.map(CheckedValueDeclaration::pretty))
+}
+
+///|
 pub impl @prettyprinter.Pretty for CheckedTypeDeclaration with fn pretty(
   declaration : CheckedTypeDeclaration,
 ) {
   match declaration {
     Struct(declaration) => declaration.pretty()
     Enum(declaration) => declaration.pretty()
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedValueDeclaration with fn pretty(
+  declaration : CheckedValueDeclaration,
+) {
+  match declaration {
+    Function(declaration) => declaration.pretty()
+    Let(declaration) => declaration.pretty()
   }
 }
 
@@ -57,6 +92,40 @@ pub impl @prettyprinter.Pretty for CheckedStructDeclaration with fn pretty(
   type_parameters_doc(declaration.type_parameters) +
   space +
   @pretty.braced_block(declaration.fields.map(CheckedFieldDeclaration::pretty))
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedFunctionDeclaration with fn pretty(
+  declaration : CheckedFunctionDeclaration,
+) {
+  text("fn") +
+  space +
+  declaration.symbol.pretty() +
+  space +
+  text(declaration.name) +
+  space +
+  text(":") +
+  space +
+  declaration.type_.pretty()
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedLetDeclaration with fn pretty(
+  declaration : CheckedLetDeclaration,
+) {
+  let name = match declaration.name {
+    Some(name) => text(name)
+    None => text("<anonymous>")
+  }
+  text("let") +
+  space +
+  declaration.symbol.pretty() +
+  space +
+  name +
+  space +
+  text(":") +
+  space +
+  declaration.type_.pretty()
 }
 
 ///|
@@ -124,6 +193,8 @@ pub impl @prettyprinter.Pretty for CheckDiagnosticKind with fn pretty(
 ) {
   match kind {
     UnresolvedType(name) => text("unresolved_type") + space + text(name)
+    UnresolvedValue(name) => text("unresolved_value") + space + text(name)
+    MissingTopLevelLetAnnotation => text("missing_top_level_let_annotation")
     TypeArgumentArityMismatch(name~, expected~, actual~) =>
       text("type_arity_mismatch") +
       space +
@@ -134,6 +205,20 @@ pub impl @prettyprinter.Pretty for CheckDiagnosticKind with fn pretty(
       space +
       text("actual=") +
       text(actual.to_string())
+    TypeMismatch(expected~, actual~) =>
+      text("type_mismatch") +
+      space +
+      text("expected=") +
+      expected.pretty() +
+      space +
+      text("actual=") +
+      actual.pretty()
+    NotCallable(type_) => text("not_callable") + space + type_.pretty()
+    UnknownField(name~) => text("unknown_field") + space + text(name)
+    MissingField(name~) => text("missing_field") + space + text(name)
+    DuplicateField(name~) => text("duplicate_field") + space + text(name)
+    NotAStruct(type_) => text("not_a_struct") + space + type_.pretty()
+    CannotInferExpression(label) => text("cannot_infer") + space + text(label)
   }
 }
 

@@ -63,6 +63,8 @@ module tasks should live in issues or implementation notes.
 
 - [x] Build the checked declaration environment for custom types, including
   struct field types and enum variant payload types.
+- [x] Introduce the first source-level semantic checker slice for annotated
+  values, direct calls, blocks, struct literals, and opened fields.
 - [ ] Implement bidirectional local type checking and direct context inference.
 - [ ] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.

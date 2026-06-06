@@ -13,6 +13,8 @@ import {
 // Values
 pub fn check_declarations(@resolve.ResolvedSourceFile) -> CheckResult
 
+pub fn check_source_file(@resolve.ResolvedSourceFile) -> CheckedSourceFile
+
 // Errors
 
 // Types and methods
@@ -24,7 +26,16 @@ pub impl @prettyprinter.Pretty for CheckDiagnostic
 
 pub(all) enum CheckDiagnosticKind {
   UnresolvedType(String)
+  UnresolvedValue(String)
+  MissingTopLevelLetAnnotation
   TypeArgumentArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
+  TypeMismatch(expected~ : @types.Type, actual~ : @types.Type)
+  NotCallable(@types.Type)
+  UnknownField(name~ : String)
+  MissingField(name~ : String)
+  DuplicateField(name~ : String)
+  NotAStruct(@types.Type)
+  CannotInferExpression(String)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckDiagnosticKind
 
@@ -59,6 +70,29 @@ pub(all) struct CheckedFieldDeclaration {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedFieldDeclaration
 
+pub(all) struct CheckedFunctionDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String
+  type_ : @types.Type
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedFunctionDeclaration
+
+pub(all) struct CheckedLetDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String?
+  type_ : @types.Type
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedLetDeclaration
+
+pub(all) struct CheckedSourceFile {
+  declarations : CheckedDeclarationEnvironment
+  values : CheckedValueEnvironment
+  diagnostics : Array[CheckDiagnostic]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedSourceFile
+
 pub(all) struct CheckedStructDeclaration {
   symbol : @symbol.TypeSymbolId
   name : String
@@ -73,6 +107,17 @@ pub(all) enum CheckedTypeDeclaration {
   Enum(CheckedEnumDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedTypeDeclaration
+
+pub(all) enum CheckedValueDeclaration {
+  Function(CheckedFunctionDeclaration)
+  Let(CheckedLetDeclaration)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedValueDeclaration
+
+pub(all) struct CheckedValueEnvironment {
+  values : Array[CheckedValueDeclaration]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedValueEnvironment
 
 pub(all) struct CheckedVariantDeclaration {
   symbol : @symbol.VariantSymbolId
