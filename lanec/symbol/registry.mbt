@@ -8,11 +8,13 @@ pub struct SymbolRegistry {
 } derive(Debug, Eq)
 
 ///|
+/// Creates an empty symbol registry.
 pub fn SymbolRegistry::SymbolRegistry() -> SymbolRegistry {
   { types: [], type_parameters: [], values: [], fields: [], variants: [] }
 }
 
 ///|
+/// Defines a nominal type symbol and returns its identity.
 pub fn SymbolRegistry::define_type(
   self : SymbolRegistry,
   name : String,
@@ -26,6 +28,7 @@ pub fn SymbolRegistry::define_type(
 }
 
 ///|
+/// Defines a type parameter symbol and returns its identity.
 pub fn SymbolRegistry::define_type_parameter(
   self : SymbolRegistry,
   name : String,
@@ -37,6 +40,7 @@ pub fn SymbolRegistry::define_type_parameter(
 }
 
 ///|
+/// Defines a value symbol and returns its identity.
 pub fn SymbolRegistry::define_value(
   self : SymbolRegistry,
   name : String,
@@ -49,6 +53,7 @@ pub fn SymbolRegistry::define_value(
 }
 
 ///|
+/// Defines a struct field symbol and returns its identity.
 pub fn SymbolRegistry::define_field(
   self : SymbolRegistry,
   owner : TypeSymbolId,
@@ -62,6 +67,7 @@ pub fn SymbolRegistry::define_field(
 }
 
 ///|
+/// Defines an enum variant symbol and returns its identity.
 pub fn SymbolRegistry::define_variant(
   self : SymbolRegistry,
   owner : TypeSymbolId,
@@ -76,6 +82,7 @@ pub fn SymbolRegistry::define_variant(
 }
 
 ///|
+/// Returns metadata for a nominal type symbol.
 pub fn SymbolRegistry::type_metadata(
   self : SymbolRegistry,
   id : TypeSymbolId,
@@ -84,6 +91,7 @@ pub fn SymbolRegistry::type_metadata(
 }
 
 ///|
+/// Returns metadata for a type parameter symbol.
 pub fn SymbolRegistry::type_parameter_metadata(
   self : SymbolRegistry,
   id : TypeParameterId,
@@ -92,6 +100,7 @@ pub fn SymbolRegistry::type_parameter_metadata(
 }
 
 ///|
+/// Returns metadata for a value symbol.
 pub fn SymbolRegistry::value_metadata(
   self : SymbolRegistry,
   id : ValueSymbolId,
@@ -100,6 +109,7 @@ pub fn SymbolRegistry::value_metadata(
 }
 
 ///|
+/// Returns metadata for a struct field symbol.
 pub fn SymbolRegistry::field_metadata(
   self : SymbolRegistry,
   id : FieldSymbolId,
@@ -108,6 +118,7 @@ pub fn SymbolRegistry::field_metadata(
 }
 
 ///|
+/// Returns metadata for an enum variant symbol.
 pub fn SymbolRegistry::variant_metadata(
   self : SymbolRegistry,
   id : VariantSymbolId,
@@ -116,6 +127,7 @@ pub fn SymbolRegistry::variant_metadata(
 }
 
 ///|
+/// Looks up a nominal type symbol by source name.
 pub fn SymbolRegistry::type_named(
   self : SymbolRegistry,
   name : String,
@@ -129,6 +141,7 @@ pub fn SymbolRegistry::type_named(
 }
 
 ///|
+/// Looks up an enum variant symbol by owner type and source name.
 pub fn SymbolRegistry::variant_named(
   self : SymbolRegistry,
   owner : TypeSymbolId,
@@ -143,6 +156,7 @@ pub fn SymbolRegistry::variant_named(
 }
 
 ///|
+/// Returns all enum variant symbols with the given source name.
 pub fn SymbolRegistry::variants_named(
   self : SymbolRegistry,
   name : String,
@@ -157,6 +171,7 @@ pub fn SymbolRegistry::variants_named(
 }
 
 ///|
+/// Looks up a struct field symbol by owner type and source name.
 pub fn SymbolRegistry::field_named(
   self : SymbolRegistry,
   owner : TypeSymbolId,
@@ -171,6 +186,7 @@ pub fn SymbolRegistry::field_named(
 }
 
 ///|
+/// Returns all field metadata entries declared by a struct type.
 pub fn SymbolRegistry::fields_of(
   self : SymbolRegistry,
   owner : TypeSymbolId,

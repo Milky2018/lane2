@@ -5,6 +5,7 @@ priv struct DeclarationChecker {
 }
 
 ///|
+/// Checks nominal declarations and returns the checked declaration environment.
 pub fn check_declarations(source : @resolve.ResolvedSourceFile) -> CheckResult {
   let checker = DeclarationChecker::{ source, diagnostics: [] }
   let types = []

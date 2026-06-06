@@ -26,6 +26,7 @@ pub(all) enum CallableSelection {
 } derive(Debug, Eq)
 
 ///|
+/// Selects a candidate only when the candidate set is already unique.
 pub fn select_without_context(
   name : String,
   candidates : Array[TypedCandidate],
@@ -34,6 +35,7 @@ pub fn select_without_context(
 }
 
 ///|
+/// Selects the unique candidate whose type equals the expected type.
 pub fn select_by_expected(
   name : String,
   candidates : Array[TypedCandidate],
@@ -64,6 +66,7 @@ fn select_from(
 }
 
 ///|
+/// Selects the unique callable candidate matching the supplied argument types.
 pub fn select_by_call_arguments(
   name : String,
   candidates : Array[TypedCandidate],

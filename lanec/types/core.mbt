@@ -40,11 +40,13 @@ pub struct TypeSubstitution {
 } derive(Debug, Eq)
 
 ///|
+/// Creates an empty type substitution.
 pub fn TypeSubstitution::TypeSubstitution() -> TypeSubstitution {
   { entries: [] }
 }
 
 ///|
+/// Creates a substitution containing one type-parameter replacement.
 pub fn TypeSubstitution::single(
   parameter : TypeParameterId,
   replacement : Type,
@@ -53,6 +55,7 @@ pub fn TypeSubstitution::single(
 }
 
 ///|
+/// Adds or appends a type-parameter replacement to this substitution.
 pub fn TypeSubstitution::insert(
   self : TypeSubstitution,
   parameter : TypeParameterId,
@@ -79,6 +82,7 @@ fn TypeSubstitution::lookup(
 }
 
 ///|
+/// Applies a type substitution to this type.
 pub fn Type::substitute(self : Type, substitution : TypeSubstitution) -> Type {
   self.substitute_with_bound(substitution, [])
 }
@@ -131,11 +135,13 @@ priv struct AlphaBinding {
 }
 
 ///|
+/// Returns whether two types are equal up to forall-bound parameter renaming.
 pub fn Type::alpha_equal(self : Type, other : Type) -> Bool {
   alpha_equal_with([], self, other)
 }
 
 ///|
+/// Returns whether two types are equal under Lane2 type equality.
 pub fn Type::equals(self : Type, other : Type) -> Bool {
   self.alpha_equal(other)
 }

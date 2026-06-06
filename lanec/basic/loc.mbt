@@ -9,6 +9,7 @@ pub(all) struct SourceSpan {
 } derive(Debug, Eq)
 
 ///|
+/// Returns a source span that starts at `start` and ends at `end`.
 pub fn SourceSpan::join(start : SourceSpan, end : SourceSpan) -> SourceSpan {
   {
     start_offset: start.start_offset,
@@ -21,6 +22,7 @@ pub fn SourceSpan::join(start : SourceSpan, end : SourceSpan) -> SourceSpan {
 }
 
 ///|
+/// Returns a zero-width placeholder span for compiler-created nodes.
 pub fn SourceSpan::dummy() -> SourceSpan {
   {
     start_offset: 0,

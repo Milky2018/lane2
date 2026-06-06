@@ -92,6 +92,7 @@ pub(all) enum Type {
 } derive(Debug, Eq)
 
 ///|
+/// Returns the source span covered by this type syntax node.
 pub fn Type::loc(self : Type) -> SourceSpan {
   match self {
     Name(loc~, ..) | Function(loc~, ..) => loc
@@ -147,6 +148,7 @@ pub(all) enum Expr {
 } derive(Debug, Eq)
 
 ///|
+/// Returns the source span covered by this expression syntax node.
 pub fn Expr::loc(self : Expr) -> SourceSpan {
   match self {
     IntLiteral(_, loc~)
@@ -218,6 +220,7 @@ pub(all) enum Pattern {
 } derive(Debug, Eq)
 
 ///|
+/// Returns the source span covered by this pattern syntax node.
 pub fn Pattern::loc(self : Pattern) -> SourceSpan {
   match self {
     Wildcard(loc)
@@ -261,11 +264,13 @@ pub(all) enum BinaryOperator {
 } derive(Debug, Eq)
 
 ///|
+/// Returns the lowest precedence level used by binary operators.
 pub fn BinaryOperator::minimum_precedence() -> Int {
   2
 }
 
 ///|
+/// Returns the precedence level for this binary operator.
 pub fn BinaryOperator::precedence(self : BinaryOperator) -> Int {
   match self {
     Or => 2

@@ -7,11 +7,13 @@ priv struct Resolver {
 }
 
 ///|
+/// Resolves a syntax source file and returns only the resolved source.
 pub fn resolve_source_file(source : @syntax.SourceFile) -> ResolvedSourceFile {
   resolve_source_file_result(source).source
 }
 
 ///|
+/// Resolves a syntax source file and returns diagnostics with the result.
 pub fn resolve_source_file_result(source : @syntax.SourceFile) -> ResolveResult {
   let resolver = Resolver::Resolver(SymbolRegistry())
   resolver.collect_top_level_headers(source)

@@ -20,6 +20,7 @@ priv struct SemanticChecker {
 }
 
 ///|
+/// Checks a resolved source file and returns checked declarations, values, and diagnostics.
 pub fn check_source_file(
   source : @resolve.ResolvedSourceFile,
 ) -> CheckedSourceFile {

@@ -1,4 +1,5 @@
 ///|
+/// Parses a Lane2 source string after lexing it with the default lexer.
 pub fn parse_string(source : String) -> ParseResult {
   let lexed = @lexer.tokens_from_string(source)
   if !lexed.errors.is_empty() {
@@ -14,6 +15,7 @@ pub fn parse_string(source : String) -> ParseResult {
 }
 
 ///|
+/// Parses an already lexed token stream into a source file.
 pub fn parse_tokens(tokens : Array[(@lexer.Token, SourceSpan)]) -> ParseResult {
   let yacc_tokens = tokens.map(fn(item) {
     let (token, loc) = item
