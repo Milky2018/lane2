@@ -11,6 +11,27 @@ fn expect_parse_ok(source : String) -> @syntax.SourceFile {
 }
 
 ///|
+fn expect_resolved_body(source : String, name : String) -> ResolvedExpr {
+  let file = expect_parse_ok(source)
+  let resolved = resolve_source_file(file)
+  for declaration in resolved.declarations {
+    match declaration {
+      ResolvedTopLevelDeclaration::Function(declaration) =>
+        if declaration.name == name {
+          return declaration.body
+        }
+      _ => ()
+    }
+  }
+  abort("expected function body")
+}
+
+///|
+fn resolve_diagnostics(source : String) -> Array[ResolveDiagnostic] {
+  resolve_source_file_result(expect_parse_ok(source)).diagnostics
+}
+
+///|
 test "collect top level declaration symbols" {
   let file = expect_parse_ok(
     (
@@ -526,6 +547,34 @@ test "resolve operator aliases through operation names" {
 }
 
 ///|
+test "resolve operator aliases through opened operation fields" {
+  let body = expect_resolved_body(
+    (
+      #|struct Ops {
+      #|  op_add : (Int, Int) -> Int
+      #|}
+      #|fn int_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|let ops : Ops = Ops::{ op_add: int_add }
+      #|open ops
+      #|fn add(a : Int, b : Int) -> Int {
+      #|  a + b
+      #|}
+    ),
+    "add",
+  )
+  inspect(
+    @prettyprinter.render(body, width=100),
+    content=(
+      #|{
+      #|  var value#5 a +[field#0 of value#4] var value#6 b
+      #|}
+    ),
+  )
+}
+
+///|
 test "report unresolved operator operation name" {
   let file = expect_parse_ok(
     (
@@ -642,4 +691,126 @@ test "resolve local open exposure as candidates with local bindings" {
       #|}
     ),
   )
+}
+
+///|
+test "same open layer keeps repeated exposed names as candidates" {
+  let body = expect_resolved_body(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|let left : Ops = Ops::{ add: 1 }
+      #|let right : Ops = Ops::{ add: 2 }
+      #|open left
+      #|open right
+      #|fn use() -> Int {
+      #|  add
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(body, width=100),
+    content=(
+      #|{
+      #|  var ?candidates add [field#0 of value#2, field#0 of value#1] add
+      #|}
+    ),
+  )
+}
+
+///|
+test "inner open layer shadows outer open layer" {
+  let body = expect_resolved_body(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|let outer : Ops = Ops::{ add: 1 }
+      #|open outer
+      #|fn use() -> Int {
+      #|  {
+      #|    let inner : Ops = Ops::{ add: 2 }
+      #|    open inner
+      #|    add
+      #|  }
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(body, width=100),
+    content=(
+      #|{
+      #|  {
+      #|    let value#2 inner : type#0 Ops = Ops::{
+      #|      add: 2
+      #|    }
+      #|    open inner
+      #|    var field#0 of value#2 add
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "inner plain binding combines with nearest outer open layer" {
+  let body = expect_resolved_body(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|let outer : Ops = Ops::{ add: 1 }
+      #|open outer
+      #|fn use() -> Int {
+      #|  {
+      #|    let add = 2
+      #|    add
+      #|  }
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(body, width=100),
+    content=(
+      #|{
+      #|  {
+      #|    let value#2 add = 2
+      #|    var ?candidates add [value#2, field#0 of value#1] add
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "open target ignores open exposure candidates" {
+  let diagnostics = resolve_diagnostics(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|let ops : Ops = Ops::{ add: 1 }
+      #|open ops
+      #|open add
+    ),
+  )
+  inspect(@prettyprinter.render(diagnostics[0]), content="unresolved_open add")
+}
+
+///|
+test "top level open cannot see later value binding" {
+  let diagnostics = resolve_diagnostics(
+    (
+      #|struct Ops {
+      #|  add : Int
+      #|}
+      #|open ops
+      #|let ops : Ops = Ops::{ add: 1 }
+    ),
+  )
+  inspect(@prettyprinter.render(diagnostics[0]), content="unresolved_open ops")
 }

@@ -4,6 +4,7 @@ priv struct ValueBinding {
   reference : ResolvedValueReference
   type_ : ResolvedType?
   kind : ValueBindingKind
+  depth : Int
 }
 
 ///|
@@ -16,6 +17,7 @@ priv enum ValueBindingKind {
 priv struct ResolveScope {
   values : Array[ValueBinding]
   type_parameters : Array[ResolvedTypeParameter]
+  depth : Int
 }
 
 ///|
@@ -101,6 +103,7 @@ fn Resolver::collect_top_level_headers(
           reference: Symbol(symbol),
           type_: None,
           kind: Plain,
+          depth: 0,
         })
       }
       Let(_) | Open(_) => ()
@@ -341,6 +344,7 @@ fn Resolver::publish_top_level_let(
     reference: Symbol(declaration.symbol),
     type_: declaration.type_annotation,
     kind: Plain,
+    depth: 0,
   }
   match declaration.name {
     Some(_) => self.publish_top_level_binding(binding, loc)
@@ -420,7 +424,7 @@ fn @syntax.Type::resolve_type(
       let resolved_type_parameters = resolver.resolve_type_parameters(
         type_parameters, loc,
       )
-      let next_scope = scope.copy()
+      let next_scope = scope.enter_scope()
       next_scope.type_parameters.append(resolved_type_parameters)
       Function(
         type_parameters=resolved_type_parameters,
@@ -479,7 +483,7 @@ fn @syntax.Expr::resolve_expr(
       let resolved_type_parameters = resolver.resolve_type_parameters(
         type_parameters, loc,
       )
-      let next_scope = scope.copy()
+      let next_scope = scope.enter_scope()
       next_scope.type_parameters.append(resolved_type_parameters)
       let resolved_parameters = parameters.map(fn(parameter) {
         parameter.resolve_function_literal_parameter(resolver, next_scope)
@@ -495,7 +499,7 @@ fn @syntax.Expr::resolve_expr(
       )
     }
     Block(items~, result~, loc~) => {
-      let next_scope = scope.copy()
+      let next_scope = scope.enter_scope()
       Block(
         items=items.map(fn(item) {
           item.resolve_local_item(resolver, next_scope)
@@ -843,12 +847,25 @@ fn Resolver::scope(
   self : Resolver,
   type_parameters : Array[ResolvedTypeParameter],
 ) -> ResolveScope {
-  { values: self.top_values.copy(), type_parameters }
+  { values: self.top_values.copy(), type_parameters, depth: 0 }
 }
 
 ///|
 fn ResolveScope::copy(self : ResolveScope) -> ResolveScope {
-  { values: self.values.copy(), type_parameters: self.type_parameters.copy() }
+  {
+    values: self.values.copy(),
+    type_parameters: self.type_parameters.copy(),
+    depth: self.depth,
+  }
+}
+
+///|
+fn ResolveScope::enter_scope(self : ResolveScope) -> ResolveScope {
+  {
+    values: self.values.copy(),
+    type_parameters: self.type_parameters.copy(),
+    depth: self.depth + 1,
+  }
 }
 
 ///|
@@ -858,7 +875,13 @@ fn ResolveScope::define_value(
   symbol : ValueSymbolId,
   type_ : ResolvedType?,
 ) -> Unit {
-  self.values.push({ name, reference: Symbol(symbol), type_, kind: Plain })
+  self.values.push({
+    name,
+    reference: Symbol(symbol),
+    type_,
+    kind: Plain,
+    depth: self.depth,
+  })
 }
 
 ///|
@@ -876,6 +899,7 @@ fn ResolveScope::value_reference(
 ) -> ResolvedValueReference {
   let candidates = []
   let mut found_plain = false
+  let mut open_depth = None
   for index = self.values.length(); index > 0; index = index - 1 {
     let binding = self.values[index - 1]
     if binding.name == name {
@@ -885,7 +909,17 @@ fn ResolveScope::value_reference(
             candidates.push(binding.reference)
             found_plain = true
           }
-        OpenExposure => candidates.push(binding.reference)
+        OpenExposure =>
+          match open_depth {
+            Some(depth) =>
+              if binding.depth == depth {
+                candidates.push(binding.reference)
+              }
+            None => {
+              open_depth = Some(binding.depth)
+              candidates.push(binding.reference)
+            }
+          }
       }
     }
   }
@@ -1002,7 +1036,7 @@ fn Resolver::open_top_level_binding(
   binding : ValueBinding,
   loc : SourceSpan,
 ) -> Unit {
-  match self.opened_fields(binding, loc) {
+  match self.opened_fields(binding, 0, loc) {
     Some(fields) =>
       for field in fields {
         self.publish_top_level_binding(field, loc)
@@ -1018,7 +1052,7 @@ fn Resolver::open_local_binding(
   scope : ResolveScope,
   loc : SourceSpan,
 ) -> Unit {
-  match self.opened_fields(binding, loc) {
+  match self.opened_fields(binding, scope.depth, loc) {
     Some(fields) =>
       for field in fields {
         scope.define_binding(field)
@@ -1031,13 +1065,14 @@ fn Resolver::open_local_binding(
 fn Resolver::opened_fields(
   self : Resolver,
   binding : ValueBinding,
+  depth : Int,
   loc : SourceSpan,
 ) -> Array[ValueBinding]? {
   match (binding.reference, binding.type_) {
     (Symbol(base), Some(Nominal(symbol~, ..))) =>
       match self.registry.type_metadata(symbol) {
         Some({ kind: Struct, .. }) =>
-          Some(self.opened_field_bindings(base, symbol))
+          Some(self.opened_field_bindings(base, symbol, depth))
         _ => {
           self.report(CannotOpenValue(binding.name), loc)
           None
@@ -1055,9 +1090,10 @@ fn Resolver::opened_field_bindings(
   self : Resolver,
   base : ValueSymbolId,
   owner : TypeSymbolId,
+  depth : Int,
 ) -> Array[ValueBinding] {
   let bindings = []
-  self.collect_opened_field_bindings(base, owner, [], [], bindings)
+  self.collect_opened_field_bindings(base, owner, depth, [], [], bindings)
   bindings
 }
 
@@ -1066,6 +1102,7 @@ fn Resolver::collect_opened_field_bindings(
   self : Resolver,
   base : ValueSymbolId,
   owner : TypeSymbolId,
+  depth : Int,
   prefix : Array[FieldSymbolId],
   visited : Array[TypeSymbolId],
   bindings : Array[ValueBinding],
@@ -1083,6 +1120,7 @@ fn Resolver::collect_opened_field_bindings(
       reference: OpenedField(base~, path~),
       type_: None,
       kind: OpenExposure,
+      depth,
     })
   }
   for forwarding in self.field_forwardings {
@@ -1092,7 +1130,7 @@ fn Resolver::collect_opened_field_bindings(
           let path = prefix.copy()
           path.push(forwarding.field)
           self.collect_opened_field_bindings(
-            base, forwarded_owner, path, next_visited, bindings,
+            base, forwarded_owner, depth, path, next_visited, bindings,
           )
         }
         None => ()
