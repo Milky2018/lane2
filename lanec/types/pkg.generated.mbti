@@ -26,6 +26,7 @@ pub(all) enum PrimitiveType {
 pub impl @prettyprinter.Pretty for PrimitiveType
 
 pub(all) enum Type {
+  Error
   Primitive(PrimitiveType)
   Nominal(@symbol.TypeSymbolId, Array[Type])
   Parameter(@symbol.TypeParameterId)

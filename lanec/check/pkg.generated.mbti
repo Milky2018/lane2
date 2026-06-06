@@ -1,0 +1,89 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/lane2/check"
+
+import {
+  "Milky2018/lane2/basic",
+  "Milky2018/lane2/resolve",
+  "Milky2018/lane2/symbol",
+  "Milky2018/lane2/types",
+  "moonbit-community/prettyprinter",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn check_declarations(@resolve.ResolvedSourceFile) -> CheckResult
+
+// Errors
+
+// Types and methods
+pub(all) struct CheckDiagnostic {
+  kind : CheckDiagnosticKind
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckDiagnostic
+
+pub(all) enum CheckDiagnosticKind {
+  UnresolvedType(String)
+  TypeArgumentArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckDiagnosticKind
+
+pub(all) struct CheckResult {
+  declarations : CheckedDeclarationEnvironment
+  diagnostics : Array[CheckDiagnostic]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckResult
+
+pub(all) struct CheckedDeclarationEnvironment {
+  types : Array[CheckedTypeDeclaration]
+  fields : Array[CheckedFieldDeclaration]
+  variants : Array[CheckedVariantDeclaration]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedDeclarationEnvironment
+
+pub(all) struct CheckedEnumDeclaration {
+  symbol : @symbol.TypeSymbolId
+  name : String
+  type_parameters : Array[@types.TypeParameter]
+  variants : Array[CheckedVariantDeclaration]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedEnumDeclaration
+
+pub(all) struct CheckedFieldDeclaration {
+  symbol : @symbol.FieldSymbolId
+  name : String
+  index : Int
+  type_ : @types.Type
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedFieldDeclaration
+
+pub(all) struct CheckedStructDeclaration {
+  symbol : @symbol.TypeSymbolId
+  name : String
+  type_parameters : Array[@types.TypeParameter]
+  fields : Array[CheckedFieldDeclaration]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedStructDeclaration
+
+pub(all) enum CheckedTypeDeclaration {
+  Struct(CheckedStructDeclaration)
+  Enum(CheckedEnumDeclaration)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedTypeDeclaration
+
+pub(all) struct CheckedVariantDeclaration {
+  symbol : @symbol.VariantSymbolId
+  name : String
+  index : Int
+  payload : Array[@types.Type]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedVariantDeclaration
+
+// Type aliases
+
+// Traits
+

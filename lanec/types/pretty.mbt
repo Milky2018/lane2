@@ -48,6 +48,7 @@ fn parenthesized(items : Array[Document]) -> Document {
 ///|
 pub impl @prettyprinter.Pretty for Type with fn pretty(type_ : Type) {
   match type_ {
+    Error => text("<error>")
     Primitive(primitive) => primitive.pretty()
     Nominal(symbol, arguments) =>
       if arguments.is_empty() {

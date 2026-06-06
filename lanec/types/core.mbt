@@ -20,6 +20,7 @@ pub(all) struct TypeParameter {
 
 ///|
 pub(all) enum Type {
+  Error
   Primitive(PrimitiveType)
   Nominal(TypeSymbolId, Array[Type])
   Parameter(TypeParameterId)
@@ -89,6 +90,7 @@ fn Type::substitute_with_bound(
   bound : Array[TypeParameterId],
 ) -> Type {
   match self {
+    Error => self
     Primitive(_) => self
     Nominal(symbol, arguments) =>
       Nominal(
@@ -150,6 +152,7 @@ fn alpha_equal_with(
   right : Type,
 ) -> Bool {
   match (left, right) {
+    (Error, Error) => true
     (Primitive(left), Primitive(right)) => left == right
     (Nominal(left_symbol, left_args), Nominal(right_symbol, right_args)) =>
       left_symbol == right_symbol &&
