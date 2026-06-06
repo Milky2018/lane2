@@ -299,7 +299,70 @@ test "resolve top level open exposes struct fields" {
 }
 
 ///|
-test "report conflicting top level open exposure" {
+test "resolve struct field forwarding when opening containing value" {
+  let file = expect_parse_ok(
+    (
+      #|struct Constants {
+      #|  answer : Int
+      #|}
+      #|struct Environment {
+      #|  constants : Constants
+      #|  open constants
+      #|}
+      #|let env : Environment = Environment::{
+      #|  constants: Constants::{ answer: 42 }
+      #|}
+      #|open env
+      #|fn use() -> Int {
+      #|  answer
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 struct Constants/0
+      #|      type#1 struct Environment/0
+      #|    }
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function use
+      #|      value#1 top_value env
+      #|    }
+      #|    fields {
+      #|      field#0 owner=type#0 answer index=0
+      #|      field#1 owner=type#1 constants index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    struct type#0 Constants {
+      #|      field field#0 answer : Int index=0
+      #|    }
+      #|    struct type#1 Environment {
+      #|      field field#1 constants : type#0 Constants index=0
+      #|      open constants
+      #|    }
+      #|    let value#1 env : type#1 Environment = Environment::{
+      #|      constants: Constants::{
+      #|        answer: 42
+      #|      }
+      #|    }
+      #|    open env
+      #|    fn value#0 use() -> Int {
+      #|      var field#1.field#0 of value#1 answer
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "preserve top level open exposure candidates" {
   let file = expect_parse_ok(
     (
       #|struct Ops {
@@ -310,14 +373,171 @@ test "report conflicting top level open exposure" {
       #|}
       #|let ops : Ops = Ops::{ add: 1 }
       #|open ops
+      #|fn use() -> Int {
+      #|  add
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 struct Ops/0
+      #|    }
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function add
+      #|      value#1 top_function use
+      #|      value#2 top_value ops
+      #|    }
+      #|    fields {
+      #|      field#0 owner=type#0 add index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    struct type#0 Ops {
+      #|      field field#0 add : Int index=0
+      #|    }
+      #|    fn value#0 add() -> Int {
+      #|      0
+      #|    }
+      #|    let value#2 ops : type#0 Ops = Ops::{
+      #|      add: 1
+      #|    }
+      #|    open ops
+      #|    fn value#1 use() -> Int {
+      #|      var ?candidates add [field#0 of value#2, value#0] add
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "resolve qualified field access when base type is known" {
+  let file = expect_parse_ok(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|  y : Int
+      #|}
+      #|fn get_x(point : Point) -> Int {
+      #|  point.x
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 struct Point/0
+      #|    }
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function get_x
+      #|      value#1 parameter point
+      #|    }
+      #|    fields {
+      #|      field#0 owner=type#0 x index=0
+      #|      field#1 owner=type#0 y index=1
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    struct type#0 Point {
+      #|      field field#0 x : Int index=0
+      #|      field field#1 y : Int index=1
+      #|    }
+      #|    fn value#0 get_x(value#1 point : type#0 Point) -> Int {
+      #|      var value#1 point.field#0 x
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "report unresolved qualified field when base type is known" {
+  let file = expect_parse_ok(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|}
+      #|fn get_z(point : Point) -> Int {
+      #|  point.z
+      #|}
     ),
   )
   let result = resolve_source_file_result(file)
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content=(
-      #|conflicting_open add existing=add incoming=ops.add
+    content="unresolved_field Point.z",
+  )
+}
+
+///|
+test "resolve operator aliases through operation names" {
+  let file = expect_parse_ok(
+    (
+      #|fn op_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn add(a : Int, b : Int) -> Int {
+      #|  a + b
+      #|}
     ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {}
+      #|    type_parameters {}
+      #|    values {
+      #|      value#0 top_function op_add
+      #|      value#1 top_function add
+      #|      value#2 parameter a
+      #|      value#3 parameter b
+      #|      value#4 parameter a
+      #|      value#5 parameter b
+      #|    }
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  declarations {
+      #|    fn value#0 op_add(value#2 a : Int, value#3 b : Int) -> Int {
+      #|      var value#2 a
+      #|    }
+      #|    fn value#1 add(value#4 a : Int, value#5 b : Int) -> Int {
+      #|      var value#4 a +[value#0] var value#5 b
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "report unresolved operator operation name" {
+  let file = expect_parse_ok(
+    (
+      #|fn add(a : Int, b : Int) -> Int {
+      #|  a + b
+      #|}
+    ),
+  )
+  let result = resolve_source_file_result(file)
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="unresolved_value op_add",
   )
 }
 
@@ -369,7 +589,7 @@ test "resolve anonymous top level let as preopen fields" {
 }
 
 ///|
-test "resolve local open shadows earlier local bindings" {
+test "resolve local open exposure as candidates with local bindings" {
   let file = expect_parse_ok(
     (
       #|struct Ops {
@@ -415,7 +635,7 @@ test "resolve local open shadows earlier local bindings" {
       #|        }
       #|        let value#2 add = 2
       #|        open ops
-      #|        var field#0 of value#1 add
+      #|        var ?candidates add [field#0 of value#1, value#2] add
       #|      }
       #|    }
       #|  }

@@ -55,6 +55,12 @@ pub impl @prettyprinter.Pretty for ResolveDiagnosticKind with fn pretty(
   match kind {
     UnresolvedType(name) => text("unresolved_type") + space + text(name)
     UnresolvedValue(name) => text("unresolved_value") + space + text(name)
+    UnresolvedField(type_name~, field~) =>
+      text("unresolved_field") +
+      space +
+      text(type_name) +
+      text(".") +
+      text(field)
     UnresolvedQualifiedVariant(type_name~, variant~) =>
       text("unresolved_variant") +
       space +
@@ -275,9 +281,40 @@ pub impl @prettyprinter.Pretty for ResolvedValueReference with fn pretty(
 ) {
   match reference {
     Symbol(symbol) => symbol.pretty()
-    OpenedField(base~, field~) =>
-      field.pretty() + space + text("of") + space + base.pretty()
+    OpenedField(base~, path~) =>
+      field_path_doc(path) + space + text("of") + space + base.pretty()
+    Candidates(name~, candidates~) =>
+      text("?candidates") +
+      space +
+      text(name) +
+      space +
+      @pretty.bracketed_inline(candidates.map(ResolvedValueReference::pretty))
     Unresolved(name) => text("?") + text(name)
+  }
+}
+
+///|
+fn field_path_doc(path : Array[FieldSymbolId]) -> Document {
+  if path.is_empty() {
+    empty
+  } else {
+    let mut doc = path[0].pretty()
+    for index in 1..<path.length() {
+      doc = doc + text(".") + path[index].pretty()
+    }
+    doc
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolvedFieldReference with fn pretty(
+  reference : ResolvedFieldReference,
+) {
+  match reference {
+    Symbol(symbol) => symbol.pretty()
+    Deferred(name) => text("?") + text(name)
+    Unresolved(type_name~, field~) =>
+      text("?") + text(type_name) + text(".") + text(field)
   }
 }
 
@@ -421,14 +458,28 @@ pub impl @prettyprinter.Pretty for ResolvedExpr with fn pretty(
     Call(callee~, arguments~, ..) =>
       callee.pretty() +
       @pretty.parenthesized_inline(arguments.map(ResolvedExpr::pretty))
-    Field(base~, name~, ..) => base.pretty() + text(".") + text(name)
-    Unary(operator~, operand~, ..) =>
-      operator.pretty() + space + operand.pretty()
-    Binary(operator~, left~, right~, ..) =>
-      left.pretty() + space + operator.pretty() + space + right.pretty()
+    Field(base~, name~, reference~, ..) =>
+      base.pretty() + text(".") + reference.pretty() + space + text(name)
+    Unary(operator~, reference~, operand~, ..) =>
+      operator.pretty() +
+      operator_reference_doc(reference) +
+      space +
+      operand.pretty()
+    Binary(operator~, reference~, left~, right~, ..) =>
+      left.pretty() +
+      space +
+      operator.pretty() +
+      operator_reference_doc(reference) +
+      space +
+      right.pretty()
     Pipeline(left~, right~, ..) =>
       left.pretty() + space + text("|>") + space + right.pretty()
   }
+}
+
+///|
+fn operator_reference_doc(reference : ResolvedValueReference) -> Document {
+  text("[") + reference.pretty() + text("]")
 }
 
 ///|

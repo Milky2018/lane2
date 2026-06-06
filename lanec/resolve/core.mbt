@@ -27,6 +27,7 @@ pub(all) struct ResolveVariantCandidate {
 pub(all) enum ResolveDiagnosticKind {
   UnresolvedType(String)
   UnresolvedValue(String)
+  UnresolvedField(type_name~ : String, field~ : String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
   UnresolvedOpenValue(String)
   CannotOpenValue(String)
@@ -159,8 +160,16 @@ pub(all) enum ResolvedType {
 ///|
 pub(all) enum ResolvedValueReference {
   Symbol(ValueSymbolId)
-  OpenedField(base~ : ValueSymbolId, field~ : FieldSymbolId)
+  OpenedField(base~ : ValueSymbolId, path~ : Array[FieldSymbolId])
+  Candidates(name~ : String, candidates~ : Array[ResolvedValueReference])
   Unresolved(String)
+} derive(Debug, Eq)
+
+///|
+pub(all) enum ResolvedFieldReference {
+  Symbol(FieldSymbolId)
+  Deferred(String)
+  Unresolved(type_name~ : String, field~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -263,14 +272,21 @@ pub(all) enum ResolvedExpr {
     arguments~ : Array[ResolvedExpr],
     loc~ : SourceSpan
   )
-  Field(base~ : ResolvedExpr, name~ : String, loc~ : SourceSpan)
+  Field(
+    base~ : ResolvedExpr,
+    name~ : String,
+    reference~ : ResolvedFieldReference,
+    loc~ : SourceSpan
+  )
   Unary(
     operator~ : @syntax.UnaryOperator,
+    reference~ : ResolvedValueReference,
     operand~ : ResolvedExpr,
     loc~ : SourceSpan
   )
   Binary(
     operator~ : @syntax.BinaryOperator,
+    reference~ : ResolvedValueReference,
     left~ : ResolvedExpr,
     right~ : ResolvedExpr,
     loc~ : SourceSpan

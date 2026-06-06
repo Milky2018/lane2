@@ -36,10 +36,11 @@ module tasks should live in issues or implementation notes.
   matches, and preserve ambiguous candidates in resolved IR.
 - [x] Resolve direct `open` and named open bindings for values with explicit
   nominal struct type annotations.
-- [ ] Resolve field access into field symbol identities after enough type
+- [x] Resolve field access into field symbol identities after enough type
   information is available.
-- [ ] Resolve struct field forwarding and operator aliases after checked field
-  types are available.
+- [x] Resolve struct field forwarding after checked field types are available.
+- [x] Resolve operator aliases through ordinary operation names and open
+  candidate sets.
 - [x] Report diagnostics for unresolved types, unresolved values, unresolved
   qualified variants, ambiguous unqualified variants, and invalid `open`
   targets.

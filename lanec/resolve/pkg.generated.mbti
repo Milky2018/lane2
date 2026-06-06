@@ -27,6 +27,7 @@ pub impl @prettyprinter.Pretty for ResolveDiagnostic
 pub(all) enum ResolveDiagnosticKind {
   UnresolvedType(String)
   UnresolvedValue(String)
+  UnresolvedField(type_name~ : String, field~ : String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
   UnresolvedOpenValue(String)
   CannotOpenValue(String)
@@ -80,9 +81,9 @@ pub(all) enum ResolvedExpr {
   If(condition~ : ResolvedExpr, then_branch~ : ResolvedExpr, else_branch~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   Match(scrutinee~ : ResolvedExpr, arms~ : Array[ResolvedMatchArm], loc~ : @basic.SourceSpan)
   Call(callee~ : ResolvedExpr, arguments~ : Array[ResolvedExpr], loc~ : @basic.SourceSpan)
-  Field(base~ : ResolvedExpr, name~ : String, loc~ : @basic.SourceSpan)
-  Unary(operator~ : @syntax.UnaryOperator, operand~ : ResolvedExpr, loc~ : @basic.SourceSpan)
-  Binary(operator~ : @syntax.BinaryOperator, left~ : ResolvedExpr, right~ : ResolvedExpr, loc~ : @basic.SourceSpan)
+  Field(base~ : ResolvedExpr, name~ : String, reference~ : ResolvedFieldReference, loc~ : @basic.SourceSpan)
+  Unary(operator~ : @syntax.UnaryOperator, reference~ : ResolvedValueReference, operand~ : ResolvedExpr, loc~ : @basic.SourceSpan)
+  Binary(operator~ : @syntax.BinaryOperator, reference~ : ResolvedValueReference, left~ : ResolvedExpr, right~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   Pipeline(left~ : ResolvedExpr, right~ : ResolvedExpr, loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedExpr
@@ -95,6 +96,13 @@ pub(all) struct ResolvedFieldDeclaration {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedFieldDeclaration
+
+pub(all) enum ResolvedFieldReference {
+  Symbol(@symbol.FieldSymbolId)
+  Deferred(String)
+  Unresolved(type_name~ : String, field~ : String)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedFieldReference
 
 pub(all) struct ResolvedFunctionDeclaration {
   symbol : @symbol.ValueSymbolId
@@ -226,7 +234,8 @@ pub impl @prettyprinter.Pretty for ResolvedValueParameter
 
 pub(all) enum ResolvedValueReference {
   Symbol(@symbol.ValueSymbolId)
-  OpenedField(base~ : @symbol.ValueSymbolId, field~ : @symbol.FieldSymbolId)
+  OpenedField(base~ : @symbol.ValueSymbolId, path~ : Array[@symbol.FieldSymbolId])
+  Candidates(name~ : String, candidates~ : Array[ResolvedValueReference])
   Unresolved(String)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedValueReference

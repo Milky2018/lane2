@@ -256,8 +256,8 @@ fn SemanticChecker::infer_expr(
       self.infer_if(scope, condition, then_branch, else_branch, loc)
     @resolve.ResolvedExpr::Call(callee~, arguments~, loc~) =>
       self.infer_call(scope, callee, arguments, loc)
-    @resolve.ResolvedExpr::Field(base~, name~, loc~) =>
-      self.infer_field(scope, base, name, loc)
+    @resolve.ResolvedExpr::Field(base~, name~, reference~, loc~) =>
+      self.infer_field(scope, base, name, reference, loc)
     @resolve.ResolvedExpr::StructLiteral(
       type_name~,
       type_arguments~,
@@ -415,9 +415,9 @@ fn SemanticChecker::infer_value_reference(
           @types.Type::Error
         }
       }
-    @resolve.ResolvedValueReference::OpenedField(base~, field~) =>
+    @resolve.ResolvedValueReference::OpenedField(base~, path~) =>
       match scope.lookup(base) {
-        Some(base_type) => self.field_type(base_type, field, name, loc)
+        Some(base_type) => self.field_path_type(base_type, path, name, loc)
         None => {
           self.diagnostics.push({
             kind: CheckDiagnosticKind::UnresolvedValue(name),
@@ -426,6 +426,15 @@ fn SemanticChecker::infer_value_reference(
           @types.Type::Error
         }
       }
+    @resolve.ResolvedValueReference::Candidates(name~, ..) => {
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression(
+          "ambiguous value reference " + name,
+        ),
+        loc,
+      })
+      @types.Type::Error
+    }
     @resolve.ResolvedValueReference::Unresolved(name) => {
       self.diagnostics.push({
         kind: CheckDiagnosticKind::UnresolvedValue(name),
@@ -434,6 +443,21 @@ fn SemanticChecker::infer_value_reference(
       @types.Type::Error
     }
   }
+}
+
+///|
+fn SemanticChecker::field_path_type(
+  self : SemanticChecker,
+  base_type : @types.Type,
+  path : Array[FieldSymbolId],
+  name : String,
+  loc : SourceSpan,
+) -> @types.Type {
+  let mut current = base_type
+  for field in path {
+    current = self.field_type(current, field, name, loc)
+  }
+  current
 }
 
 ///|
@@ -581,29 +605,42 @@ fn SemanticChecker::infer_field(
   scope : TypeScope,
   base : @resolve.ResolvedExpr,
   name : String,
+  reference : @resolve.ResolvedFieldReference,
   loc : SourceSpan,
 ) -> @types.Type {
   let base_type = self.infer_expr(scope, base)
-  match base_type {
-    @types.Type::Nominal(symbol, _) =>
-      match self.source.symbols.field_named(symbol, name) {
-        Some(field) => self.field_type(base_type, field, name, loc)
-        None => {
+  match reference {
+    @resolve.ResolvedFieldReference::Symbol(field) =>
+      self.field_type(base_type, field, name, loc)
+    @resolve.ResolvedFieldReference::Unresolved(..) => {
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::UnknownField(name~),
+        loc,
+      })
+      @types.Type::Error
+    }
+    @resolve.ResolvedFieldReference::Deferred(_) =>
+      match base_type {
+        @types.Type::Nominal(symbol, _) =>
+          match self.source.symbols.field_named(symbol, name) {
+            Some(field) => self.field_type(base_type, field, name, loc)
+            None => {
+              self.diagnostics.push({
+                kind: CheckDiagnosticKind::UnknownField(name~),
+                loc,
+              })
+              @types.Type::Error
+            }
+          }
+        @types.Type::Error => @types.Type::Error
+        _ => {
           self.diagnostics.push({
-            kind: CheckDiagnosticKind::UnknownField(name~),
+            kind: CheckDiagnosticKind::NotAStruct(base_type),
             loc,
           })
           @types.Type::Error
         }
       }
-    @types.Type::Error => @types.Type::Error
-    _ => {
-      self.diagnostics.push({
-        kind: CheckDiagnosticKind::NotAStruct(base_type),
-        loc,
-      })
-      @types.Type::Error
-    }
   }
 }
 
