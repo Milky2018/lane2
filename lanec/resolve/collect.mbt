@@ -1,44 +1,9 @@
 ///|
-priv struct ValueBinding {
-  name : String
-  reference : ResolvedValueReference
-  type_ : ResolvedType?
-  kind : ValueBindingKind
-  depth : Int
-}
-
-///|
-priv enum ValueBindingKind {
-  Plain
-  OpenExposure
-} derive(Eq)
-
-///|
-priv struct ResolveScope {
-  values : Array[ValueBinding]
-  type_parameters : Array[ResolvedTypeParameter]
-  depth : Int
-}
-
-///|
-priv struct FieldTypeBinding {
-  symbol : FieldSymbolId
-  type_ : ResolvedType
-}
-
-///|
-priv struct StructFieldForwarding {
-  owner : TypeSymbolId
-  field : FieldSymbolId
-}
-
-///|
 priv struct Resolver {
   registry : SymbolRegistry
   top_values : Array[ValueBinding]
   diagnostics : Array[ResolveDiagnostic]
-  field_types : Array[FieldTypeBinding]
-  field_forwardings : Array[StructFieldForwarding]
+  members : NominalMembers
 }
 
 ///|
@@ -64,8 +29,7 @@ fn Resolver::Resolver(registry : SymbolRegistry) -> Resolver {
     registry,
     top_values: [],
     diagnostics: [],
-    field_types: [],
-    field_forwardings: [],
+    members: NominalMembers::NominalMembers(),
   }
 }
 
@@ -233,7 +197,7 @@ fn @syntax.FieldDeclaration::resolve_field(
 ) -> ResolvedFieldDeclaration {
   let symbol = resolver.registry.field_named(owner, self.name).unwrap()
   let type_ = self.type_.resolve_type(resolver, scope)
-  resolver.field_types.push({ symbol, type_ })
+  resolver.members.record_field_type(symbol, type_)
   { symbol, name: self.name, type_, index, loc: self.loc }
 }
 
@@ -245,11 +209,11 @@ fn Resolver::resolve_struct_forwarding(
 ) -> Unit {
   match self.registry.field_named(owner, open.name) {
     Some(field) =>
-      match self.field_type(field) {
+      match self.members.field_type(field) {
         Some(Nominal(symbol~, ..)) =>
           match self.registry.type_metadata(symbol) {
             Some({ kind: Struct, .. }) =>
-              self.field_forwardings.push({ owner, field })
+              self.members.record_struct_forwarding(owner, field)
             _ => self.report(CannotOpenValue(open.name), open.loc)
           }
         _ => self.report(CannotOpenValue(open.name), open.loc)
@@ -851,133 +815,6 @@ fn Resolver::scope(
 }
 
 ///|
-fn ResolveScope::copy(self : ResolveScope) -> ResolveScope {
-  {
-    values: self.values.copy(),
-    type_parameters: self.type_parameters.copy(),
-    depth: self.depth,
-  }
-}
-
-///|
-fn ResolveScope::enter_scope(self : ResolveScope) -> ResolveScope {
-  {
-    values: self.values.copy(),
-    type_parameters: self.type_parameters.copy(),
-    depth: self.depth + 1,
-  }
-}
-
-///|
-fn ResolveScope::define_value(
-  self : ResolveScope,
-  name : String,
-  symbol : ValueSymbolId,
-  type_ : ResolvedType?,
-) -> Unit {
-  self.values.push({
-    name,
-    reference: Symbol(symbol),
-    type_,
-    kind: Plain,
-    depth: self.depth,
-  })
-}
-
-///|
-fn ResolveScope::define_binding(
-  self : ResolveScope,
-  binding : ValueBinding,
-) -> Unit {
-  self.values.push(binding)
-}
-
-///|
-fn ResolveScope::value_reference(
-  self : ResolveScope,
-  name : String,
-) -> ResolvedValueReference {
-  let candidates = []
-  let mut found_plain = false
-  let mut open_depth = None
-  for index = self.values.length(); index > 0; index = index - 1 {
-    let binding = self.values[index - 1]
-    if binding.name == name {
-      match binding.kind {
-        Plain =>
-          if !found_plain {
-            candidates.push(binding.reference)
-            found_plain = true
-          }
-        OpenExposure =>
-          match open_depth {
-            Some(depth) =>
-              if binding.depth == depth {
-                candidates.push(binding.reference)
-              }
-            None => {
-              open_depth = Some(binding.depth)
-              candidates.push(binding.reference)
-            }
-          }
-      }
-    }
-  }
-  match candidates.length() {
-    0 => Unresolved(name)
-    1 => candidates[0]
-    _ => Candidates(name~, candidates~)
-  }
-}
-
-///|
-fn ResolveScope::value_binding(
-  self : ResolveScope,
-  name : String,
-) -> ValueBinding? {
-  for index = self.values.length(); index > 0; index = index - 1 {
-    let binding = self.values[index - 1]
-    if binding.name == name && binding.kind == Plain {
-      return Some(binding)
-    }
-  }
-  None
-}
-
-///|
-fn ResolveScope::value_type(
-  self : ResolveScope,
-  reference : ResolvedValueReference,
-) -> ResolvedType? {
-  match reference {
-    Symbol(symbol) => {
-      for index = self.values.length(); index > 0; index = index - 1 {
-        let binding = self.values[index - 1]
-        if binding.reference == Symbol(symbol) {
-          return binding.type_
-        }
-      }
-      None
-    }
-    _ => None
-  }
-}
-
-///|
-fn ResolveScope::type_parameter(
-  self : ResolveScope,
-  name : String,
-) -> TypeParameterId? {
-  for index = self.type_parameters.length(); index > 0; index = index - 1 {
-    let parameter = self.type_parameters[index - 1]
-    if parameter.name == name {
-      return Some(parameter.symbol)
-    }
-  }
-  None
-}
-
-///|
 fn Resolver::type_symbol(self : Resolver, name : String) -> TypeSymbolId {
   self.registry.type_named(name).unwrap()
 }
@@ -1072,7 +909,14 @@ fn Resolver::opened_fields(
     (Symbol(base), Some(Nominal(symbol~, ..))) =>
       match self.registry.type_metadata(symbol) {
         Some({ kind: Struct, .. }) =>
-          Some(self.opened_field_bindings(base, symbol, depth))
+          Some(
+            self.members.opened_field_bindings(
+              self.registry,
+              base,
+              symbol,
+              depth,
+            ),
+          )
         _ => {
           self.report(CannotOpenValue(binding.name), loc)
           None
@@ -1083,84 +927,6 @@ fn Resolver::opened_fields(
       None
     }
   }
-}
-
-///|
-fn Resolver::opened_field_bindings(
-  self : Resolver,
-  base : ValueSymbolId,
-  owner : TypeSymbolId,
-  depth : Int,
-) -> Array[ValueBinding] {
-  let bindings = []
-  self.collect_opened_field_bindings(base, owner, depth, [], [], bindings)
-  bindings
-}
-
-///|
-fn Resolver::collect_opened_field_bindings(
-  self : Resolver,
-  base : ValueSymbolId,
-  owner : TypeSymbolId,
-  depth : Int,
-  prefix : Array[FieldSymbolId],
-  visited : Array[TypeSymbolId],
-  bindings : Array[ValueBinding],
-) -> Unit {
-  if visited.contains(owner) {
-    return
-  }
-  let next_visited = visited.copy()
-  next_visited.push(owner)
-  for field in self.registry.fields_of(owner) {
-    let path = prefix.copy()
-    path.push(field.id)
-    bindings.push({
-      name: field.name,
-      reference: OpenedField(base~, path~),
-      type_: None,
-      kind: OpenExposure,
-      depth,
-    })
-  }
-  for forwarding in self.field_forwardings {
-    if forwarding.owner == owner {
-      match self.forwarded_owner(forwarding.field) {
-        Some(forwarded_owner) => {
-          let path = prefix.copy()
-          path.push(forwarding.field)
-          self.collect_opened_field_bindings(
-            base, forwarded_owner, depth, path, next_visited, bindings,
-          )
-        }
-        None => ()
-      }
-    }
-  }
-}
-
-///|
-fn Resolver::forwarded_owner(
-  self : Resolver,
-  field : FieldSymbolId,
-) -> TypeSymbolId? {
-  match self.field_type(field) {
-    Some(Nominal(symbol~, ..)) => Some(symbol)
-    _ => None
-  }
-}
-
-///|
-fn Resolver::field_type(
-  self : Resolver,
-  field : FieldSymbolId,
-) -> ResolvedType? {
-  for binding in self.field_types {
-    if binding.symbol == field {
-      return Some(binding.type_)
-    }
-  }
-  None
 }
 
 ///|

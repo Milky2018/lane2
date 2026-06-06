@@ -327,7 +327,7 @@ fn SemanticChecker::infer_struct_literal(
         loc,
       )
       let type_ = @types.Type::Nominal(symbol, arguments)
-      let struct_declaration = match self.checked_struct(symbol) {
+      let struct_declaration = match self.declarations.checked_struct(symbol) {
         Some(declaration) => declaration
         None => {
           self.diagnostics.push({
@@ -349,7 +349,8 @@ fn SemanticChecker::infer_struct_literal(
         }
         match self.source.symbols.field_named(symbol, field.name) {
           Some(field_symbol) => {
-            let expected = self.field_type(
+            let expected = self.declarations.field_type(
+              self.diagnostics,
               type_,
               field_symbol,
               field.name,
@@ -417,7 +418,14 @@ fn SemanticChecker::infer_value_reference(
       }
     @resolve.ResolvedValueReference::OpenedField(base~, path~) =>
       match scope.lookup(base) {
-        Some(base_type) => self.field_path_type(base_type, path, name, loc)
+        Some(base_type) =>
+          self.declarations.field_path_type(
+            self.diagnostics,
+            base_type,
+            path,
+            name,
+            loc,
+          )
         None => {
           self.diagnostics.push({
             kind: CheckDiagnosticKind::UnresolvedValue(name),
@@ -443,21 +451,6 @@ fn SemanticChecker::infer_value_reference(
       @types.Type::Error
     }
   }
-}
-
-///|
-fn SemanticChecker::field_path_type(
-  self : SemanticChecker,
-  base_type : @types.Type,
-  path : Array[FieldSymbolId],
-  name : String,
-  loc : SourceSpan,
-) -> @types.Type {
-  let mut current = base_type
-  for field in path {
-    current = self.field_type(current, field, name, loc)
-  }
-  current
 }
 
 ///|
@@ -611,7 +604,13 @@ fn SemanticChecker::infer_field(
   let base_type = self.infer_expr(scope, base)
   match reference {
     @resolve.ResolvedFieldReference::Symbol(field) =>
-      self.field_type(base_type, field, name, loc)
+      self.declarations.field_type(
+        self.diagnostics,
+        base_type,
+        field,
+        name,
+        loc,
+      )
     @resolve.ResolvedFieldReference::Unresolved(..) => {
       self.diagnostics.push({
         kind: CheckDiagnosticKind::UnknownField(name~),
@@ -623,7 +622,14 @@ fn SemanticChecker::infer_field(
       match base_type {
         @types.Type::Nominal(symbol, _) =>
           match self.source.symbols.field_named(symbol, name) {
-            Some(field) => self.field_type(base_type, field, name, loc)
+            Some(field) =>
+              self.declarations.field_type(
+                self.diagnostics,
+                base_type,
+                field,
+                name,
+                loc,
+              )
             None => {
               self.diagnostics.push({
                 kind: CheckDiagnosticKind::UnknownField(name~),
@@ -642,97 +648,6 @@ fn SemanticChecker::infer_field(
         }
       }
   }
-}
-
-///|
-fn SemanticChecker::field_type(
-  self : SemanticChecker,
-  base_type : @types.Type,
-  field : FieldSymbolId,
-  name : String,
-  loc : SourceSpan,
-) -> @types.Type {
-  match base_type {
-    @types.Type::Nominal(owner, arguments) =>
-      match self.checked_struct(owner) {
-        Some(declaration) =>
-          match declaration.field(field) {
-            Some(field_declaration) =>
-              field_declaration.type_.substitute(
-                declaration.nominal_substitution(arguments),
-              )
-            None => {
-              self.diagnostics.push({
-                kind: CheckDiagnosticKind::UnknownField(name~),
-                loc,
-              })
-              @types.Type::Error
-            }
-          }
-        None => {
-          self.diagnostics.push({
-            kind: CheckDiagnosticKind::NotAStruct(base_type),
-            loc,
-          })
-          @types.Type::Error
-        }
-      }
-    @types.Type::Error => @types.Type::Error
-    _ => {
-      self.diagnostics.push({
-        kind: CheckDiagnosticKind::NotAStruct(base_type),
-        loc,
-      })
-      @types.Type::Error
-    }
-  }
-}
-
-///|
-fn SemanticChecker::checked_struct(
-  self : SemanticChecker,
-  symbol : TypeSymbolId,
-) -> CheckedStructDeclaration? {
-  for declaration in self.declarations.types {
-    match declaration {
-      CheckedTypeDeclaration::Struct(declaration) =>
-        if declaration.symbol == symbol {
-          return Some(declaration)
-        }
-      _ => ()
-    }
-  }
-  None
-}
-
-///|
-fn CheckedStructDeclaration::field(
-  self : CheckedStructDeclaration,
-  symbol : FieldSymbolId,
-) -> CheckedFieldDeclaration? {
-  for field in self.fields {
-    if field.symbol == symbol {
-      return Some(field)
-    }
-  }
-  None
-}
-
-///|
-fn CheckedStructDeclaration::nominal_substitution(
-  self : CheckedStructDeclaration,
-  arguments : Array[@types.Type],
-) -> @types.TypeSubstitution {
-  let substitution = @types.TypeSubstitution::TypeSubstitution()
-  let length = if self.type_parameters.length() < arguments.length() {
-    self.type_parameters.length()
-  } else {
-    arguments.length()
-  }
-  for index in 0..<length {
-    substitution.insert(self.type_parameters[index].id, arguments[index])
-  }
-  substitution
 }
 
 ///|
