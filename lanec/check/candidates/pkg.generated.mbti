@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/lane2/check/candidates"
+
+import {
+  "Milky2018/lane2/resolve",
+  "Milky2018/lane2/types",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn select_by_call_arguments(String, Array[TypedCandidate], Array[@types.Type]) -> CallableSelection
+
+pub fn select_by_expected(String, Array[TypedCandidate], @types.Type) -> Selection
+
+pub fn select_without_context(String, Array[TypedCandidate]) -> Selection
+
+// Errors
+
+// Types and methods
+pub(all) struct CallableCandidate {
+  reference : @resolve.ResolvedValueReference
+  parameters : Array[@types.Type]
+  result : @types.Type
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CallableSelection {
+  Selected(CallableCandidate)
+  Ambiguous(name~ : String, candidates~ : Array[CallableCandidate])
+  NoMatch(name~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Selection {
+  Selected(TypedCandidate)
+  Ambiguous(name~ : String, candidates~ : Array[TypedCandidate])
+  NoMatch(name~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TypedCandidate {
+  reference : @resolve.ResolvedValueReference
+  type_ : @types.Type
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

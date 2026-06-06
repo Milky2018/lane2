@@ -151,6 +151,81 @@ test "check local let inference and opened field reference" {
 }
 
 ///|
+test "check selects open candidate by expected type" {
+  let result = expect_checked_source(
+    (
+      #|struct IntSource {
+      #|  value : Int
+      #|}
+      #|struct BoolSource {
+      #|  value : Bool
+      #|}
+      #|let int_source : IntSource = IntSource::{ value: 1 }
+      #|let bool_source : BoolSource = BoolSource::{ value: true }
+      #|open int_source
+      #|open bool_source
+      #|fn use() -> Int {
+      #|  value
+      #|}
+    ),
+  )
+  assert_true(result.diagnostics.is_empty())
+}
+
+///|
+test "check keeps same typed open candidates ambiguous" {
+  let result = expect_checked_source(
+    (
+      #|struct Left {
+      #|  value : Int
+      #|}
+      #|struct Right {
+      #|  value : Int
+      #|}
+      #|let left : Left = Left::{ value: 1 }
+      #|let right : Right = Right::{ value: 2 }
+      #|open left
+      #|open right
+      #|fn use() -> Int {
+      #|  value
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer ambiguous value reference value",
+  )
+}
+
+///|
+test "check selects callable open candidate by argument types" {
+  let result = expect_checked_source(
+    (
+      #|struct IntOps {
+      #|  op_add : (Int, Int) -> Int
+      #|}
+      #|struct BoolOps {
+      #|  op_add : (Bool, Bool) -> Bool
+      #|}
+      #|fn int_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn bool_add(a : Bool, b : Bool) -> Bool {
+      #|  a
+      #|}
+      #|let int_ops : IntOps = IntOps::{ op_add: int_add }
+      #|let bool_ops : BoolOps = BoolOps::{ op_add: bool_add }
+      #|open int_ops
+      #|open bool_ops
+      #|fn use() -> Int {
+      #|  op_add(1, 2)
+      #|}
+    ),
+  )
+  assert_true(result.diagnostics.is_empty())
+}
+
+///|
 test "check reports type mismatch" {
   let result = expect_checked_source(
     (

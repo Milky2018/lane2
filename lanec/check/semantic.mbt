@@ -206,6 +206,17 @@ fn SemanticChecker::check_expr(
 ) -> Unit {
   match expr {
     @resolve.ResolvedExpr::Builtin(_, ..) => ()
+    @resolve.ResolvedExpr::Var(name~, reference~, loc~) =>
+      match reference {
+        @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+          self.check_candidate_reference(scope, name, candidates, expected, loc)
+        _ => {
+          let actual = self.infer_expr(scope, expr)
+          self.expect_type(expected, actual, resolved_expr_loc(expr))
+        }
+      }
+    @resolve.ResolvedExpr::Block(items~, result~, ..) =>
+      self.check_block(scope, items, result, expected)
     @resolve.ResolvedExpr::FunctionLiteral(
       type_parameters~,
       parameters~,
@@ -220,6 +231,50 @@ fn SemanticChecker::check_expr(
       let actual = self.infer_expr(scope, expr)
       self.expect_type(expected, actual, resolved_expr_loc(expr))
     }
+  }
+}
+
+///|
+fn SemanticChecker::check_block(
+  self : SemanticChecker,
+  scope : TypeScope,
+  items : Array[@resolve.ResolvedLocalItem],
+  result : @resolve.ResolvedExpr,
+  expected : @types.Type,
+) -> Unit {
+  let next_scope : TypeScope = { values: scope.values.copy() }
+  for item in items {
+    match item {
+      @resolve.ResolvedLocalItem::Let(declaration) =>
+        self.check_local_let(next_scope, declaration)
+      @resolve.ResolvedLocalItem::Function(declaration) =>
+        self.check_local_function(next_scope, declaration)
+      @resolve.ResolvedLocalItem::Open(_) => ()
+    }
+  }
+  self.check_expr(next_scope, result, expected)
+}
+
+///|
+fn SemanticChecker::check_candidate_reference(
+  self : SemanticChecker,
+  scope : TypeScope,
+  name : String,
+  candidates : Array[@resolve.ResolvedValueReference],
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
+  match @candidates.select_by_expected(name, typed_candidates, expected) {
+    Selected(_) => ()
+    Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
+    NoMatch(name~) =>
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression(
+          "no matching value reference " + name,
+        ),
+        loc,
+      })
   }
 }
 
@@ -434,14 +489,24 @@ fn SemanticChecker::infer_value_reference(
           @types.Type::Error
         }
       }
-    @resolve.ResolvedValueReference::Candidates(name~, ..) => {
-      self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression(
-          "ambiguous value reference " + name,
-        ),
-        loc,
-      })
-      @types.Type::Error
+    @resolve.ResolvedValueReference::Candidates(name~, candidates~) => {
+      let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
+      match @candidates.select_without_context(name, typed_candidates) {
+        Selected(candidate) => candidate.type_
+        Ambiguous(name~, ..) => {
+          self.report_ambiguous_value_reference(name, loc)
+          @types.Type::Error
+        }
+        NoMatch(name~) => {
+          self.diagnostics.push({
+            kind: CheckDiagnosticKind::CannotInferExpression(
+              "no matching value reference " + name,
+            ),
+            loc,
+          })
+          @types.Type::Error
+        }
+      }
     }
     @resolve.ResolvedValueReference::Unresolved(name) => {
       self.diagnostics.push({
@@ -451,6 +516,90 @@ fn SemanticChecker::infer_value_reference(
       @types.Type::Error
     }
   }
+}
+
+///|
+fn SemanticChecker::typed_candidates(
+  self : SemanticChecker,
+  scope : TypeScope,
+  candidates : Array[@resolve.ResolvedValueReference],
+  name : String,
+  loc : SourceSpan,
+) -> Array[@candidates.TypedCandidate] {
+  let typed = []
+  for candidate in candidates {
+    match self.typed_candidate(scope, candidate, name, loc) {
+      Some(candidate) => typed.push(candidate)
+      None => ()
+    }
+  }
+  typed
+}
+
+///|
+fn SemanticChecker::typed_candidate(
+  self : SemanticChecker,
+  scope : TypeScope,
+  reference : @resolve.ResolvedValueReference,
+  name : String,
+  loc : SourceSpan,
+) -> @candidates.TypedCandidate? {
+  match reference {
+    @resolve.ResolvedValueReference::Symbol(symbol) =>
+      match scope.lookup(symbol) {
+        Some(type_) => Some({ reference, type_ })
+        None => {
+          self.diagnostics.push({
+            kind: CheckDiagnosticKind::UnresolvedValue(name),
+            loc,
+          })
+          None
+        }
+      }
+    @resolve.ResolvedValueReference::OpenedField(base~, path~) =>
+      match scope.lookup(base) {
+        Some(base_type) =>
+          Some({
+            reference,
+            type_: self.declarations.field_path_type(
+              self.diagnostics,
+              base_type,
+              path,
+              name,
+              loc,
+            ),
+          })
+        None => {
+          self.diagnostics.push({
+            kind: CheckDiagnosticKind::UnresolvedValue(name),
+            loc,
+          })
+          None
+        }
+      }
+    @resolve.ResolvedValueReference::Candidates(..) => None
+    @resolve.ResolvedValueReference::Unresolved(name) => {
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::UnresolvedValue(name),
+        loc,
+      })
+      None
+    }
+  }
+}
+
+///|
+fn SemanticChecker::report_ambiguous_value_reference(
+  self : SemanticChecker,
+  name : String,
+  loc : SourceSpan,
+) -> Unit {
+  self.diagnostics.push({
+    kind: CheckDiagnosticKind::CannotInferExpression(
+      "ambiguous value reference " + name,
+    ),
+    loc,
+  })
 }
 
 ///|
@@ -549,6 +698,17 @@ fn SemanticChecker::infer_call(
   arguments : Array[@resolve.ResolvedExpr],
   loc : SourceSpan,
 ) -> @types.Type {
+  match callee {
+    @resolve.ResolvedExpr::Var(name~, reference~, loc=callee_loc) =>
+      match reference {
+        @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+          return self.infer_candidate_call(
+            scope, name, candidates, arguments, callee_loc,
+          )
+        _ => ()
+      }
+    _ => ()
+  }
   match self.infer_expr(scope, callee) {
     @types.Type::Function(parameters, result) => {
       self.check_call_arguments(scope, parameters, arguments, loc)
@@ -565,6 +725,38 @@ fn SemanticChecker::infer_call(
     type_ => {
       self.diagnostics.push({
         kind: CheckDiagnosticKind::NotCallable(type_),
+        loc,
+      })
+      @types.Type::Error
+    }
+  }
+}
+
+///|
+fn SemanticChecker::infer_candidate_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  name : String,
+  candidates : Array[@resolve.ResolvedValueReference],
+  arguments : Array[@resolve.ResolvedExpr],
+  loc : SourceSpan,
+) -> @types.Type {
+  let argument_types = arguments.map(fn(argument) {
+    self.infer_expr(scope, argument)
+  })
+  let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
+  match
+    @candidates.select_by_call_arguments(name, typed_candidates, argument_types) {
+    Selected(candidate) => candidate.result
+    Ambiguous(name~, ..) => {
+      self.report_ambiguous_value_reference(name, loc)
+      @types.Type::Error
+    }
+    NoMatch(name~) => {
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression(
+          "no matching callable value reference " + name,
+        ),
         loc,
       })
       @types.Type::Error
