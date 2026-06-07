@@ -13,11 +13,9 @@ test "select candidate by expected type" {
     ],
     @types.Type::Primitive(@types.PrimitiveType::Int),
   )
-  assert_true(
-    selected
-    is Selection::Selected(
-      { type_: @types.Type::Primitive(@types.PrimitiveType::Int), .. }
-    ),
+  debug_inspect(
+    selected,
+    content="Selected({ reference: Unresolved(\"candidate\"), type_: Primitive(Int) })",
   )
 }
 
@@ -31,7 +29,18 @@ test "keep ambiguity when expected type matches more than one candidate" {
     ],
     @types.Type::Primitive(@types.PrimitiveType::Int),
   )
-  assert_true(selected is Selection::Ambiguous(candidates=[_, _], ..))
+  debug_inspect(
+    selected,
+    content=(
+      #|Ambiguous(
+      #|  name="value",
+      #|  candidates=[
+      #|    { reference: Unresolved("candidate"), type_: Primitive(Int) },
+      #|    { reference: Unresolved("candidate"), type_: Primitive(Int) },
+      #|  ],
+      #|)
+    ),
+  )
 }
 
 ///|
@@ -63,10 +72,16 @@ test "select callable candidate by argument types" {
       @types.Type::Primitive(@types.PrimitiveType::Int),
     ],
   )
-  assert_true(
-    selected
-    is CallableSelection::Selected(
-      { result: @types.Type::Primitive(@types.PrimitiveType::Int), .. }
+  debug_inspect(
+    selected,
+    content=(
+      #|Selected(
+      #|  {
+      #|    reference: Unresolved("candidate"),
+      #|    parameters: [Primitive(Int), Primitive(Int)],
+      #|    result: Primitive(Int),
+      #|  },
+      #|)
     ),
   )
 }

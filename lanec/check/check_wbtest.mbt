@@ -169,7 +169,34 @@ test "check selects open candidate by expected type" {
       #|}
     ),
   )
-  assert_true(result.diagnostics.is_empty())
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IntSource {
+      #|        field field#0 value : Int index=0
+      #|      }
+      #|      struct type#1 BoolSource {
+      #|        field field#1 value : Bool index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 value : Int index=0
+      #|      field field#1 value : Bool index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
+      #|    let value#1 int_source : type#0
+      #|    let value#2 bool_source : type#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
 }
 
 ///|
@@ -222,7 +249,142 @@ test "check selects callable open candidate by argument types" {
       #|}
     ),
   )
-  assert_true(result.diagnostics.is_empty())
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IntOps {
+      #|        field field#0 op_add : (Int, Int) -> Int index=0
+      #|      }
+      #|      struct type#1 BoolOps {
+      #|        field field#1 op_add : (Bool, Bool) -> Bool index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 op_add : (Int, Int) -> Int index=0
+      #|      field field#1 op_add : (Bool, Bool) -> Bool index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 int_add : (Int, Int) -> Int
+      #|    fn value#1 bool_add : (Bool, Bool) -> Bool
+      #|    fn value#2 use : () -> Int
+      #|    let value#7 int_ops : type#0
+      #|    let value#8 bool_ops : type#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check selects open candidate in if branches by expected type" {
+  let result = expect_checked_source(
+    (
+      #|struct IntSource {
+      #|  value : Int
+      #|}
+      #|struct BoolSource {
+      #|  value : Bool
+      #|}
+      #|let int_source : IntSource = IntSource::{ value: 1 }
+      #|let bool_source : BoolSource = BoolSource::{ value: true }
+      #|open int_source
+      #|open bool_source
+      #|fn use(flag : Bool) -> Int {
+      #|  if flag {
+      #|    value
+      #|  } else {
+      #|    value
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IntSource {
+      #|        field field#0 value : Int index=0
+      #|      }
+      #|      struct type#1 BoolSource {
+      #|        field field#1 value : Bool index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 value : Int index=0
+      #|      field field#1 value : Bool index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : (Bool) -> Int
+      #|    let value#1 int_source : type#0
+      #|    let value#2 bool_source : type#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check selects argument candidate from known function parameter type" {
+  let result = expect_checked_source(
+    (
+      #|struct IntSource {
+      #|  value : Int
+      #|}
+      #|struct BoolSource {
+      #|  value : Bool
+      #|}
+      #|fn take_int(value : Int) -> Int {
+      #|  value
+      #|}
+      #|let int_source : IntSource = IntSource::{ value: 1 }
+      #|let bool_source : BoolSource = BoolSource::{ value: true }
+      #|open int_source
+      #|open bool_source
+      #|fn use() -> Int {
+      #|  take_int(value)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IntSource {
+      #|        field field#0 value : Int index=0
+      #|      }
+      #|      struct type#1 BoolSource {
+      #|        field field#1 value : Bool index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 value : Int index=0
+      #|      field field#1 value : Bool index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 take_int : (Int) -> Int
+      #|    fn value#1 use : () -> Int
+      #|    let value#3 int_source : type#0
+      #|    let value#4 bool_source : type#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
 }
 
 ///|

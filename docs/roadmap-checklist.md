@@ -57,6 +57,8 @@ module tasks should live in issues or implementation notes.
   values, direct calls, blocks, struct literals, and opened fields.
 - [x] Introduce type-directed candidate selection as an internal checker
   package for expected-type and call-argument disambiguation.
+- [x] Propagate expected types through function bodies, block results, `if`
+  branches, and known call parameters to drive local candidate selection.
 - [ ] Implement bidirectional local type checking and direct context inference.
 - [ ] Ensure candidate sets are eliminated by checking: every resolved value
   candidate use must either select one concrete reference or produce a stable

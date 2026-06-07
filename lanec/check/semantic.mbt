@@ -218,6 +218,8 @@ fn SemanticChecker::check_expr(
       }
     @resolve.ResolvedExpr::Block(items~, result~, ..) =>
       self.check_block(scope, items, result, expected)
+    @resolve.ResolvedExpr::If(condition~, then_branch~, else_branch~, ..) =>
+      self.check_if(scope, condition, then_branch, else_branch, expected)
     @resolve.ResolvedExpr::FunctionLiteral(
       type_parameters~,
       parameters~,
@@ -233,6 +235,24 @@ fn SemanticChecker::check_expr(
       self.expect_type(expected, actual, resolved_expr_loc(expr))
     }
   }
+}
+
+///|
+fn SemanticChecker::check_if(
+  self : SemanticChecker,
+  scope : TypeScope,
+  condition : @resolve.ResolvedExpr,
+  then_branch : @resolve.ResolvedExpr,
+  else_branch : @resolve.ResolvedExpr,
+  expected : @types.Type,
+) -> Unit {
+  self.check_expr(
+    scope,
+    condition,
+    @types.Type::Primitive(@types.PrimitiveType::Bool),
+  )
+  self.check_expr(scope, then_branch, expected)
+  self.check_expr(scope, else_branch, expected)
 }
 
 ///|
