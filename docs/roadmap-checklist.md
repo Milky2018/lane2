@@ -51,6 +51,12 @@ module tasks should live in issues or implementation notes.
 
 ## 3. Semantic Checking
 
+Local type inference is implemented as two source-level judgments: synthesis
+computes a type from an expression, and checking verifies an expression against
+an expected type. It must not introduce Hindley-Milner-style global unification
+state. Lane2's open overload resolution is an extension layer over these local
+typing judgments.
+
 - [x] Build the checked declaration environment for custom types, including
   struct field types and enum variant payload types.
 - [x] Introduce the first source-level semantic checker slice for annotated
@@ -61,15 +67,24 @@ module tasks should live in issues or implementation notes.
   branches, and known call parameters to drive local candidate selection.
 - [x] Check unary and non-thunked binary operator aliases as calls to resolved
   `op_*` values, including open candidate selection by operand types.
-- [ ] Implement bidirectional local type checking and direct context inference.
+- [ ] Reframe the checker around explicit synthesis (`synthesize(expr) -> T`)
+  and checking (`check(expr, expected)`) judgments.
+- [ ] Implement non-generic bidirectional local checking for function literals,
+  calls, blocks, `if` branches, struct literals, field access, and non-thunked
+  operator aliases.
+- [ ] Treat open overload selection as a candidate layer over local typing
+  derivations: each viable candidate must type-check under the same local
+  context, and multiple viable candidates remain ambiguous.
+- [ ] Implement local type argument synthesis for generic applications,
+  including constraints from argument types and expected result types in
+  checking mode.
 - [ ] Ensure candidate sets are eliminated by checking: every resolved value
   candidate use must either select one concrete reference or produce a stable
   ambiguity diagnostic.
 - [ ] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.
-- [ ] Check generic instantiation, forall introduction/elimination, generic
-  candidate instantiation, primitive operations, nominal construction, and
-  field access.
+- [ ] Check forall introduction/elimination, generic candidate instantiation,
+  primitive operations, nominal construction, and field access.
 - [ ] Check enum variant construction and unqualified variant calls after type
   information is available.
 - [ ] Check `if`, `match`, pipeline, operator aliases, and `&&` / `||` source
