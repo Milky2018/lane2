@@ -334,6 +334,10 @@ fn SemanticChecker::infer_expr(
       self.infer_call(scope, callee, arguments, loc)
     @resolve.ResolvedExpr::Field(base~, name~, reference~, loc~) =>
       self.infer_field(scope, base, name, reference, loc)
+    @resolve.ResolvedExpr::Unary(operator~, reference~, operand~, loc~) =>
+      self.infer_unary_operator(scope, operator, reference, operand, loc)
+    @resolve.ResolvedExpr::Binary(operator~, reference~, left~, right~, loc~) =>
+      self.infer_binary_operator(scope, operator, reference, left, right, loc)
     @resolve.ResolvedExpr::StructLiteral(
       type_name~,
       type_arguments~,
@@ -355,6 +359,126 @@ fn SemanticChecker::infer_expr(
       })
       @types.Type::Error
     }
+  }
+}
+
+///|
+fn SemanticChecker::infer_unary_operator(
+  self : SemanticChecker,
+  scope : TypeScope,
+  operator : @syntax.UnaryOperator,
+  reference : @resolve.ResolvedValueReference,
+  operand : @resolve.ResolvedExpr,
+  loc : SourceSpan,
+) -> @types.Type {
+  let argument_types = [self.infer_expr(scope, operand)]
+  self.infer_resolved_operator_call(
+    scope,
+    reference,
+    operator.operation_name(),
+    argument_types,
+    loc,
+  )
+}
+
+///|
+fn SemanticChecker::infer_binary_operator(
+  self : SemanticChecker,
+  scope : TypeScope,
+  operator : @syntax.BinaryOperator,
+  reference : @resolve.ResolvedValueReference,
+  left : @resolve.ResolvedExpr,
+  right : @resolve.ResolvedExpr,
+  loc : SourceSpan,
+) -> @types.Type {
+  match operator {
+    And | Or => {
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression("thunked operator"),
+        loc,
+      })
+      return @types.Type::Error
+    }
+    _ => ()
+  }
+  let argument_types = [
+    self.infer_expr(scope, left),
+    self.infer_expr(scope, right),
+  ]
+  self.infer_resolved_operator_call(
+    scope,
+    reference,
+    operator.operation_name(),
+    argument_types,
+    loc,
+  )
+}
+
+///|
+fn SemanticChecker::infer_resolved_operator_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  reference : @resolve.ResolvedValueReference,
+  name : String,
+  argument_types : Array[@types.Type],
+  loc : SourceSpan,
+) -> @types.Type {
+  let typed_candidates = match reference {
+    @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+      self.typed_candidates(scope, candidates, name, loc)
+    _ =>
+      match self.typed_candidate(scope, reference, name, loc) {
+        Some(candidate) => [candidate]
+        None => []
+      }
+  }
+  match
+    @candidates.select_by_call_arguments(name, typed_candidates, argument_types) {
+    Selected(candidate) => candidate.result
+    Ambiguous(name~, ..) => {
+      self.report_ambiguous_value_reference(name, loc)
+      @types.Type::Error
+    }
+    NoMatch(name~) => {
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression(
+          "no matching callable value reference " + name,
+        ),
+        loc,
+      })
+      @types.Type::Error
+    }
+  }
+}
+
+///|
+fn @syntax.UnaryOperator::operation_name(
+  self : @syntax.UnaryOperator,
+) -> String {
+  match self {
+    Neg => "op_neg"
+    Not => "op_not"
+  }
+}
+
+///|
+fn @syntax.BinaryOperator::operation_name(
+  self : @syntax.BinaryOperator,
+) -> String {
+  match self {
+    Add => "op_add"
+    Sub => "op_sub"
+    Mul => "op_mul"
+    Div => "op_div"
+    Rem => "op_rem"
+    Equal => "op_equal"
+    NotEqual => "op_not_equal"
+    Less => "op_less"
+    LessEqual => "op_less_eq"
+    Greater => "op_greater"
+    GreaterEqual => "op_greater_eq"
+    And => "op_and"
+    Or => "op_or"
   }
 }
 

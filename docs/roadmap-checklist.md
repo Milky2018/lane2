@@ -59,6 +59,8 @@ module tasks should live in issues or implementation notes.
   package for expected-type and call-argument disambiguation.
 - [x] Propagate expected types through function bodies, block results, `if`
   branches, and known call parameters to drive local candidate selection.
+- [x] Check unary and non-thunked binary operator aliases as calls to resolved
+  `op_*` values, including open candidate selection by operand types.
 - [ ] Implement bidirectional local type checking and direct context inference.
 - [ ] Ensure candidate sets are eliminated by checking: every resolved value
   candidate use must either select one concrete reference or produce a stable

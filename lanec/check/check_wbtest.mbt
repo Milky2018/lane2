@@ -282,6 +282,156 @@ test "check selects callable open candidate by argument types" {
 }
 
 ///|
+test "check direct binary operator alias" {
+  let result = expect_checked_source(
+    (
+      #|fn op_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn use() -> Int {
+      #|  1 + 2
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_add : (Int, Int) -> Int
+      #|    fn value#1 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check direct unary operator alias" {
+  let result = expect_checked_source(
+    (
+      #|fn op_neg(value : Int) -> Int {
+      #|  value
+      #|}
+      #|fn use() -> Int {
+      #|  -1
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_neg : (Int) -> Int
+      #|    fn value#1 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check selects open binary operator candidate by argument types" {
+  let result = expect_checked_source(
+    (
+      #|struct IntOps {
+      #|  op_add : (Int, Int) -> Int
+      #|}
+      #|struct BoolOps {
+      #|  op_add : (Bool, Bool) -> Bool
+      #|}
+      #|fn int_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn bool_add(a : Bool, b : Bool) -> Bool {
+      #|  a
+      #|}
+      #|let int_ops : IntOps = IntOps::{ op_add: int_add }
+      #|let bool_ops : BoolOps = BoolOps::{ op_add: bool_add }
+      #|open int_ops
+      #|open bool_ops
+      #|fn use() -> Int {
+      #|  1 + 2
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IntOps {
+      #|        field field#0 op_add : (Int, Int) -> Int index=0
+      #|      }
+      #|      struct type#1 BoolOps {
+      #|        field field#1 op_add : (Bool, Bool) -> Bool index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 op_add : (Int, Int) -> Int index=0
+      #|      field field#1 op_add : (Bool, Bool) -> Bool index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 int_add : (Int, Int) -> Int
+      #|    fn value#1 bool_add : (Bool, Bool) -> Bool
+      #|    fn value#2 use : () -> Int
+      #|    let value#7 int_ops : type#0
+      #|    let value#8 bool_ops : type#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check keeps same typed binary operator candidates ambiguous" {
+  let result = expect_checked_source(
+    (
+      #|struct LeftOps {
+      #|  op_add : (Int, Int) -> Int
+      #|}
+      #|struct RightOps {
+      #|  op_add : (Int, Int) -> Int
+      #|}
+      #|fn left_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn right_add(a : Int, b : Int) -> Int {
+      #|  b
+      #|}
+      #|let left_ops : LeftOps = LeftOps::{ op_add: left_add }
+      #|let right_ops : RightOps = RightOps::{ op_add: right_add }
+      #|open left_ops
+      #|open right_ops
+      #|fn use() -> Int {
+      #|  1 + 2
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer ambiguous value reference op_add",
+  )
+}
+
+///|
 test "check selects open candidate in if branches by expected type" {
   let result = expect_checked_source(
     (

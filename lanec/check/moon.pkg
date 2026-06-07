@@ -4,11 +4,11 @@ import {
   "Milky2018/lane2/pretty",
   "Milky2018/lane2/resolve",
   "Milky2018/lane2/symbol",
+  "Milky2018/lane2/syntax",
   "Milky2018/lane2/types",
   "moonbit-community/prettyprinter",
 }
 
 import {
   "Milky2018/lane2/parser",
-  "Milky2018/lane2/syntax",
 } for "wbtest"
