@@ -67,12 +67,12 @@ typing judgments.
   branches, and known call parameters to drive local candidate selection.
 - [x] Check unary and non-thunked binary operator aliases as calls to resolved
   `op_*` values, including open candidate selection by operand types.
-- [ ] Reframe the checker around explicit synthesis (`synthesize(expr) -> T`)
+- [x] Reframe the checker around explicit synthesis (`synthesize(expr) -> T`)
   and checking (`check(expr, expected)`) judgments.
-- [ ] Implement non-generic bidirectional local checking for function literals,
+- [x] Implement non-generic bidirectional local checking for function literals,
   calls, blocks, `if` branches, struct literals, field access, and non-thunked
   operator aliases.
-- [ ] Treat open overload selection as a candidate layer over local typing
+- [x] Treat open overload selection as a candidate layer over local typing
   derivations: each viable candidate must type-check under the same local
   context, and multiple viable candidates remain ambiguous.
 - [ ] Implement local type argument synthesis for generic applications,

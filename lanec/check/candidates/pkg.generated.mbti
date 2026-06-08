@@ -8,8 +8,6 @@ import {
 }
 
 // Values
-pub fn select_by_call_arguments(String, Array[TypedCandidate], Array[@types.Type]) -> CallableSelection
-
 pub fn select_by_expected(String, Array[TypedCandidate], @types.Type) -> Selection
 
 pub fn select_without_context(String, Array[TypedCandidate]) -> Selection

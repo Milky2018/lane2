@@ -20,6 +20,11 @@ priv struct SemanticChecker {
 }
 
 ///|
+priv struct DiagnosticCheckpoint {
+  length : Int
+}
+
+///|
 /// Checks a resolved source file and returns checked declarations, values, and diagnostics.
 pub fn check_source_file(
   source : @resolve.ResolvedSourceFile,
@@ -116,7 +121,7 @@ fn SemanticChecker::check_top_level_let(
         kind: CheckDiagnosticKind::MissingTopLevelLetAnnotation,
         loc: declaration.loc,
       })
-      self.infer_expr(self.root_scope(), declaration.initializer)
+      self.synthesize_expr(self.root_scope(), declaration.initializer)
     }
   }
   self.value_types.push({
@@ -205,6 +210,14 @@ fn SemanticChecker::check_expr(
   expr : @resolve.ResolvedExpr,
   expected : @types.Type,
 ) -> Unit {
+  // Checking judgment:
+  //
+  //   Gamma |- e <= Expected
+  //
+  // The expected type flows only to syntax nodes that are adjacent to this
+  // expression: variable candidates, block results, if branches, function
+  // literals, calls, and operators. This is the local part of LTI; it never
+  // creates global inference variables to be solved elsewhere.
   match expr {
     @resolve.ResolvedExpr::Builtin(_, ..) => ()
     @resolve.ResolvedExpr::Var(name~, reference~, loc~) =>
@@ -212,7 +225,7 @@ fn SemanticChecker::check_expr(
         @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
           self.check_candidate_reference(scope, name, candidates, expected, loc)
         _ => {
-          let actual = self.infer_expr(scope, expr)
+          let actual = self.synthesize_expr(scope, expr)
           self.expect_type(expected, actual, resolved_expr_loc(expr))
         }
       }
@@ -220,6 +233,16 @@ fn SemanticChecker::check_expr(
       self.check_block(scope, items, result, expected)
     @resolve.ResolvedExpr::If(condition~, then_branch~, else_branch~, ..) =>
       self.check_if(scope, condition, then_branch, else_branch, expected)
+    @resolve.ResolvedExpr::Call(callee~, arguments~, loc~) =>
+      self.check_call(scope, callee, arguments, expected, loc)
+    @resolve.ResolvedExpr::Unary(operator~, reference~, operand~, loc~) =>
+      self.check_unary_operator(
+        scope, operator, reference, operand, expected, loc,
+      )
+    @resolve.ResolvedExpr::Binary(operator~, reference~, left~, right~, loc~) =>
+      self.check_binary_operator(
+        scope, operator, reference, left, right, expected, loc,
+      )
     @resolve.ResolvedExpr::FunctionLiteral(
       type_parameters~,
       parameters~,
@@ -231,7 +254,7 @@ fn SemanticChecker::check_expr(
         scope, type_parameters, parameters, return_type, body, expected, loc,
       )
     _ => {
-      let actual = self.infer_expr(scope, expr)
+      let actual = self.synthesize_expr(scope, expr)
       self.expect_type(expected, actual, resolved_expr_loc(expr))
     }
   }
@@ -246,6 +269,11 @@ fn SemanticChecker::check_if(
   else_branch : @resolve.ResolvedExpr,
   expected : @types.Type,
 ) -> Unit {
+  // Gamma |- condition <= Bool
+  // Gamma |- then <= Expected
+  // Gamma |- else <= Expected
+  // ---
+  // Gamma |- if condition { then } else { else } <= Expected
   self.check_expr(
     scope,
     condition,
@@ -263,6 +291,14 @@ fn SemanticChecker::check_block(
   result : @resolve.ResolvedExpr,
   expected : @types.Type,
 ) -> Unit {
+  // Gamma |- item_1 => Gamma_1
+  // ...
+  // Gamma_n |- result <= Expected
+  // ---
+  // Gamma |- { item_1; ...; result } <= Expected
+  //
+  // Only the block result receives the expected type. Local items are processed
+  // sequentially and extend a block-local scope.
   let next_scope : TypeScope = { values: scope.values.copy() }
   for item in items {
     match item {
@@ -285,6 +321,13 @@ fn SemanticChecker::check_candidate_reference(
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
+  // Gamma |- c_i : T_i
+  // T_i = Expected
+  // ---
+  // Gamma |- x <= Expected
+  //
+  // Open exposure can make `x` a candidate set. Checking mode uses the expected
+  // type to select the unique candidate; ambiguity remains visible to users.
   let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
   match @candidates.select_by_expected(name, typed_candidates, expected) {
     Selected(_) => ()
@@ -300,11 +343,18 @@ fn SemanticChecker::check_candidate_reference(
 }
 
 ///|
-fn SemanticChecker::infer_expr(
+fn SemanticChecker::synthesize_expr(
   self : SemanticChecker,
   scope : TypeScope,
   expr : @resolve.ResolvedExpr,
 ) -> @types.Type {
+  // Synthesis judgment:
+  //
+  //   Gamma |- e => T
+  //
+  // This direction computes a type from the expression itself. If an expression
+  // needs an adjacent expected type, it must be handled by `check_expr` instead
+  // of inventing a non-local type.
   match expr {
     @resolve.ResolvedExpr::IntLiteral(_, ..) =>
       @types.Type::Primitive(@types.PrimitiveType::Int)
@@ -315,7 +365,7 @@ fn SemanticChecker::infer_expr(
     @resolve.ResolvedExpr::UnitLiteral(..) =>
       @types.Type::Primitive(@types.PrimitiveType::Unit)
     @resolve.ResolvedExpr::Var(name~, reference~, loc~) =>
-      self.infer_value_reference(scope, reference, name, loc)
+      self.synthesize_value_reference(scope, reference, name, loc)
     @resolve.ResolvedExpr::FunctionLiteral(
       type_parameters~,
       parameters~,
@@ -323,28 +373,32 @@ fn SemanticChecker::infer_expr(
       body~,
       loc~
     ) =>
-      self.infer_function_literal(
+      self.synthesize_function_literal(
         scope, type_parameters, parameters, return_type, body, loc,
       )
     @resolve.ResolvedExpr::Block(items~, result~, ..) =>
-      self.infer_block(scope, items, result)
+      self.synthesize_block(scope, items, result)
     @resolve.ResolvedExpr::If(condition~, then_branch~, else_branch~, loc~) =>
-      self.infer_if(scope, condition, then_branch, else_branch, loc)
+      self.synthesize_if(scope, condition, then_branch, else_branch, loc)
     @resolve.ResolvedExpr::Call(callee~, arguments~, loc~) =>
-      self.infer_call(scope, callee, arguments, loc)
+      self.synthesize_call(scope, callee, arguments, loc)
     @resolve.ResolvedExpr::Field(base~, name~, reference~, loc~) =>
-      self.infer_field(scope, base, name, reference, loc)
+      self.synthesize_field(scope, base, name, reference, loc)
     @resolve.ResolvedExpr::Unary(operator~, reference~, operand~, loc~) =>
-      self.infer_unary_operator(scope, operator, reference, operand, loc)
+      self.synthesize_unary_operator(scope, operator, reference, operand, loc)
     @resolve.ResolvedExpr::Binary(operator~, reference~, left~, right~, loc~) =>
-      self.infer_binary_operator(scope, operator, reference, left, right, loc)
+      self.synthesize_binary_operator(
+        scope, operator, reference, left, right, loc,
+      )
     @resolve.ResolvedExpr::StructLiteral(
       type_name~,
       type_arguments~,
       fields~,
       loc~
     ) =>
-      self.infer_struct_literal(scope, type_name, type_arguments, fields, loc)
+      self.synthesize_struct_literal(
+        scope, type_name, type_arguments, fields, loc,
+      )
     @resolve.ResolvedExpr::Builtin(_, loc~) => {
       self.diagnostics.push({
         kind: CheckDiagnosticKind::CannotInferExpression("builtin"),
@@ -363,7 +417,7 @@ fn SemanticChecker::infer_expr(
 }
 
 ///|
-fn SemanticChecker::infer_unary_operator(
+fn SemanticChecker::synthesize_unary_operator(
   self : SemanticChecker,
   scope : TypeScope,
   operator : @syntax.UnaryOperator,
@@ -371,18 +425,17 @@ fn SemanticChecker::infer_unary_operator(
   operand : @resolve.ResolvedExpr,
   loc : SourceSpan,
 ) -> @types.Type {
-  let argument_types = [self.infer_expr(scope, operand)]
-  self.infer_resolved_operator_call(
+  self.synthesize_resolved_operator_call(
     scope,
     reference,
     operator.operation_name(),
-    argument_types,
+    [operand],
     loc,
   )
 }
 
 ///|
-fn SemanticChecker::infer_binary_operator(
+fn SemanticChecker::synthesize_binary_operator(
   self : SemanticChecker,
   scope : TypeScope,
   operator : @syntax.BinaryOperator,
@@ -401,26 +454,22 @@ fn SemanticChecker::infer_binary_operator(
     }
     _ => ()
   }
-  let argument_types = [
-    self.infer_expr(scope, left),
-    self.infer_expr(scope, right),
-  ]
-  self.infer_resolved_operator_call(
+  self.synthesize_resolved_operator_call(
     scope,
     reference,
     operator.operation_name(),
-    argument_types,
+    [left, right],
     loc,
   )
 }
 
 ///|
-fn SemanticChecker::infer_resolved_operator_call(
+fn SemanticChecker::synthesize_resolved_operator_call(
   self : SemanticChecker,
   scope : TypeScope,
   reference : @resolve.ResolvedValueReference,
   name : String,
-  argument_types : Array[@types.Type],
+  arguments : Array[@resolve.ResolvedExpr],
   loc : SourceSpan,
 ) -> @types.Type {
   let typed_candidates = match reference {
@@ -433,7 +482,14 @@ fn SemanticChecker::infer_resolved_operator_call(
       }
   }
   match
-    @candidates.select_by_call_arguments(name, typed_candidates, argument_types) {
+    self.select_callable_by_local_typing(
+      scope,
+      name,
+      typed_candidates,
+      arguments,
+      None,
+      loc,
+    ) {
     Selected(candidate) => candidate.result
     Ambiguous(name~, ..) => {
       self.report_ambiguous_value_reference(name, loc)
@@ -448,6 +504,100 @@ fn SemanticChecker::infer_resolved_operator_call(
       })
       @types.Type::Error
     }
+  }
+}
+
+///|
+fn SemanticChecker::check_unary_operator(
+  self : SemanticChecker,
+  scope : TypeScope,
+  operator : @syntax.UnaryOperator,
+  reference : @resolve.ResolvedValueReference,
+  operand : @resolve.ResolvedExpr,
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  self.check_resolved_operator_call(
+    scope,
+    reference,
+    operator.operation_name(),
+    [operand],
+    expected,
+    loc,
+  )
+}
+
+///|
+fn SemanticChecker::check_binary_operator(
+  self : SemanticChecker,
+  scope : TypeScope,
+  operator : @syntax.BinaryOperator,
+  reference : @resolve.ResolvedValueReference,
+  left : @resolve.ResolvedExpr,
+  right : @resolve.ResolvedExpr,
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  match operator {
+    And | Or => {
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression("thunked operator"),
+        loc,
+      })
+      return
+    }
+    _ => ()
+  }
+  self.check_resolved_operator_call(
+    scope,
+    reference,
+    operator.operation_name(),
+    [left, right],
+    expected,
+    loc,
+  )
+}
+
+///|
+fn SemanticChecker::check_resolved_operator_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  reference : @resolve.ResolvedValueReference,
+  name : String,
+  arguments : Array[@resolve.ResolvedExpr],
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  let typed_candidates = match reference {
+    @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+      self.typed_candidates(scope, candidates, name, loc)
+    _ => {
+      let actual = self.synthesize_resolved_operator_call(
+        scope, reference, name, arguments, loc,
+      )
+      self.expect_type(expected, actual, loc)
+      return
+    }
+  }
+  match
+    self.select_callable_by_local_typing(
+      scope,
+      name,
+      typed_candidates,
+      arguments,
+      Some(expected),
+      loc,
+    ) {
+    Selected(candidate) =>
+      self.check_call_arguments(scope, candidate.parameters, arguments, loc)
+    Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
+    NoMatch(name~) =>
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression(
+          "no matching callable value reference " + name,
+        ),
+        loc,
+      })
   }
 }
 
@@ -507,7 +657,7 @@ fn resolved_expr_loc(expr : @resolve.ResolvedExpr) -> SourceSpan {
 }
 
 ///|
-fn SemanticChecker::infer_struct_literal(
+fn SemanticChecker::synthesize_struct_literal(
   self : SemanticChecker,
   scope : TypeScope,
   type_name : String,
@@ -597,7 +747,7 @@ fn SemanticChecker::infer_struct_literal(
 }
 
 ///|
-fn SemanticChecker::infer_value_reference(
+fn SemanticChecker::synthesize_value_reference(
   self : SemanticChecker,
   scope : TypeScope,
   reference : @resolve.ResolvedValueReference,
@@ -748,7 +898,7 @@ fn SemanticChecker::report_ambiguous_value_reference(
 }
 
 ///|
-fn SemanticChecker::infer_block(
+fn SemanticChecker::synthesize_block(
   self : SemanticChecker,
   scope : TypeScope,
   items : Array[@resolve.ResolvedLocalItem],
@@ -764,7 +914,7 @@ fn SemanticChecker::infer_block(
       @resolve.ResolvedLocalItem::Open(_) => ()
     }
   }
-  self.infer_expr(next_scope, result)
+  self.synthesize_expr(next_scope, result)
 }
 
 ///|
@@ -779,7 +929,7 @@ fn SemanticChecker::check_local_let(
       self.check_expr(scope, declaration.initializer, type_)
       type_
     }
-    None => self.infer_expr(scope, declaration.initializer)
+    None => self.synthesize_expr(scope, declaration.initializer)
   }
   scope.bind(
     declaration.symbol,
@@ -816,7 +966,7 @@ fn SemanticChecker::check_local_function(
 }
 
 ///|
-fn SemanticChecker::infer_if(
+fn SemanticChecker::synthesize_if(
   self : SemanticChecker,
   scope : TypeScope,
   condition : @resolve.ResolvedExpr,
@@ -829,32 +979,39 @@ fn SemanticChecker::infer_if(
     condition,
     @types.Type::Primitive(@types.PrimitiveType::Bool),
   )
-  let then_type = self.infer_expr(scope, then_branch)
-  let else_type = self.infer_expr(scope, else_branch)
+  let then_type = self.synthesize_expr(scope, then_branch)
+  let else_type = self.synthesize_expr(scope, else_branch)
   self.expect_type(then_type, else_type, loc)
   then_type
 }
 
 ///|
-fn SemanticChecker::infer_call(
+fn SemanticChecker::synthesize_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @resolve.ResolvedExpr,
   arguments : Array[@resolve.ResolvedExpr],
   loc : SourceSpan,
 ) -> @types.Type {
+  // Gamma |- callee => (P_1, ..., P_n) -> R
+  // Gamma |- a_i <= P_i
+  // ---
+  // Gamma |- callee(a_1, ..., a_n) => R
+  //
+  // In synthesis mode the result type must come from the callee. Candidate
+  // callees are selected by checking the adjacent arguments only.
   match callee {
     @resolve.ResolvedExpr::Var(name~, reference~, loc=callee_loc) =>
       match reference {
         @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
-          return self.infer_candidate_call(
+          return self.synthesize_candidate_call(
             scope, name, candidates, arguments, callee_loc,
           )
         _ => ()
       }
     _ => ()
   }
-  match self.infer_expr(scope, callee) {
+  match self.synthesize_expr(scope, callee) {
     @types.Type::Function(parameters, result) => {
       self.check_call_arguments(scope, parameters, arguments, loc)
       result
@@ -878,7 +1035,7 @@ fn SemanticChecker::infer_call(
 }
 
 ///|
-fn SemanticChecker::infer_candidate_call(
+fn SemanticChecker::synthesize_candidate_call(
   self : SemanticChecker,
   scope : TypeScope,
   name : String,
@@ -886,12 +1043,16 @@ fn SemanticChecker::infer_candidate_call(
   arguments : Array[@resolve.ResolvedExpr],
   loc : SourceSpan,
 ) -> @types.Type {
-  let argument_types = arguments.map(fn(argument) {
-    self.infer_expr(scope, argument)
-  })
   let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
   match
-    @candidates.select_by_call_arguments(name, typed_candidates, argument_types) {
+    self.select_callable_by_local_typing(
+      scope,
+      name,
+      typed_candidates,
+      arguments,
+      None,
+      loc,
+    ) {
     Selected(candidate) => candidate.result
     Ambiguous(name~, ..) => {
       self.report_ambiguous_value_reference(name, loc)
@@ -910,6 +1071,172 @@ fn SemanticChecker::infer_candidate_call(
 }
 
 ///|
+fn SemanticChecker::check_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  callee : @resolve.ResolvedExpr,
+  arguments : Array[@resolve.ResolvedExpr],
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  // Gamma |- callee(a_1, ..., a_n) => Actual
+  // Actual = Expected
+  // ---
+  // Gamma |- callee(a_1, ..., a_n) <= Expected
+  //
+  // For open candidate callees, Expected also filters the candidate result type
+  // before arguments are checked under the candidate's parameter types.
+  match callee {
+    @resolve.ResolvedExpr::Var(name~, reference~, loc=callee_loc) =>
+      match reference {
+        @resolve.ResolvedValueReference::Candidates(candidates~, ..) => {
+          self.check_candidate_call(
+            scope, name, candidates, arguments, expected, callee_loc,
+          )
+          return
+        }
+        _ => ()
+      }
+    _ => ()
+  }
+  let actual = self.synthesize_call(scope, callee, arguments, loc)
+  self.expect_type(expected, actual, loc)
+}
+
+///|
+fn SemanticChecker::check_candidate_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  name : String,
+  candidates : Array[@resolve.ResolvedValueReference],
+  arguments : Array[@resolve.ResolvedExpr],
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
+  match
+    self.select_callable_by_local_typing(
+      scope,
+      name,
+      typed_candidates,
+      arguments,
+      Some(expected),
+      loc,
+    ) {
+    Selected(candidate) =>
+      self.check_call_arguments(scope, candidate.parameters, arguments, loc)
+    Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
+    NoMatch(name~) =>
+      self.diagnostics.push({
+        kind: CheckDiagnosticKind::CannotInferExpression(
+          "no matching callable value reference " + name,
+        ),
+        loc,
+      })
+  }
+}
+
+///|
+fn SemanticChecker::select_callable_by_local_typing(
+  self : SemanticChecker,
+  scope : TypeScope,
+  name : String,
+  candidates : Array[@candidates.TypedCandidate],
+  arguments : Array[@resolve.ResolvedExpr],
+  expected_result : @types.Type?,
+  loc : SourceSpan,
+) -> @candidates.CallableSelection {
+  // For each open candidate c_i:
+  //
+  //   Gamma |- c_i => (P_1, ..., P_n) -> R
+  //   Gamma |- a_1 <= P_1
+  //   ...
+  //   Gamma |- a_n <= P_n
+  //   R matches ExpectedResult, when a result context exists
+  //
+  // A candidate is viable only if this local derivation succeeds. This is the
+  // Lane2 overload layer over LTI: it tries complete local derivations and then
+  // exposes 0/1/many viable candidates instead of choosing implicitly.
+  let viable = []
+  for candidate in candidates {
+    match
+      self.viable_callable_candidate(
+        scope, candidate, arguments, expected_result, loc,
+      ) {
+      Some(callable) => viable.push(callable)
+      None => ()
+    }
+  }
+  match viable.length() {
+    0 => NoMatch(name~)
+    1 => Selected(viable[0])
+    _ => Ambiguous(name~, candidates=viable)
+  }
+}
+
+///|
+fn SemanticChecker::viable_callable_candidate(
+  self : SemanticChecker,
+  scope : TypeScope,
+  candidate : @candidates.TypedCandidate,
+  arguments : Array[@resolve.ResolvedExpr],
+  expected_result : @types.Type?,
+  loc : SourceSpan,
+) -> @candidates.CallableCandidate? {
+  match candidate.type_ {
+    @types.Type::Function(parameters, result) => {
+      if !self.result_matches_expected(result, expected_result) {
+        return None
+      }
+      if parameters.length() != arguments.length() {
+        return None
+      }
+      // Candidate probing must not leak diagnostics. The selected candidate is
+      // checked again on the real path, so only final derivations produce user
+      // visible errors.
+      let checkpoint = self.diagnostic_checkpoint()
+      self.check_call_arguments(scope, parameters, arguments, loc)
+      let viable = self.diagnostics.length() == checkpoint.length
+      self.rollback_diagnostics(checkpoint)
+      if viable {
+        Some({ reference: candidate.reference, parameters, result })
+      } else {
+        None
+      }
+    }
+    _ => None
+  }
+}
+
+///|
+fn SemanticChecker::result_matches_expected(
+  self : SemanticChecker,
+  result : @types.Type,
+  expected : @types.Type?,
+) -> Bool {
+  ignore(self)
+  match expected {
+    Some(expected) => type_matches(expected, result)
+    None => true
+  }
+}
+
+///|
+fn SemanticChecker::diagnostic_checkpoint(
+  self : SemanticChecker,
+) -> DiagnosticCheckpoint {
+  { length: self.diagnostics.length() }
+}
+
+///|
+fn SemanticChecker::rollback_diagnostics(
+  self : SemanticChecker,
+  checkpoint : DiagnosticCheckpoint,
+) -> Unit {
+  self.diagnostics.truncate(checkpoint.length)
+}
+
+///|
 fn SemanticChecker::check_call_arguments(
   self : SemanticChecker,
   scope : TypeScope,
@@ -917,6 +1244,13 @@ fn SemanticChecker::check_call_arguments(
   arguments : Array[@resolve.ResolvedExpr],
   loc : SourceSpan,
 ) -> Unit {
+  // Gamma |- f => (P_1, ..., P_n) -> R
+  // Gamma |- a_i <= P_i
+  // ---
+  // Gamma |- f(a_1, ..., a_n) => R
+  //
+  // Argument checking is the direct-context step for calls: parameter types flow
+  // down to each adjacent argument expression.
   if parameters.length() != arguments.length() {
     self.diagnostics.push({
       kind: CheckDiagnosticKind::CannotInferExpression("call arity"),
@@ -930,7 +1264,7 @@ fn SemanticChecker::check_call_arguments(
 }
 
 ///|
-fn SemanticChecker::infer_field(
+fn SemanticChecker::synthesize_field(
   self : SemanticChecker,
   scope : TypeScope,
   base : @resolve.ResolvedExpr,
@@ -938,7 +1272,7 @@ fn SemanticChecker::infer_field(
   reference : @resolve.ResolvedFieldReference,
   loc : SourceSpan,
 ) -> @types.Type {
-  let base_type = self.infer_expr(scope, base)
+  let base_type = self.synthesize_expr(scope, base)
   match reference {
     @resolve.ResolvedFieldReference::Symbol(field) =>
       self.declarations.field_type(
@@ -988,7 +1322,7 @@ fn SemanticChecker::infer_field(
 }
 
 ///|
-fn SemanticChecker::infer_function_literal(
+fn SemanticChecker::synthesize_function_literal(
   self : SemanticChecker,
   scope : TypeScope,
   type_parameters : Array[@resolve.ResolvedTypeParameter],
@@ -1025,7 +1359,7 @@ fn SemanticChecker::infer_function_literal(
       self.check_expr(body_scope, body, type_)
       type_
     }
-    None => self.infer_expr(body_scope, body)
+    None => self.synthesize_expr(body_scope, body)
   }
   let type_ = @types.Type::Function(parameter_types, result)
   if type_parameters.is_empty() {
@@ -1049,6 +1383,13 @@ fn SemanticChecker::check_function_literal(
   ignore(type_parameters)
   match expected {
     @types.Type::Function(expected_parameters, expected_result) => {
+      // Gamma, x_1 : P_1, ..., x_n : P_n |- body <= R
+      // ---
+      // Gamma |- fn(x_1, ..., x_n) { body } <= (P_1, ..., P_n) -> R
+      //
+      // This is the core direct-context rule for anonymous functions: omitted
+      // parameter annotations are recovered only from the adjacent expected
+      // function type.
       if expected_parameters.length() != parameters.length() {
         self.diagnostics.push({
           kind: CheckDiagnosticKind::CannotInferExpression("function arity"),
@@ -1087,7 +1428,7 @@ fn SemanticChecker::check_function_literal(
     }
     @types.Type::Error => ()
     _ => {
-      let actual = self.infer_function_literal(
+      let actual = self.synthesize_function_literal(
         scope, type_parameters, parameters, return_type, body, loc,
       )
       self.expect_type(expected, actual, loc)
@@ -1102,14 +1443,18 @@ fn SemanticChecker::expect_type(
   actual : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
+  if !type_matches(expected, actual) {
+    self.diagnostics.push({
+      kind: CheckDiagnosticKind::TypeMismatch(expected~, actual~),
+      loc,
+    })
+  }
+}
+
+///|
+fn type_matches(expected : @types.Type, actual : @types.Type) -> Bool {
   match (expected, actual) {
-    (@types.Type::Error, _) | (_, @types.Type::Error) => ()
-    _ =>
-      if expected != actual {
-        self.diagnostics.push({
-          kind: CheckDiagnosticKind::TypeMismatch(expected~, actual~),
-          loc,
-        })
-      }
+    (@types.Type::Error, _) | (_, @types.Type::Error) => true
+    _ => expected.equals(actual)
   }
 }

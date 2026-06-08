@@ -313,6 +313,24 @@ test "check direct binary operator alias" {
 }
 
 ///|
+test "check direct binary operator result mismatch" {
+  let result = expect_checked_source(
+    (
+      #|fn op_add(a : Int, b : Int) -> Bool {
+      #|  true
+      #|}
+      #|fn use() -> Int {
+      #|  1 + 2
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="type_mismatch expected=Int actual=Bool",
+  )
+}
+
+///|
 test "check direct unary operator alias" {
   let result = expect_checked_source(
     (
@@ -530,6 +548,173 @@ test "check selects argument candidate from known function parameter type" {
       #|    fn value#1 use : () -> Int
       #|    let value#3 int_source : type#0
       #|    let value#4 bool_source : type#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check selects callable open candidate by expected result type" {
+  let result = expect_checked_source(
+    (
+      #|struct IntFactory {
+      #|  make : () -> Int
+      #|}
+      #|struct BoolFactory {
+      #|  make : () -> Bool
+      #|}
+      #|fn make_int() -> Int {
+      #|  1
+      #|}
+      #|fn make_bool() -> Bool {
+      #|  true
+      #|}
+      #|let int_factory : IntFactory = IntFactory::{ make: make_int }
+      #|let bool_factory : BoolFactory = BoolFactory::{ make: make_bool }
+      #|open int_factory
+      #|open bool_factory
+      #|fn use() -> Int {
+      #|  make()
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IntFactory {
+      #|        field field#0 make : () -> Int index=0
+      #|      }
+      #|      struct type#1 BoolFactory {
+      #|        field field#1 make : () -> Bool index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 make : () -> Int index=0
+      #|      field field#1 make : () -> Bool index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 make_int : () -> Int
+      #|    fn value#1 make_bool : () -> Bool
+      #|    fn value#2 use : () -> Int
+      #|    let value#3 int_factory : type#0
+      #|    let value#4 bool_factory : type#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check selects callable candidate by checking argument candidates" {
+  let result = expect_checked_source(
+    (
+      #|struct IntSource {
+      #|  value : Int
+      #|}
+      #|struct BoolSource {
+      #|  value : Bool
+      #|}
+      #|struct IntApply {
+      #|  apply : (Int) -> Int
+      #|}
+      #|struct BoolApply {
+      #|  apply : (Bool) -> Bool
+      #|}
+      #|fn apply_int(value : Int) -> Int {
+      #|  value
+      #|}
+      #|fn apply_bool(value : Bool) -> Bool {
+      #|  value
+      #|}
+      #|let int_source : IntSource = IntSource::{ value: 1 }
+      #|let bool_source : BoolSource = BoolSource::{ value: true }
+      #|let int_apply : IntApply = IntApply::{ apply: apply_int }
+      #|let bool_apply : BoolApply = BoolApply::{ apply: apply_bool }
+      #|open int_source
+      #|open bool_source
+      #|open int_apply
+      #|open bool_apply
+      #|fn use() -> Int {
+      #|  apply(value)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IntSource {
+      #|        field field#0 value : Int index=0
+      #|      }
+      #|      struct type#1 BoolSource {
+      #|        field field#1 value : Bool index=0
+      #|      }
+      #|      struct type#2 IntApply {
+      #|        field field#2 apply : (Int) -> Int index=0
+      #|      }
+      #|      struct type#3 BoolApply {
+      #|        field field#3 apply : (Bool) -> Bool index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 value : Int index=0
+      #|      field field#1 value : Bool index=0
+      #|      field field#2 apply : (Int) -> Int index=0
+      #|      field field#3 apply : (Bool) -> Bool index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 apply_int : (Int) -> Int
+      #|    fn value#1 apply_bool : (Bool) -> Bool
+      #|    fn value#2 use : () -> Int
+      #|    let value#5 int_source : type#0
+      #|    let value#6 bool_source : type#1
+      #|    let value#7 int_apply : type#2
+      #|    let value#8 bool_apply : type#3
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check function literal parameters from expected function type" {
+  let result = expect_checked_source(
+    (
+      #|fn apply(callback : (Int) -> Int) -> Int {
+      #|  callback(1)
+      #|}
+      #|fn use() -> Int {
+      #|  apply(fn(value) {
+      #|    value
+      #|  })
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 apply : ((Int) -> Int) -> Int
+      #|    fn value#1 use : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
