@@ -70,6 +70,9 @@ fn ResolveScope::value_reference(
   let candidates = []
   let mut found_plain = false
   let mut open_depth = None
+  // Plain lexical bindings shadow earlier plain bindings, but they do not erase
+  // open exposures. Open exposures are collected only from the nearest open
+  // depth so an inner block-local `open` shadows outer open exposures.
   for index = self.values.length(); index > 0; index = index - 1 {
     let binding = self.values[index - 1]
     if binding.name == name {

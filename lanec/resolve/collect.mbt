@@ -8,14 +8,22 @@ priv struct Resolver {
 
 ///|
 /// Resolves a syntax source file and returns only the resolved source.
+///
+/// Example: a parsed file containing `struct Point { x : Int }` becomes a
+/// resolved file whose `Point` type and `x` field have stable compiler symbols.
 pub fn resolve_source_file(source : @syntax.SourceFile) -> ResolvedSourceFile {
   resolve_source_file_result(source).source
 }
 
 ///|
 /// Resolves a syntax source file and returns diagnostics with the result.
+///
+/// Example: resolving `fn f(x : Missing) -> Int { x }` records an unresolved
+/// type diagnostic while still returning a resolved tree for later phases.
 pub fn resolve_source_file_result(source : @syntax.SourceFile) -> ResolveResult {
   let resolver = Resolver::Resolver(SymbolRegistry())
+  // Headers and nominal members are collected before declaration bodies so
+  // top-level functions, structs, enums, fields, and variants can be recursive.
   resolver.collect_top_level_headers(source)
   resolver.collect_nominal_members(source)
   let declarations = source.declarations.map(fn(declaration) {
@@ -118,6 +126,10 @@ fn Resolver::collect_nominal_members(
 }
 
 ///|
+/// Resolves one top-level declaration after the global headers are known.
+///
+/// Example: `fn f() -> Int { 1 }` resolves through the function path, while
+/// `open int_ops` resolves through the top-level open path.
 fn @syntax.TopLevelDeclaration::resolve_top_level(
   self : @syntax.TopLevelDeclaration,
   resolver : Resolver,
@@ -133,6 +145,10 @@ fn @syntax.TopLevelDeclaration::resolve_top_level(
 }
 
 ///|
+/// Resolves a struct declaration and its fields and forwarding opens.
+///
+/// Example: `struct Point { x : Int }` resolves `Point` to a type symbol and
+/// `x` to a field symbol whose declared type is also resolved.
 fn @syntax.StructDeclaration::resolve_struct(
   self : @syntax.StructDeclaration,
   resolver : Resolver,
@@ -152,6 +168,8 @@ fn @syntax.StructDeclaration::resolve_struct(
         ResolvedStructMember::Field(resolved)
       }
       Open(open) => {
+        // Struct-local `open field` is forwarding metadata. It does not expose
+        // names into this resolver scope; later `open value` expands through it.
         resolver.resolve_struct_forwarding(symbol, open)
         Open(open.resolve_open())
       }
@@ -161,6 +179,10 @@ fn @syntax.StructDeclaration::resolve_struct(
 }
 
 ///|
+/// Resolves an enum declaration and every declared variant payload type.
+///
+/// Example: `enum Option[A] { some(A) }` resolves `Option`, `A`, and `some`
+/// into distinct type-parameter and variant symbols.
 fn @syntax.EnumDeclaration::resolve_enum(
   self : @syntax.EnumDeclaration,
   resolver : Resolver,
@@ -178,6 +200,10 @@ fn @syntax.EnumDeclaration::resolve_enum(
 }
 
 ///|
+/// Resolves a list of type parameter names into fresh type-parameter symbols.
+///
+/// Example: the `[A, B]` in `fn[A, B] pair(...)` creates two symbols that can be
+/// referenced by parameter, return, and body type annotations.
 fn Resolver::resolve_type_parameters(
   self : Resolver,
   names : Array[String],
@@ -190,6 +216,10 @@ fn Resolver::resolve_type_parameters(
 }
 
 ///|
+/// Resolves one struct field declaration under the struct's type-parameter scope.
+///
+/// Example: in `struct Box[A] { value : A }`, the field type `A` resolves to
+/// the struct type parameter, not a nominal type named `A`.
 fn @syntax.FieldDeclaration::resolve_field(
   self : @syntax.FieldDeclaration,
   resolver : Resolver,
@@ -204,6 +234,10 @@ fn @syntax.FieldDeclaration::resolve_field(
 }
 
 ///|
+/// Resolves struct-local open forwarding metadata for a field.
+///
+/// Example: in `struct Env { constants : Constants; open constants }`,
+/// `constants` must be a field whose resolved type is a nominal struct.
 fn Resolver::resolve_struct_forwarding(
   self : Resolver,
   owner : TypeSymbolId,
@@ -225,6 +259,10 @@ fn Resolver::resolve_struct_forwarding(
 }
 
 ///|
+/// Resolves one enum variant declaration and its payload type list.
+///
+/// Example: `some(A)` inside `enum Option[A]` resolves to the `some` variant
+/// symbol and a payload whose type is the enum type parameter `A`.
 fn @syntax.EnumVariant::resolve_variant(
   self : @syntax.EnumVariant,
   resolver : Resolver,
@@ -243,6 +281,10 @@ fn @syntax.EnumVariant::resolve_variant(
 }
 
 ///|
+/// Resolves a top-level function using its pre-collected value symbol.
+///
+/// Example: `fn even(...)` can refer to `odd(...)` because both top-level
+/// function symbols are collected before this function body is resolved.
 fn @syntax.FunctionDeclaration::resolve_top_level_function(
   self : @syntax.FunctionDeclaration,
   resolver : Resolver,
@@ -251,6 +293,10 @@ fn @syntax.FunctionDeclaration::resolve_top_level_function(
 }
 
 ///|
+/// Resolves a function declaration once the function's value symbol is known.
+///
+/// Example: both top-level `fn f(...)` and local `fn f(...)` use this path after
+/// their caller decides which value symbol should represent `f`.
 fn @syntax.FunctionDeclaration::resolve_function_with_symbol(
   self : @syntax.FunctionDeclaration,
   resolver : Resolver,
@@ -265,6 +311,9 @@ fn @syntax.FunctionDeclaration::resolve_function_with_symbol(
     parameter.resolve_parameter(resolver, parameter_scope)
   })
   let return_type = self.return_type.resolve_type(resolver, parameter_scope)
+  // Parameters are inserted into `parameter_scope` while they are resolved. The
+  // return type can use type parameters, and the body can use both type and
+  // value parameters.
   {
     symbol,
     name: self.name,
@@ -277,6 +326,10 @@ fn @syntax.FunctionDeclaration::resolve_function_with_symbol(
 }
 
 ///|
+/// Resolves a named function parameter and binds it in the function scope.
+///
+/// Example: `x : Int` in `fn f(x : Int) -> Int { x }` creates a parameter
+/// value symbol that the body reference `x` resolves to.
 fn @syntax.Parameter::resolve_parameter(
   self : @syntax.Parameter,
   resolver : Resolver,
@@ -289,6 +342,10 @@ fn @syntax.Parameter::resolve_parameter(
 }
 
 ///|
+/// Resolves a top-level let declaration and publishes it for later declarations.
+///
+/// Example: after `let answer : Int = 42`, following top-level declarations can
+/// resolve `answer`, but earlier declarations cannot.
 fn @syntax.LetDeclaration::resolve_top_level_let(
   self : @syntax.LetDeclaration,
   resolver : Resolver,
@@ -319,6 +376,10 @@ fn Resolver::publish_top_level_let(
 }
 
 ///|
+/// Resolves a let declaration in the supplied scope.
+///
+/// Example: `let y = x` resolves the initializer against the current scope,
+/// then binds `y` for declarations and expressions that follow.
 fn @syntax.LetDeclaration::resolve_let(
   self : @syntax.LetDeclaration,
   resolver : Resolver,
@@ -326,6 +387,8 @@ fn @syntax.LetDeclaration::resolve_let(
   kind : @symbol.ValueSymbolKind,
 ) -> ResolvedLetDeclaration {
   let display_name = self.name.unwrap_or("<anonymous>")
+  // The initializer is resolved before the binding is inserted. This keeps
+  // local let bindings sequential and non-recursive.
   let initializer = self.initializer.resolve_expr(resolver, scope)
   let type_annotation = self.type_annotation.map(fn(type_) {
     type_.resolve_type(resolver, scope)
@@ -339,6 +402,10 @@ fn @syntax.LetDeclaration::resolve_let(
 }
 
 ///|
+/// Resolves the syntax payload of an open declaration.
+///
+/// Example: `open int_ops` records the opened value name; top-level and local
+/// callers decide which scope receives the exposed fields.
 fn @syntax.OpenDeclaration::resolve_open(
   self : @syntax.OpenDeclaration,
 ) -> ResolvedOpenDeclaration {
@@ -346,6 +413,10 @@ fn @syntax.OpenDeclaration::resolve_open(
 }
 
 ///|
+/// Resolves a top-level open declaration and exposes opened fields globally.
+///
+/// Example: after `let int_ops : IntOps = ...; open int_ops`, later top-level
+/// declarations can resolve `op_add` through fields of `int_ops`.
 fn @syntax.OpenDeclaration::resolve_top_level_open(
   self : @syntax.OpenDeclaration,
   resolver : Resolver,
@@ -359,6 +430,11 @@ fn @syntax.OpenDeclaration::resolve_top_level_open(
 }
 
 ///|
+/// Resolves a source type expression into primitive, parameter, nominal, or
+/// unresolved resolved-type nodes.
+///
+/// Example: `A` in a generic scope resolves to a type parameter, while
+/// `Option[Int]` resolves to a nominal type application.
 fn @syntax.Type::resolve_type(
   self : @syntax.Type,
   resolver : Resolver,
@@ -369,6 +445,8 @@ fn @syntax.Type::resolve_type(
       let resolved_arguments = arguments.map(fn(argument) {
         argument.resolve_type(resolver, scope)
       })
+      // Type names are resolved in the language order: primitives first, then
+      // in-scope type parameters, then nominal type constructors.
       match primitive_type(name) {
         Some(primitive) => Primitive(primitive, loc~)
         None =>
@@ -405,6 +483,10 @@ fn @syntax.Type::resolve_type(
 }
 
 ///|
+/// Resolves a source expression under the current value and type scopes.
+///
+/// Example: `Point::{ x: a }` resolves field initializer `a` as an expression,
+/// while `point.x` defers or records the field symbol depending on base type.
 fn @syntax.Expr::resolve_expr(
   self : @syntax.Expr,
   resolver : Resolver,
@@ -454,6 +536,8 @@ fn @syntax.Expr::resolve_expr(
       let resolved_parameters = parameters.map(fn(parameter) {
         parameter.resolve_function_literal_parameter(resolver, next_scope)
       })
+      // Function literal parameters are inserted before the body is resolved;
+      // omitted parameter types stay unresolved until semantic checking.
       FunctionLiteral(
         type_parameters=resolved_type_parameters,
         parameters=resolved_parameters,
@@ -466,6 +550,9 @@ fn @syntax.Expr::resolve_expr(
     }
     Block(items~, result~, loc~) => {
       let next_scope = scope.enter_scope()
+      // Local items are resolved in source order against one mutable scope copy.
+      // This preserves sequential local bindings while still letting later items
+      // see earlier `let`, `fn`, and `open` effects.
       Block(
         items=items.map(fn(item) {
           item.resolve_local_item(resolver, next_scope)
@@ -620,6 +707,11 @@ fn Resolver::nominal_type_of_expr(
 }
 
 ///|
+/// Resolves call syntax whose callee was parsed as an expression.
+///
+/// Example: `f(x)` resolves to a value call when `f` is visible as a value,
+/// while `some(x)` resolves to an unqualified enum variant call when no value
+/// named `some` is visible and enum variants named `some` are available.
 fn @syntax.Expr::resolve_call(
   self : @syntax.Expr,
   resolver : Resolver,
@@ -630,6 +722,9 @@ fn @syntax.Expr::resolve_call(
   match self {
     Var(name, ..) =>
       match scope.value_reference(name) {
+        // A bare call callee can denote either a value or an unqualified enum
+        // variant. Value lookup is tried first because ordinary lexical
+        // bindings shadow variant fallback at this syntactic position.
         Symbol(_) | OpenedField(..) | Candidates(..) as reference =>
           Call(
             callee=Var(name~, reference~, loc=self.loc()),
@@ -681,6 +776,10 @@ fn @syntax.Expr::resolve_call(
 }
 
 ///|
+/// Resolves one struct literal field value or field pun.
+///
+/// Example: `Point::{ x }` keeps the field name `x` and leaves the pun lookup
+/// to semantic checking, while `Point::{ x: value }` resolves `value` now.
 fn @syntax.StructLiteralField::resolve_struct_literal_field(
   self : @syntax.StructLiteralField,
   resolver : Resolver,
@@ -694,6 +793,10 @@ fn @syntax.StructLiteralField::resolve_struct_literal_field(
 }
 
 ///|
+/// Resolves a function literal parameter and binds it in the literal body scope.
+///
+/// Example: in `fn(x) { x }`, `x` gets a value symbol even when its type
+/// annotation is absent and must be inferred later from context.
 fn @syntax.FunctionLiteralParameter::resolve_function_literal_parameter(
   self : @syntax.FunctionLiteralParameter,
   resolver : Resolver,
@@ -708,6 +811,10 @@ fn @syntax.FunctionLiteralParameter::resolve_function_literal_parameter(
 }
 
 ///|
+/// Resolves a local block item in source order.
+///
+/// Example: a local `let` extends the following scope, a local `fn` binds its
+/// name before resolving its body, and a local `open` exposes struct fields.
 fn @syntax.LocalItem::resolve_local_item(
   self : @syntax.LocalItem,
   resolver : Resolver,
@@ -723,6 +830,8 @@ fn @syntax.LocalItem::resolve_local_item(
         declaration.loc,
       )
       scope.define_value(declaration.name, symbol, None)
+      // The local function name is inserted before its body is resolved, so the
+      // function can call itself after the declaration has been reached.
       Function(declaration.resolve_function_with_symbol(resolver, symbol))
     }
     Open(declaration) => Open(declaration.resolve_local_open(resolver, scope))
@@ -730,6 +839,10 @@ fn @syntax.LocalItem::resolve_local_item(
 }
 
 ///|
+/// Resolves a local open declaration and exposes fields in the current block.
+///
+/// Example: in `{ open ops; op_add(a, b) }`, `op_add` resolves through fields
+/// of `ops` for the rest of that block scope.
 fn @syntax.OpenDeclaration::resolve_local_open(
   self : @syntax.OpenDeclaration,
   resolver : Resolver,
@@ -743,6 +856,10 @@ fn @syntax.OpenDeclaration::resolve_local_open(
 }
 
 ///|
+/// Resolves a match arm with pattern binders visible only in the arm body.
+///
+/// Example: in `Option::some(x) => x`, the pattern binder `x` is added to a
+/// copied arm scope before resolving the body expression.
 fn @syntax.MatchArm::resolve_match_arm(
   self : @syntax.MatchArm,
   resolver : Resolver,
@@ -757,6 +874,10 @@ fn @syntax.MatchArm::resolve_match_arm(
 }
 
 ///|
+/// Resolves a pattern and binds any pattern variables into the current arm scope.
+///
+/// Example: `Point::{ x }` resolves a struct pattern field, while `x` alone
+/// creates a pattern binder rather than resolving a value reference.
 fn @syntax.Pattern::resolve_pattern(
   self : @syntax.Pattern,
   resolver : Resolver,
@@ -794,6 +915,10 @@ fn @syntax.Pattern::resolve_pattern(
 }
 
 ///|
+/// Resolves one struct pattern field and its nested pattern.
+///
+/// Example: in `Point::{ x: Option::some(y) }`, the field name is kept and the
+/// nested variant pattern is recursively resolved.
 fn @syntax.StructPatternField::resolve_struct_pattern_field(
   self : @syntax.StructPatternField,
   resolver : Resolver,

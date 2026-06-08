@@ -27,6 +27,10 @@ fn expect_resolved_body(source : String, name : String) -> ResolvedExpr {
 }
 
 ///|
+/// Resolves a parsed test source and returns only resolver diagnostics.
+///
+/// Example: tests use this helper to inspect unresolved values without matching
+/// the whole resolved source snapshot.
 fn resolve_diagnostics(source : String) -> Array[ResolveDiagnostic] {
   resolve_source_file_result(expect_parse_ok(source)).diagnostics
 }

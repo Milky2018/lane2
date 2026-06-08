@@ -61,6 +61,8 @@ fn NominalMembers::opened_field_bindings(
   depth : Int,
 ) -> Array[ValueBinding] {
   let bindings = []
+  // Opening a value exposes the immediate fields of its nominal struct type and
+  // recursively exposes forwarded fields declared by struct-local `open`.
   self.collect_opened_field_bindings(
     registry,
     base,
@@ -87,6 +89,8 @@ fn NominalMembers::collect_opened_field_bindings(
   if visited.contains(owner) {
     return
   }
+  // Forwarding can form cycles through recursive nominal structs. `visited`
+  // keeps field expansion finite without treating the cycle as a resolver error.
   let next_visited = visited.copy()
   next_visited.push(owner)
   for field in registry.fields_of(owner) {
