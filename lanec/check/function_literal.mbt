@@ -1,0 +1,167 @@
+///|
+fn SemanticChecker::synthesize_function_literal(
+  self : SemanticChecker,
+  scope : TypeScope,
+  type_parameters : Array[@resolve.ResolvedTypeParameter],
+  parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
+  return_type : @resolve.ResolvedType?,
+  body : @resolve.ResolvedExpr,
+  loc : SourceSpan,
+) -> @types.Type {
+  ignore(loc)
+  let parameter_types = []
+  let body_scope : TypeScope = { values: scope.values.copy() }
+  for parameter in parameters {
+    match parameter.type_annotation {
+      Some(type_annotation) => {
+        let type_ = self.check_type(type_annotation)
+        body_scope.bind(parameter.symbol, parameter.name, type_)
+        parameter_types.push(type_)
+      }
+      None => {
+        self.diagnostics.push({
+          kind: CheckDiagnosticKind::CannotInferExpression(
+            "function literal parameter",
+          ),
+          loc: parameter.loc,
+        })
+        body_scope.bind(parameter.symbol, parameter.name, @types.Type::Error)
+        parameter_types.push(@types.Type::Error)
+      }
+    }
+  }
+  let result = match return_type {
+    Some(type_annotation) => {
+      let type_ = self.check_type(type_annotation)
+      self.check_expr(body_scope, body, type_)
+      type_
+    }
+    None => self.synthesize_expr(body_scope, body)
+  }
+  let type_ = @types.Type::Function(parameter_types, result)
+  if type_parameters.is_empty() {
+    type_
+  } else {
+    @types.Type::Forall(type_parameters.map(checked_type_parameter), type_)
+  }
+}
+
+///|
+fn SemanticChecker::check_function_literal(
+  self : SemanticChecker,
+  scope : TypeScope,
+  type_parameters : Array[@resolve.ResolvedTypeParameter],
+  parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
+  return_type : @resolve.ResolvedType?,
+  body : @resolve.ResolvedExpr,
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  match expected {
+    @types.Type::Forall(expected_parameters, expected_body) =>
+      self.check_generic_function_literal(
+        scope, type_parameters, expected_parameters, expected_body, parameters, return_type,
+        body, loc,
+      )
+    @types.Type::Function(expected_parameters, expected_result) => {
+      if !type_parameters.is_empty() {
+        self.diagnostics.push({
+          kind: CheckDiagnosticKind::CannotInferExpression(
+            "generic function arity",
+          ),
+          loc,
+        })
+        return
+      }
+      // Gamma, x_1 : P_1, ..., x_n : P_n |- body <= R
+      // ---
+      // Gamma |- fn(x_1, ..., x_n) { body } <= (P_1, ..., P_n) -> R
+      //
+      // This is the core direct-context rule for anonymous functions: omitted
+      // parameter annotations are recovered only from the adjacent expected
+      // function type.
+      if expected_parameters.length() != parameters.length() {
+        self.diagnostics.push({
+          kind: CheckDiagnosticKind::CannotInferExpression("function arity"),
+          loc,
+        })
+        return
+      }
+      let body_scope : TypeScope = { values: scope.values.copy() }
+      for index in 0..<parameters.length() {
+        let parameter = parameters[index]
+        match parameter.type_annotation {
+          Some(type_annotation) =>
+            self.expect_type(
+              expected_parameters[index],
+              self.check_type(type_annotation),
+              parameter.loc,
+            )
+          None => ()
+        }
+        body_scope.bind(
+          parameter.symbol,
+          parameter.name,
+          expected_parameters[index],
+        )
+      }
+      match return_type {
+        Some(type_annotation) =>
+          self.expect_type(
+            expected_result,
+            self.check_type(type_annotation),
+            loc,
+          )
+        None => ()
+      }
+      self.check_expr(body_scope, body, expected_result)
+    }
+    @types.Type::Error => ()
+    _ => {
+      let actual = self.synthesize_function_literal(
+        scope, type_parameters, parameters, return_type, body, loc,
+      )
+      self.expect_type(expected, actual, loc)
+    }
+  }
+}
+
+///|
+fn SemanticChecker::check_generic_function_literal(
+  self : SemanticChecker,
+  scope : TypeScope,
+  type_parameters : Array[@resolve.ResolvedTypeParameter],
+  expected_parameters : Array[@types.TypeParameter],
+  expected_body : @types.Type,
+  parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
+  return_type : @resolve.ResolvedType?,
+  body : @resolve.ResolvedExpr,
+  loc : SourceSpan,
+) -> Unit {
+  // Forall introduction is local to the function literal. The literal must
+  // declare the generic parameters it introduces; checking only aligns the
+  // expected forall parameters with those local parameters.
+  if type_parameters.length() != expected_parameters.length() {
+    self.diagnostics.push({
+      kind: CheckDiagnosticKind::CannotInferExpression("generic function arity"),
+      loc,
+    })
+    return
+  }
+  let substitution = @types.TypeSubstitution::TypeSubstitution()
+  for index in 0..<expected_parameters.length() {
+    substitution.insert(
+      expected_parameters[index].id,
+      @types.Type::Parameter(type_parameters[index].symbol),
+    )
+  }
+  self.check_function_literal(
+    scope,
+    [],
+    parameters,
+    return_type,
+    body,
+    expected_body.substitute(substitution),
+    loc,
+  )
+}

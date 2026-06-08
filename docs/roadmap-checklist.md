@@ -85,7 +85,7 @@ typing judgments.
   sequential bindings, and local generic functions.
 - [x] Check forall introduction/elimination, generic candidate instantiation,
   primitive operations, nominal construction, and field access.
-- [ ] Check enum variant construction and unqualified variant calls after type
+- [x] Check enum variant construction and unqualified variant calls after type
   information is available.
 - [ ] Check `if`, `match`, pipeline, operator aliases, and `&&` / `||` source
   semantics before semantic lowering.

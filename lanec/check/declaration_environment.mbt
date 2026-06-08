@@ -16,6 +16,23 @@ fn CheckedDeclarationEnvironment::checked_struct(
 }
 
 ///|
+fn CheckedDeclarationEnvironment::checked_enum(
+  self : CheckedDeclarationEnvironment,
+  symbol : TypeSymbolId,
+) -> CheckedEnumDeclaration? {
+  for declaration in self.types {
+    match declaration {
+      CheckedTypeDeclaration::Enum(declaration) =>
+        if declaration.symbol == symbol {
+          return Some(declaration)
+        }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn CheckedDeclarationEnvironment::field_path_type(
   self : CheckedDeclarationEnvironment,
   diagnostics : Array[CheckDiagnostic],
@@ -81,6 +98,19 @@ fn CheckedStructDeclaration::field(
   for field in self.fields {
     if field.symbol == symbol {
       return Some(field)
+    }
+  }
+  None
+}
+
+///|
+fn CheckedEnumDeclaration::variant(
+  self : CheckedEnumDeclaration,
+  symbol : VariantSymbolId,
+) -> CheckedVariantDeclaration? {
+  for variant in self.variants {
+    if variant.symbol == symbol {
+      return Some(variant)
     }
   }
   None

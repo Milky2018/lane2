@@ -1295,6 +1295,173 @@ test "check reports field access on non-struct value" {
 }
 
 ///|
+test "check qualified enum variant construction" {
+  let result = expect_checked_source(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn wrap(value : Int) -> Option[Int] {
+      #|  Option::some(value)
+      #|}
+      #|fn empty() -> Option[Int] {
+      #|  Option::none
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      enum type#0 Option[tparam#0 A : Type] {
+      #|        variant variant#0 none index=0 payloads=0
+      #|        variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      }
+      #|    }
+      #|    fields {}
+      #|    variants {
+      #|      variant variant#0 none index=0 payloads=0
+      #|      variant variant#1 some index=1 payloads=1(tparam#0)
+      #|    }
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 wrap : (Int) -> type#0[Int]
+      #|    fn value#1 empty : () -> type#0[Int]
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check unqualified enum variant construction" {
+  let result = expect_checked_source(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn wrap(value : Int) -> Option[Int] {
+      #|  some(value)
+      #|}
+      #|fn empty() -> Option[Int] {
+      #|  none()
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      enum type#0 Option[tparam#0 A : Type] {
+      #|        variant variant#0 none index=0 payloads=0
+      #|        variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      }
+      #|    }
+      #|    fields {}
+      #|    variants {
+      #|      variant variant#0 none index=0 payloads=0
+      #|      variant variant#1 some index=1 payloads=1(tparam#0)
+      #|    }
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 wrap : (Int) -> type#0[Int]
+      #|    fn value#1 empty : () -> type#0[Int]
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check reports unresolved variant type arguments" {
+  let result = expect_checked_source(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn use() -> Bool {
+      #|  {
+      #|    let value = none()
+      #|    true
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer type arguments",
+  )
+}
+
+///|
+test "check reports enum variant payload mismatch" {
+  let result = expect_checked_source(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn bad() -> Option[Int] {
+      #|  some(true)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="type_mismatch expected=Int actual=Bool",
+  )
+}
+
+///|
+test "check reports enum variant arity mismatch" {
+  let result = expect_checked_source(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn bad() -> Option[Int] {
+      #|  some()
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer variant arity",
+  )
+}
+
+///|
+test "check reports ambiguous unqualified enum variant" {
+  let result = expect_checked_source(
+    (
+      #|enum Left {
+      #|  same(Int)
+      #|}
+      #|enum Right {
+      #|  same(Int)
+      #|}
+      #|fn bad() -> Left {
+      #|  same(1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer ambiguous variant reference same",
+  )
+}
+
+///|
 test "check reports type mismatch" {
   let result = expect_checked_source(
     (
