@@ -723,6 +723,165 @@ test "check function literal parameters from expected function type" {
 }
 
 ///|
+test "check synthesizes direct generic call from argument type" {
+  let result = expect_checked_source(
+    (
+      #|fn[A] id(value : A) -> A {
+      #|  value
+      #|}
+      #|fn use() -> Int {
+      #|  id(1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 id : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0
+      #|    fn value#1 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check generic call uses expected result type" {
+  let result = expect_checked_source(
+    (
+      #|fn[A] make() -> A {
+      #|  builtin("%make")
+      #|}
+      #|fn use() -> Int {
+      #|  make()
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 make : forall [tparam#0 A : Type]. () -> tparam#0
+      #|    fn value#1 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check generic call drives function literal argument" {
+  let result = expect_checked_source(
+    (
+      #|fn[A] apply(callback : (A) -> A, value : A) -> A {
+      #|  callback(value)
+      #|}
+      #|fn use() -> Int {
+      #|  apply(fn(value) {
+      #|    value
+      #|  }, 1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 apply : forall [tparam#0 A : Type]. ((tparam#0) -> tparam#0, tparam#0) -> tparam#0
+      #|    fn value#1 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check selects generic open callable candidate by argument type" {
+  let result = expect_checked_source(
+    (
+      #|struct IdOps {
+      #|  id : [A](A) -> A
+      #|}
+      #|fn[A] identity(value : A) -> A {
+      #|  value
+      #|}
+      #|let ops : IdOps = IdOps::{ id: identity }
+      #|open ops
+      #|fn use() -> Int {
+      #|  id(1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 IdOps {
+      #|        field field#0 id : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 id : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 identity : forall [tparam#1 A : Type]. (tparam#1) -> tparam#1
+      #|    fn value#1 use : () -> Int
+      #|    let value#3 ops : type#0
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check reports unresolved generic type arguments" {
+  let result = expect_checked_source(
+    (
+      #|fn[A] make() -> A {
+      #|  builtin("%make")
+      #|}
+      #|fn use() -> Bool {
+      #|  {
+      #|    let value = make()
+      #|    true
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer type arguments",
+  )
+}
+
+///|
 test "check reports type mismatch" {
   let result = expect_checked_source(
     (

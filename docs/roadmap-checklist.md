@@ -75,7 +75,7 @@ typing judgments.
 - [x] Treat open overload selection as a candidate layer over local typing
   derivations: each viable candidate must type-check under the same local
   context, and multiple viable candidates remain ambiguous.
-- [ ] Implement local type argument synthesis for generic applications,
+- [x] Implement local type argument synthesis for generic applications,
   including constraints from argument types and expected result types in
   checking mode.
 - [ ] Ensure candidate sets are eliminated by checking: every resolved value

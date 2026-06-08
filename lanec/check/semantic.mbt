@@ -1011,17 +1011,38 @@ fn SemanticChecker::synthesize_call(
       }
     _ => ()
   }
-  match self.synthesize_expr(scope, callee) {
+  self.synthesize_callable_call(
+    scope,
+    self.synthesize_expr(scope, callee),
+    arguments,
+    None,
+    loc,
+  )
+}
+
+///|
+fn SemanticChecker::synthesize_callable_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  callee_type : @types.Type,
+  arguments : Array[@resolve.ResolvedExpr],
+  expected_result : @types.Type?,
+  loc : SourceSpan,
+) -> @types.Type {
+  match callee_type {
     @types.Type::Function(parameters, result) => {
       self.check_call_arguments(scope, parameters, arguments, loc)
       result
     }
-    @types.Type::Forall(_, _) as type_ => {
-      self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression("generic call"),
-        loc,
-      })
-      type_
+    @types.Type::Forall(type_parameters, body) => {
+      guard self.instantiate_generic_callable(
+          scope, type_parameters, body, arguments, expected_result, loc, true,
+        )
+        is Some(instantiated) else {
+        return @types.Type::Error
+      }
+      self.check_call_arguments(scope, instantiated.parameters, arguments, loc)
+      instantiated.result
     }
     @types.Type::Error => @types.Type::Error
     type_ => {
@@ -1099,7 +1120,13 @@ fn SemanticChecker::check_call(
       }
     _ => ()
   }
-  let actual = self.synthesize_call(scope, callee, arguments, loc)
+  let actual = self.synthesize_callable_call(
+    scope,
+    self.synthesize_expr(scope, callee),
+    arguments,
+    Some(expected),
+    loc,
+  )
   self.expect_type(expected, actual, loc)
 }
 
@@ -1159,12 +1186,11 @@ fn SemanticChecker::select_callable_by_local_typing(
   // exposes 0/1/many viable candidates instead of choosing implicitly.
   let viable = []
   for candidate in candidates {
-    match
-      self.viable_callable_candidate(
+    if self.viable_callable_candidate(
         scope, candidate, arguments, expected_result, loc,
-      ) {
-      Some(callable) => viable.push(callable)
-      None => ()
+      )
+      is Some(callable) {
+      viable.push(callable)
     }
   }
   match viable.length() {
@@ -1204,6 +1230,30 @@ fn SemanticChecker::viable_callable_candidate(
         None
       }
     }
+    @types.Type::Forall(type_parameters, body) => {
+      guard self.instantiate_generic_callable(
+          scope, type_parameters, body, arguments, expected_result, loc, false,
+        )
+        is Some(instantiated) else {
+        return None
+      }
+      if !self.result_matches_expected(instantiated.result, expected_result) {
+        return None
+      }
+      let checkpoint = self.diagnostic_checkpoint()
+      self.check_call_arguments(scope, instantiated.parameters, arguments, loc)
+      let viable = self.diagnostics.length() == checkpoint.length
+      self.rollback_diagnostics(checkpoint)
+      if viable {
+        Some({
+          reference: candidate.reference,
+          parameters: instantiated.parameters,
+          result: instantiated.result,
+        })
+      } else {
+        None
+      }
+    }
     _ => None
   }
 }
@@ -1215,9 +1265,10 @@ fn SemanticChecker::result_matches_expected(
   expected : @types.Type?,
 ) -> Bool {
   ignore(self)
-  match expected {
-    Some(expected) => type_matches(expected, result)
-    None => true
+  if expected is Some(expected) {
+    type_matches(expected, result)
+  } else {
+    true
   }
 }
 
