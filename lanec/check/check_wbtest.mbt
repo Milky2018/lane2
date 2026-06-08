@@ -690,6 +690,65 @@ test "check selects callable candidate by checking argument candidates" {
 }
 
 ///|
+test "check reports ambiguous candidate without expected type" {
+  let result = expect_checked_source(
+    (
+      #|struct IntSource {
+      #|  value : Int
+      #|}
+      #|struct BoolSource {
+      #|  value : Bool
+      #|}
+      #|let int_source : IntSource = IntSource::{ value: 1 }
+      #|let bool_source : BoolSource = BoolSource::{ value: true }
+      #|open int_source
+      #|open bool_source
+      #|fn use() -> Bool {
+      #|  {
+      #|    let local = value
+      #|    true
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer ambiguous value reference value",
+  )
+}
+
+///|
+test "check reports no callable candidate when arguments reject all candidates" {
+  let result = expect_checked_source(
+    (
+      #|struct IntApply {
+      #|  apply : (Int) -> Int
+      #|}
+      #|struct BoolApply {
+      #|  apply : (Bool) -> Bool
+      #|}
+      #|fn apply_int(value : Int) -> Int {
+      #|  value
+      #|}
+      #|fn apply_bool(value : Bool) -> Bool {
+      #|  value
+      #|}
+      #|let int_apply : IntApply = IntApply::{ apply: apply_int }
+      #|let bool_apply : BoolApply = BoolApply::{ apply: apply_bool }
+      #|open int_apply
+      #|open bool_apply
+      #|fn use() -> Int {
+      #|  apply("text")
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer no matching callable value reference apply",
+  )
+}
+
+///|
 test "check function literal parameters from expected function type" {
   let result = expect_checked_source(
     (
@@ -857,6 +916,37 @@ test "check selects generic open callable candidate by argument type" {
       #|  diagnostics {}
       #|}
     ),
+  )
+}
+
+///|
+test "check keeps generic callable candidates ambiguous" {
+  let result = expect_checked_source(
+    (
+      #|struct LeftOps {
+      #|  id : [A](A) -> A
+      #|}
+      #|struct RightOps {
+      #|  id : [A](A) -> A
+      #|}
+      #|fn[A] left_id(value : A) -> A {
+      #|  value
+      #|}
+      #|fn[A] right_id(value : A) -> A {
+      #|  value
+      #|}
+      #|let left_ops : LeftOps = LeftOps::{ id: left_id }
+      #|let right_ops : RightOps = RightOps::{ id: right_id }
+      #|open left_ops
+      #|open right_ops
+      #|fn use() -> Int {
+      #|  id(1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer ambiguous value reference id",
   )
 }
 

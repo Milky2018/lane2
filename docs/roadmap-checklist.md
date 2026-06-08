@@ -78,7 +78,7 @@ typing judgments.
 - [x] Implement local type argument synthesis for generic applications,
   including constraints from argument types and expected result types in
   checking mode.
-- [ ] Ensure candidate sets are eliminated by checking: every resolved value
+- [x] Ensure candidate sets are eliminated by checking: every resolved value
   candidate use must either select one concrete reference or produce a stable
   ambiguity diagnostic.
 - [ ] Check top-level recursive groups, ordered top-level values, local
