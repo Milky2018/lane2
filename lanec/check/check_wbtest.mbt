@@ -109,6 +109,59 @@ test "check top level values and direct calls" {
 }
 
 ///|
+test "check top level functions recurse and values stay ordered" {
+  let result = expect_checked_source(
+    (
+      #|fn first(value : Int) -> Int {
+      #|  second(value)
+      #|}
+      #|let base : Int = 1
+      #|fn second(value : Int) -> Int {
+      #|  first(value)
+      #|}
+      #|let copied : Int = base
+      #|fn use() -> Int {
+      #|  copied
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 first : (Int) -> Int
+      #|    fn value#1 second : (Int) -> Int
+      #|    fn value#2 use : () -> Int
+      #|    let value#4 base : Int
+      #|    let value#6 copied : Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check reports forward top level value use" {
+  let result = expect_checked_source(
+    (
+      #|let first : Int = second
+      #|let second : Int = 1
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="unresolved_value second",
+  )
+}
+
+///|
 test "check local let inference and opened field reference" {
   let result = expect_checked_source(
     (
@@ -143,6 +196,124 @@ test "check local let inference and opened field reference" {
       #|  checked_values {
       #|    fn value#0 use : () -> Int
       #|    let value#1 box : type#0
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check local bindings are sequential and local functions see prior scope" {
+  let result = expect_checked_source(
+    (
+      #|fn use() -> Int {
+      #|  {
+      #|    let base = 1
+      #|    fn local(value : Int) -> Int {
+      #|      base
+      #|    }
+      #|    local(2)
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check local function can call itself after declaration" {
+  let result = expect_checked_source(
+    (
+      #|fn use() -> Int {
+      #|  {
+      #|    fn loop(value : Int) -> Int {
+      #|      loop(value)
+      #|    }
+      #|    loop(1)
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check reports local function forward reference" {
+  let result = expect_checked_source(
+    (
+      #|fn use() -> Int {
+      #|  {
+      #|    let result = local(1)
+      #|    fn local(value : Int) -> Int {
+      #|      value
+      #|    }
+      #|    result
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="unresolved_value local",
+  )
+}
+
+///|
+test "check local generic function after declaration" {
+  let result = expect_checked_source(
+    (
+      #|fn use() -> Int {
+      #|  {
+      #|    fn[A] id(value : A) -> A {
+      #|      value
+      #|    }
+      #|    id(1)
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
       #|  }
       #|  diagnostics {}
       #|}

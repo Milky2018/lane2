@@ -81,7 +81,7 @@ typing judgments.
 - [x] Ensure candidate sets are eliminated by checking: every resolved value
   candidate use must either select one concrete reference or produce a stable
   ambiguity diagnostic.
-- [ ] Check top-level recursive groups, ordered top-level values, local
+- [x] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.
 - [ ] Check forall introduction/elimination, generic candidate instantiation,
   primitive operations, nominal construction, and field access.

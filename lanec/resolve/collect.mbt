@@ -289,7 +289,11 @@ fn @syntax.FunctionDeclaration::resolve_top_level_function(
   self : @syntax.FunctionDeclaration,
   resolver : Resolver,
 ) -> ResolvedFunctionDeclaration {
-  self.resolve_function_with_symbol(resolver, resolver.value_symbol(self.name))
+  self.resolve_function_with_symbol(
+    resolver,
+    resolver.value_symbol(self.name),
+    resolver.scope([]),
+  )
 }
 
 ///|
@@ -301,12 +305,14 @@ fn @syntax.FunctionDeclaration::resolve_function_with_symbol(
   self : @syntax.FunctionDeclaration,
   resolver : Resolver,
   symbol : ValueSymbolId,
+  scope : ResolveScope,
 ) -> ResolvedFunctionDeclaration {
   let type_parameters = resolver.resolve_type_parameters(
     self.type_parameters,
     self.loc,
   )
-  let parameter_scope = resolver.scope(type_parameters)
+  let parameter_scope = scope.enter_scope()
+  parameter_scope.type_parameters.append(type_parameters)
   let parameters = self.parameters.map(fn(parameter) {
     parameter.resolve_parameter(resolver, parameter_scope)
   })
@@ -832,7 +838,9 @@ fn @syntax.LocalItem::resolve_local_item(
       scope.define_value(declaration.name, symbol, None)
       // The local function name is inserted before its body is resolved, so the
       // function can call itself after the declaration has been reached.
-      Function(declaration.resolve_function_with_symbol(resolver, symbol))
+      Function(
+        declaration.resolve_function_with_symbol(resolver, symbol, scope),
+      )
     }
     Open(declaration) => Open(declaration.resolve_local_open(resolver, scope))
   }
