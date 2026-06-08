@@ -1431,9 +1431,22 @@ fn SemanticChecker::check_function_literal(
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
-  ignore(type_parameters)
   match expected {
+    @types.Type::Forall(expected_parameters, expected_body) =>
+      self.check_generic_function_literal(
+        scope, type_parameters, expected_parameters, expected_body, parameters, return_type,
+        body, loc,
+      )
     @types.Type::Function(expected_parameters, expected_result) => {
+      if !type_parameters.is_empty() {
+        self.diagnostics.push({
+          kind: CheckDiagnosticKind::CannotInferExpression(
+            "generic function arity",
+          ),
+          loc,
+        })
+        return
+      }
       // Gamma, x_1 : P_1, ..., x_n : P_n |- body <= R
       // ---
       // Gamma |- fn(x_1, ..., x_n) { body } <= (P_1, ..., P_n) -> R
@@ -1485,6 +1498,46 @@ fn SemanticChecker::check_function_literal(
       self.expect_type(expected, actual, loc)
     }
   }
+}
+
+///|
+fn SemanticChecker::check_generic_function_literal(
+  self : SemanticChecker,
+  scope : TypeScope,
+  type_parameters : Array[@resolve.ResolvedTypeParameter],
+  expected_parameters : Array[@types.TypeParameter],
+  expected_body : @types.Type,
+  parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
+  return_type : @resolve.ResolvedType?,
+  body : @resolve.ResolvedExpr,
+  loc : SourceSpan,
+) -> Unit {
+  // Forall introduction is local to the function literal. The literal must
+  // declare the generic parameters it introduces; checking only aligns the
+  // expected forall parameters with those local parameters.
+  if type_parameters.length() != expected_parameters.length() {
+    self.diagnostics.push({
+      kind: CheckDiagnosticKind::CannotInferExpression("generic function arity"),
+      loc,
+    })
+    return
+  }
+  let substitution = @types.TypeSubstitution::TypeSubstitution()
+  for index in 0..<expected_parameters.length() {
+    substitution.insert(
+      expected_parameters[index].id,
+      @types.Type::Parameter(type_parameters[index].symbol),
+    )
+  }
+  self.check_function_literal(
+    scope,
+    [],
+    parameters,
+    return_type,
+    body,
+    expected_body.substitute(substitution),
+    loc,
+  )
 }
 
 ///|

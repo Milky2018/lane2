@@ -83,7 +83,7 @@ typing judgments.
   ambiguity diagnostic.
 - [x] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.
-- [ ] Check forall introduction/elimination, generic candidate instantiation,
+- [x] Check forall introduction/elimination, generic candidate instantiation,
   primitive operations, nominal construction, and field access.
 - [ ] Check enum variant construction and unqualified variant calls after type
   information is available.

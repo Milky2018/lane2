@@ -953,6 +953,67 @@ test "check function literal parameters from expected function type" {
 }
 
 ///|
+test "check generic function literal parameters from expected forall type" {
+  let result = expect_checked_source(
+    (
+      #|let id : [A](A) -> A = fn[A](value) {
+      #|  value
+      #|}
+      #|fn use() -> Int {
+      #|  id(1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
+      #|    let value#2 id : forall [tparam#1 A : Type]. (tparam#1) -> tparam#1
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check reports generic function literal arity mismatch" {
+  let result = expect_checked_source(
+    (
+      #|let id : [A](A) -> A = fn(value) {
+      #|  value
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer generic function arity",
+  )
+}
+
+///|
+test "check reports generic literal against non-generic function type" {
+  let result = expect_checked_source(
+    (
+      #|let id : (Int) -> Int = fn[A](value : A) -> A {
+      #|  value
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="cannot_infer generic function arity",
+  )
+}
+
+///|
 test "check synthesizes direct generic call from argument type" {
   let result = expect_checked_source(
     (
@@ -1040,6 +1101,43 @@ test "check generic call drives function literal argument" {
       #|  checked_values {
       #|    fn value#0 apply : forall [tparam#0 A : Type]. ((tparam#0) -> tparam#0, tparam#0) -> tparam#0
       #|    fn value#1 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check polymorphic function parameter instantiation" {
+  let result = expect_checked_source(
+    (
+      #|fn[B] apply(f : [A](A) -> A, x : B) -> B {
+      #|  f(x)
+      #|}
+      #|fn[A] id(value : A) -> A {
+      #|  value
+      #|}
+      #|fn use() -> Int {
+      #|  apply(id, 1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 apply : forall [
+      #|      tparam#0 B : Type
+      #|    ]. (forall [tparam#1 A : Type]. (tparam#1) -> tparam#1, tparam#0) -> tparam#0
+      #|    fn value#1 id : forall [tparam#2 A : Type]. (tparam#2) -> tparam#2
+      #|    fn value#2 use : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -1139,6 +1237,60 @@ test "check reports unresolved generic type arguments" {
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
     content="cannot_infer type arguments",
+  )
+}
+
+///|
+test "check generic struct construction and field access" {
+  let result = expect_checked_source(
+    (
+      #|struct Box[A] {
+      #|  value : A
+      #|}
+      #|fn use() -> Int {
+      #|  {
+      #|    let box = Box[Int]::{ value: 1 }
+      #|    box.value
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Box[tparam#0 A : Type] {
+      #|        field field#0 value : tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 value : tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "check reports field access on non-struct value" {
+  let result = expect_checked_source(
+    (
+      #|fn bad() -> Int {
+      #|  1.value
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="not_a_struct Int",
   )
 }
 
