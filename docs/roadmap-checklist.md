@@ -111,12 +111,14 @@ and unresolved or ambiguous states before typed core lowering.
   checked match arms, and checked patterns with attached types and origin spans.
 - [x] Provide a Checked Source pretty printer and snapshot tests for the initial
   checked expression and pattern shapes.
-- [ ] Elaborate pipeline expressions into ordinary checked calls.
+- [x] Define checked-source pipeline lowering into ordinary checked calls.
 - [ ] Elaborate ordinary operator aliases into resolved checked calls.
 - [ ] Elaborate `&&` and `||` into checked thunked calls to `op_and` and
   `op_or`.
 - [ ] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.
+- [ ] Integrate checked-source lowering with the resolved-to-checked source
+  elaboration pipeline.
 - [ ] Produce a typed source-level result that contains no unresolved names,
   open candidate sets, or source-only ambiguity states.
 
