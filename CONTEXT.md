@@ -69,8 +69,8 @@ A source-shaped tree whose names, variants, operators, and open-scope references
 _Avoid_: parsed AST, typed core
 
 **Semantic Lowering**:
-The transformation from resolved source-shaped syntax into typed core representation.
-_Avoid_: parsing, bytecode generation
+The transformation from Checked Source AST into Typed Core IR.
+_Avoid_: source elaboration, parsing, bytecode generation
 
 **Symbol Identity**:
 A stable compiler identity for a resolved type, value, constructor, or local binding.
@@ -93,8 +93,8 @@ A diagnostic annotation that links resolved or core IR back to source text.
 _Avoid_: semantic location, runtime value
 
 **Typed Core IR**:
-The typed intermediate representation that removes surface syntax sugar while preserving Lane2/Core semantics.
-_Avoid_: source AST, bytecode, VM instruction format
+The typed Structured ANF representation produced from Checked Source AST while preserving Lane2/Core semantics.
+_Avoid_: source AST, checked source AST, bytecode, VM instruction format
 
 **Typed Core Node**:
 A typed core expression or binding whose type is explicitly available after type checking.
@@ -556,12 +556,15 @@ _Avoid_: module system, imports
 - Lane2 compiler IR uses **Separated Symbol Identity**.
 - Field and variant identities use **Owned Symbol Metadata**.
 - Value references use **Value Symbols**.
-- A **Resolved AST** is checked and simplified into **Typed Core IR**.
+- **Type Checking** assigns and verifies types over a **Resolved AST**.
+- **Source Elaboration** consumes type checking information and produces a **Checked Source AST**.
+- A **Checked Source AST** preserves **Source-Level Structure** while removing source-only syntax and unresolved or ambiguous references.
+- **Semantic Lowering** transforms a **Checked Source AST** into **Typed Core IR**.
 - Every compiler IR layer has an **IR Pretty Printer**.
 - **Typed Core IR** uses **Symbol Identity** for references.
 - Expressions and bindings in **Typed Core IR** are **Typed Core Nodes**.
 - **Typed Core IR** may carry **Origin Spans** for diagnostics, but spans do not affect semantics.
-- **Semantic Lowering** removes **Open Scope Extensions**, **Preopen Namespace** lookups, and **Operator Aliases** from **Typed Core IR**.
+- **Source Elaboration** removes **Open Scope Extensions**, **Preopen Namespace** lookups, **Pipeline Expressions**, and **Operator Aliases** before **Typed Core IR**.
 - **Typed Core IR** uses **Administrative Normal Form**.
 - **Typed Core IR** uses **Structured ANF**, not basic blocks.
 - **Core Atoms** may include function values and **Type Lambdas**.
