@@ -112,7 +112,8 @@ and unresolved or ambiguous states before typed core lowering.
 - [x] Provide a Checked Source pretty printer and snapshot tests for the initial
   checked expression and pattern shapes.
 - [x] Define checked-source pipeline lowering into ordinary checked calls.
-- [ ] Elaborate ordinary operator aliases into resolved checked calls.
+- [x] Define checked-source ordinary operator alias lowering into resolved
+  checked calls.
 - [ ] Elaborate `&&` and `||` into checked thunked calls to `op_and` and
   `op_or`.
 - [ ] Elaborate builtin expressions into typed unsafe builtins without

@@ -186,6 +186,108 @@ test "rejects pipeline rhs that is not call or function literal" {
 }
 
 ///|
+test "elaborates ordinary operator alias into checked call" {
+  let registry = @symbol.SymbolRegistry::SymbolRegistry()
+  let op_add_symbol = registry.define_value("op_add", TopLevelFunction, loc())
+  let op_add = CheckedExpr::Value(
+    name="op_add",
+    symbol=op_add_symbol,
+    type_=function_type([int_type(), int_type()], int_type()),
+    loc=loc(),
+  )
+  inspect(
+    @prettyprinter.render(
+      elaborate_operator_alias_expression(
+        op_add,
+        [
+          IntLiteral(value="1", type_=int_type(), loc=loc()),
+          IntLiteral(value="2", type_=int_type(), loc=loc()),
+        ],
+        loc(),
+      ),
+    ),
+    content=(
+      #|source_elaboration {
+      #|  expression {
+      #|    call : Int {
+      #|      callee {
+      #|        value : (Int, Int) -> Int value#0 op_add
+      #|      }
+      #|      arguments {
+      #|        int 1 : Int
+      #|        int 2 : Int
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "rejects operator alias callee that is not callable" {
+  let registry = @symbol.SymbolRegistry::SymbolRegistry()
+  let op_add_symbol = registry.define_value("op_add", TopLevelValue, loc())
+  let op_add = CheckedExpr::Value(
+    name="op_add",
+    symbol=op_add_symbol,
+    type_=int_type(),
+    loc=loc(),
+  )
+  inspect(
+    @prettyprinter.render(
+      elaborate_operator_alias_expression(
+        op_add,
+        [IntLiteral(value="1", type_=int_type(), loc=loc())],
+        loc(),
+      ),
+    ),
+    content=(
+      #|source_elaboration {
+      #|  expression {
+      #|    <none>
+      #|  }
+      #|  diagnostics {
+      #|    invalid_operator_callee Int
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "rejects operator alias argument arity mismatch" {
+  let registry = @symbol.SymbolRegistry::SymbolRegistry()
+  let op_add_symbol = registry.define_value("op_add", TopLevelFunction, loc())
+  let op_add = CheckedExpr::Value(
+    name="op_add",
+    symbol=op_add_symbol,
+    type_=function_type([int_type(), int_type()], int_type()),
+    loc=loc(),
+  )
+  inspect(
+    @prettyprinter.render(
+      elaborate_operator_alias_expression(
+        op_add,
+        [IntLiteral(value="1", type_=int_type(), loc=loc())],
+        loc(),
+      ),
+    ),
+    content=(
+      #|source_elaboration {
+      #|  expression {
+      #|    <none>
+      #|  }
+      #|  diagnostics {
+      #|    operator_arity_mismatch expected=2 actual=1
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
 test "pretty prints checked thunked short circuit call shape" {
   let registry = @symbol.SymbolRegistry::SymbolRegistry()
   let op_and_symbol = registry.define_value("op_and", TopLevelValue, loc())

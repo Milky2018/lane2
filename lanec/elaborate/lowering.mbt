@@ -13,6 +13,8 @@ pub(all) struct SourceElaborationDiagnostic {
 ///|
 pub(all) enum SourceElaborationDiagnosticKind {
   InvalidPipelineRhs
+  InvalidOperatorCallee(@types.Type)
+  OperatorArgumentArityMismatch(expected~ : Int, actual~ : Int)
 } derive(Debug, Eq)
 
 ///|
@@ -36,6 +38,44 @@ pub fn elaborate_pipeline_expression(
     FunctionLiteral(return_type~, ..) =>
       ok(Call(callee=right, arguments=[left], type_=return_type, loc~))
     _ => { expression: None, diagnostics: [{ kind: InvalidPipelineRhs, loc }] }
+  }
+}
+
+///|
+/// Lowers an ordinary operator alias into a checked call.
+///
+/// The caller must provide the selected operation value, such as the checked
+/// `op_add` value selected for `a + b`, and the already checked operands. This
+/// function only removes the source-only operator spelling; it does not perform
+/// candidate selection and it does not implement thunked `&&` or `||`.
+pub fn elaborate_operator_alias_expression(
+  operation : CheckedExpr,
+  arguments : Array[CheckedExpr],
+  loc : SourceSpan,
+) -> SourceElaborationResult {
+  match operation.type_() {
+    Function(parameters, result) => {
+      if parameters.length() != arguments.length() {
+        return {
+          expression: None,
+          diagnostics: [
+            {
+              kind: OperatorArgumentArityMismatch(
+                expected=parameters.length(),
+                actual=arguments.length(),
+              ),
+              loc,
+            },
+          ],
+        }
+      }
+      ok(Call(callee=operation, arguments~, type_=result, loc~))
+    }
+    type_ =>
+      {
+        expression: None,
+        diagnostics: [{ kind: InvalidOperatorCallee(type_), loc }],
+      }
   }
 }
 

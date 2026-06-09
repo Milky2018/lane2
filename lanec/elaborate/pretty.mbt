@@ -278,6 +278,16 @@ pub impl @prettyprinter.Pretty for SourceElaborationDiagnosticKind with fn prett
 ) {
   match kind {
     InvalidPipelineRhs => text("invalid_pipeline_rhs")
+    InvalidOperatorCallee(type_) =>
+      text("invalid_operator_callee") + space + type_.pretty()
+    OperatorArgumentArityMismatch(expected~, actual~) =>
+      text("operator_arity_mismatch") +
+      space +
+      text("expected=") +
+      text(expected.to_string()) +
+      space +
+      text("actual=") +
+      text(actual.to_string())
   }
 }
 

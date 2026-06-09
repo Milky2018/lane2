@@ -11,6 +11,8 @@ import {
 }
 
 // Values
+pub fn elaborate_operator_alias_expression(CheckedExpr, Array[CheckedExpr], @basic.SourceSpan) -> SourceElaborationResult
+
 pub fn elaborate_pipeline_expression(CheckedExpr, CheckedExpr, @basic.SourceSpan) -> SourceElaborationResult
 
 // Errors
@@ -131,6 +133,8 @@ pub impl @prettyprinter.Pretty for SourceElaborationDiagnostic
 
 pub(all) enum SourceElaborationDiagnosticKind {
   InvalidPipelineRhs
+  InvalidOperatorCallee(@types.Type)
+  OperatorArgumentArityMismatch(expected~ : Int, actual~ : Int)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for SourceElaborationDiagnosticKind
 
