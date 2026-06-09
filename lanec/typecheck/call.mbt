@@ -60,7 +60,7 @@ fn SemanticChecker::synthesize_callable_call(
     @types.Type::Error => @types.Type::Error
     type_ => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::NotCallable(type_),
+        kind: TypeCheckDiagnosticKind::NotCallable(type_),
         loc,
       })
       @types.Type::Error
@@ -94,7 +94,7 @@ fn SemanticChecker::synthesize_candidate_call(
     }
     NoMatch(name~) => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression(
+        kind: TypeCheckDiagnosticKind::CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,
@@ -168,7 +168,7 @@ fn SemanticChecker::check_candidate_call(
     Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
     NoMatch(name~) =>
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression(
+        kind: TypeCheckDiagnosticKind::CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,
@@ -302,7 +302,7 @@ fn SemanticChecker::check_call_arguments(
   // down to each adjacent argument expression.
   if parameters.length() != arguments.length() {
     self.diagnostics.push({
-      kind: CheckDiagnosticKind::CannotInferExpression("call arity"),
+      kind: TypeCheckDiagnosticKind::CannotInferExpression("call arity"),
       loc,
     })
     return

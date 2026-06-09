@@ -20,7 +20,7 @@ fn SemanticChecker::check_candidate_reference(
     Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
     NoMatch(name~) =>
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression(
+        kind: TypeCheckDiagnosticKind::CannotInferExpression(
           "no matching value reference " + name,
         ),
         loc,
@@ -42,7 +42,7 @@ fn SemanticChecker::synthesize_value_reference(
         Some(type_) => type_
         None => {
           self.diagnostics.push({
-            kind: CheckDiagnosticKind::UnresolvedValue(name),
+            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
             loc,
           })
           @types.Type::Error
@@ -60,7 +60,7 @@ fn SemanticChecker::synthesize_value_reference(
           )
         None => {
           self.diagnostics.push({
-            kind: CheckDiagnosticKind::UnresolvedValue(name),
+            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
             loc,
           })
           @types.Type::Error
@@ -76,7 +76,7 @@ fn SemanticChecker::synthesize_value_reference(
         }
         NoMatch(name~) => {
           self.diagnostics.push({
-            kind: CheckDiagnosticKind::CannotInferExpression(
+            kind: TypeCheckDiagnosticKind::CannotInferExpression(
               "no matching value reference " + name,
             ),
             loc,
@@ -87,7 +87,7 @@ fn SemanticChecker::synthesize_value_reference(
     }
     @resolve.ResolvedValueReference::Unresolved(name) => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::UnresolvedValue(name),
+        kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
         loc,
       })
       @types.Type::Error
@@ -127,7 +127,7 @@ fn SemanticChecker::typed_candidate(
         Some(type_) => Some({ reference, type_ })
         None => {
           self.diagnostics.push({
-            kind: CheckDiagnosticKind::UnresolvedValue(name),
+            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
             loc,
           })
           None
@@ -148,7 +148,7 @@ fn SemanticChecker::typed_candidate(
           })
         None => {
           self.diagnostics.push({
-            kind: CheckDiagnosticKind::UnresolvedValue(name),
+            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
             loc,
           })
           None
@@ -157,7 +157,7 @@ fn SemanticChecker::typed_candidate(
     @resolve.ResolvedValueReference::Candidates(..) => None
     @resolve.ResolvedValueReference::Unresolved(name) => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::UnresolvedValue(name),
+        kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
         loc,
       })
       None

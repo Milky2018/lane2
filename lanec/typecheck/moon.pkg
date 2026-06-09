@@ -1,6 +1,6 @@
 import {
   "Milky2018/lane2/basic",
-  "Milky2018/lane2/check/candidates",
+  "Milky2018/lane2/typecheck/candidates",
   "Milky2018/lane2/pretty",
   "Milky2018/lane2/resolve",
   "Milky2018/lane2/symbol",

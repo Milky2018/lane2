@@ -234,14 +234,14 @@ fn SemanticChecker::synthesize_expr(
       )
     @resolve.ResolvedExpr::Builtin(_, loc~) => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression("builtin"),
+        kind: TypeCheckDiagnosticKind::CannotInferExpression("builtin"),
         loc,
       })
       @types.Type::Error
     }
     _ => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression("expression"),
+        kind: TypeCheckDiagnosticKind::CannotInferExpression("expression"),
         loc: resolved_expr_loc(expr),
       })
       @types.Type::Error
@@ -322,7 +322,7 @@ fn SemanticChecker::expect_type(
 ) -> Unit {
   if !type_matches(expected, actual) {
     self.diagnostics.push({
-      kind: CheckDiagnosticKind::TypeMismatch(expected~, actual~),
+      kind: TypeCheckDiagnosticKind::TypeMismatch(expected~, actual~),
       loc,
     })
   }

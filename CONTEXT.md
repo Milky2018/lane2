@@ -352,6 +352,22 @@ _Avoid_: unordered pattern set, priority-free match
 A match arm written as `pattern => expression`.
 _Avoid_: case arm, arrow statement
 
+**Type Checking**:
+The static phase that assigns or verifies types for resolved source terms and rejects type-inconsistent programs.
+_Avoid_: name resolution, source desugaring, runtime checking
+
+**Source Elaboration**:
+The source-level checking phase that turns resolved surface syntax into checked source syntax by removing source-only forms and selecting concrete symbols.
+_Avoid_: pure desugaring, typed core lowering
+
+**Checked Source AST**:
+The typed, symbol-resolved source tree produced by Source Elaboration before lowering to Typed Core IR.
+_Avoid_: typed core ANF, resolved surface AST, environment-only check result
+
+**Source-Level Structure**:
+The expression structure of the source language, such as blocks, conditionals, matches, calls, literals, and function literals, preserved before ANF lowering.
+_Avoid_: atomized core shape, source-only syntax, basic blocks
+
 **Pipeline Expression**:
 An expression `value |> call` that rewrites by passing `value` as the first argument to the call.
 _Avoid_: core pipeline node, method call, placeholder pipeline

@@ -10,7 +10,7 @@ fn SemanticChecker::report_ambiguous_variant_reference(
   loc : SourceSpan,
 ) -> Unit {
   self.diagnostics.push({
-    kind: CheckDiagnosticKind::CannotInferExpression(
+    kind: TypeCheckDiagnosticKind::CannotInferExpression(
       "ambiguous variant reference " + name,
     ),
     loc,
@@ -24,7 +24,7 @@ fn SemanticChecker::report_ambiguous_value_reference(
   loc : SourceSpan,
 ) -> Unit {
   self.diagnostics.push({
-    kind: CheckDiagnosticKind::CannotInferExpression(
+    kind: TypeCheckDiagnosticKind::CannotInferExpression(
       "ambiguous value reference " + name,
     ),
     loc,

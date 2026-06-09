@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/check/candidates"
+package "Milky2018/lane2/typecheck/candidates"
 
 import {
   "Milky2018/lane2/resolve",

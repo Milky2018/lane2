@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/check"
+package "Milky2018/lane2/typecheck"
 
 import {
   "Milky2018/lane2/basic",
@@ -11,40 +11,13 @@ import {
 }
 
 // Values
-pub fn check_declarations(@resolve.ResolvedSourceFile) -> CheckResult
+pub fn typecheck_declarations(@resolve.ResolvedSourceFile) -> DeclarationTypeCheckResult
 
-pub fn check_source_file(@resolve.ResolvedSourceFile) -> CheckedSourceFile
+pub fn typecheck_source_file(@resolve.ResolvedSourceFile) -> TypeCheckResult
 
 // Errors
 
 // Types and methods
-pub(all) struct CheckDiagnostic {
-  kind : CheckDiagnosticKind
-  loc : @basic.SourceSpan
-} derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for CheckDiagnostic
-
-pub(all) enum CheckDiagnosticKind {
-  UnresolvedType(String)
-  UnresolvedValue(String)
-  MissingTopLevelLetAnnotation
-  TypeArgumentArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
-  TypeMismatch(expected~ : @types.Type, actual~ : @types.Type)
-  NotCallable(@types.Type)
-  UnknownField(name~ : String)
-  MissingField(name~ : String)
-  DuplicateField(name~ : String)
-  NotAStruct(@types.Type)
-  CannotInferExpression(String)
-} derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for CheckDiagnosticKind
-
-pub(all) struct CheckResult {
-  declarations : CheckedDeclarationEnvironment
-  diagnostics : Array[CheckDiagnostic]
-} derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for CheckResult
-
 pub(all) struct CheckedDeclarationEnvironment {
   types : Array[CheckedTypeDeclaration]
   fields : Array[CheckedFieldDeclaration]
@@ -86,13 +59,6 @@ pub(all) struct CheckedLetDeclaration {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedLetDeclaration
 
-pub(all) struct CheckedSourceFile {
-  declarations : CheckedDeclarationEnvironment
-  values : CheckedValueEnvironment
-  diagnostics : Array[CheckDiagnostic]
-} derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for CheckedSourceFile
-
 pub(all) struct CheckedStructDeclaration {
   symbol : @symbol.TypeSymbolId
   name : String
@@ -127,6 +93,40 @@ pub(all) struct CheckedVariantDeclaration {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedVariantDeclaration
+
+pub(all) struct DeclarationTypeCheckResult {
+  declarations : CheckedDeclarationEnvironment
+  diagnostics : Array[TypeCheckDiagnostic]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for DeclarationTypeCheckResult
+
+pub(all) struct TypeCheckDiagnostic {
+  kind : TypeCheckDiagnosticKind
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for TypeCheckDiagnostic
+
+pub(all) enum TypeCheckDiagnosticKind {
+  UnresolvedType(String)
+  UnresolvedValue(String)
+  MissingTopLevelLetAnnotation
+  TypeArgumentArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
+  TypeMismatch(expected~ : @types.Type, actual~ : @types.Type)
+  NotCallable(@types.Type)
+  UnknownField(name~ : String)
+  MissingField(name~ : String)
+  DuplicateField(name~ : String)
+  NotAStruct(@types.Type)
+  CannotInferExpression(String)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for TypeCheckDiagnosticKind
+
+pub(all) struct TypeCheckResult {
+  declarations : CheckedDeclarationEnvironment
+  values : CheckedValueEnvironment
+  diagnostics : Array[TypeCheckDiagnostic]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for TypeCheckResult
 
 // Type aliases
 

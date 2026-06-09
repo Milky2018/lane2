@@ -1,12 +1,14 @@
 ///|
 priv struct DeclarationChecker {
   source : @resolve.ResolvedSourceFile
-  diagnostics : Array[CheckDiagnostic]
+  diagnostics : Array[TypeCheckDiagnostic]
 }
 
 ///|
 /// Checks nominal declarations and returns the checked declaration environment.
-pub fn check_declarations(source : @resolve.ResolvedSourceFile) -> CheckResult {
+pub fn typecheck_declarations(
+  source : @resolve.ResolvedSourceFile,
+) -> DeclarationTypeCheckResult {
   let checker = DeclarationChecker::{ source, diagnostics: [] }
   let types = []
   let fields = []
@@ -115,7 +117,7 @@ fn DeclarationChecker::check_type(
 ///|
 fn check_resolved_type(
   source : @resolve.ResolvedSourceFile,
-  diagnostics : Array[CheckDiagnostic],
+  diagnostics : Array[TypeCheckDiagnostic],
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
   match type_ {
@@ -158,7 +160,10 @@ fn check_resolved_type(
       for argument in arguments {
         ignore(check_resolved_type(source, diagnostics, argument))
       }
-      diagnostics.push({ kind: CheckDiagnosticKind::UnresolvedType(name), loc })
+      diagnostics.push({
+        kind: TypeCheckDiagnosticKind::UnresolvedType(name),
+        loc,
+      })
       @types.Type::Error
     }
   }
@@ -167,7 +172,7 @@ fn check_resolved_type(
 ///|
 fn check_type_arity(
   source : @resolve.ResolvedSourceFile,
-  diagnostics : Array[CheckDiagnostic],
+  diagnostics : Array[TypeCheckDiagnostic],
   symbol : TypeSymbolId,
   name : String,
   actual : Int,
@@ -177,7 +182,7 @@ fn check_type_arity(
     Some(metadata) =>
       if metadata.arity != actual {
         diagnostics.push({
-          kind: CheckDiagnosticKind::TypeArgumentArityMismatch(
+          kind: TypeCheckDiagnosticKind::TypeArgumentArityMismatch(
             name~,
             expected=metadata.arity,
             actual~,

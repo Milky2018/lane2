@@ -1,14 +1,14 @@
 ///|
-pub(all) struct CheckResult {
+pub(all) struct DeclarationTypeCheckResult {
   declarations : CheckedDeclarationEnvironment
-  diagnostics : Array[CheckDiagnostic]
+  diagnostics : Array[TypeCheckDiagnostic]
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CheckedSourceFile {
+pub(all) struct TypeCheckResult {
   declarations : CheckedDeclarationEnvironment
   values : CheckedValueEnvironment
-  diagnostics : Array[CheckDiagnostic]
+  diagnostics : Array[TypeCheckDiagnostic]
 } derive(Debug, Eq)
 
 ///|
@@ -88,13 +88,13 @@ pub(all) struct CheckedLetDeclaration {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CheckDiagnostic {
-  kind : CheckDiagnosticKind
+pub(all) struct TypeCheckDiagnostic {
+  kind : TypeCheckDiagnosticKind
   loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
-pub(all) enum CheckDiagnosticKind {
+pub(all) enum TypeCheckDiagnosticKind {
   UnresolvedType(String)
   UnresolvedValue(String)
   MissingTopLevelLetAnnotation

@@ -49,7 +49,7 @@ module tasks should live in issues or implementation notes.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
 
-## 3. Semantic Checking
+## 3. Type Checking
 
 Local type inference is implemented as two source-level judgments: synthesis
 computes a type from an expression, and checking verifies an expression against
@@ -57,11 +57,13 @@ an expected type. It must not introduce Hindley-Milner-style global unification
 state. Lane2's open overload resolution is an extension layer over these local
 typing judgments.
 
+- [x] Move the type-checking engine into the dedicated `lanec/typecheck`
+  package, with no compatibility wrapper under `lanec/check`.
 - [x] Build the checked declaration environment for custom types, including
   struct field types and enum variant payload types.
-- [x] Introduce the first source-level semantic checker slice for annotated
+- [x] Introduce the first source-level type checker slice for annotated
   values, direct calls, blocks, struct literals, and opened fields.
-- [x] Introduce type-directed candidate selection as an internal checker
+- [x] Introduce type-directed candidate selection as an internal type-checker
   package for expected-type and call-argument disambiguation.
 - [x] Propagate expected types through function bodies, block results, `if`
   branches, and known call parameters to drive local candidate selection.
@@ -87,10 +89,6 @@ typing judgments.
   primitive operations, nominal construction, and field access.
 - [x] Check enum variant construction and unqualified variant calls after type
   information is available.
-- [ ] Check `if`, `match`, pipeline, operator aliases, and `&&` / `||` source
-  semantics before semantic lowering.
-- [ ] Elaborate builtin expressions into typed unsafe builtins without
-  interpreting intrinsic names.
 - Pattern analysis:
   - [ ] Use a pattern matrix model for exhaustiveness and usefulness checking.
   - [ ] Check primitive literal patterns, enum patterns, struct patterns,
@@ -99,14 +97,31 @@ typing judgments.
     fields, declaration-order struct fields, and typed binders.
   - [ ] Keep checked patterns available for typed core.
   - [ ] Defer decision tree generation to later lowered IR or VM work.
-- [ ] Produce a typed source-level semantic result that contains no unresolved
-  names, open candidate sets, or source-only ambiguity states.
 - [ ] Produce stable diagnostics with origin spans.
 
-## 4. Typed Core ANF
+## 4. Source Elaboration
+
+Source elaboration consumes the type checker and produces the Checked Source
+AST. It preserves source-level structure while eliminating source-only syntax
+and unresolved or ambiguous states before typed core lowering.
+
+- [ ] Create the `lanec/elaborate` package as the owner of the Checked Source
+  AST.
+- [ ] Define checked expressions, checked local items, checked top-level bodies,
+  checked match arms, and checked patterns with attached types and origin spans.
+- [ ] Elaborate pipeline expressions into ordinary checked calls.
+- [ ] Elaborate ordinary operator aliases into resolved checked calls.
+- [ ] Elaborate `&&` and `||` into checked thunked calls to `op_and` and
+  `op_or`.
+- [ ] Elaborate builtin expressions into typed unsafe builtins without
+  interpreting intrinsic names.
+- [ ] Produce a typed source-level result that contains no unresolved names,
+  open candidate sets, or source-only ambiguity states.
+
+## 5. Typed Core ANF
 
 - [ ] Define the typed core program representation after the source-level
-  semantic checker has a closed typed result.
+  elaborator has a closed typed result.
 - [ ] Lower checked source semantics into structured ANF with typed nodes and
   origin spans.
 - [ ] Preserve nominal data, first-class functions, type lambdas, type
@@ -117,7 +132,7 @@ typing judgments.
   operator selection.
 - [ ] Provide a typed core pretty printer and tests based on typed core output.
 
-## 5. Reference Interpreter
+## 6. Reference Interpreter
 
 - [ ] Evaluate whole typed core programs without hard-coding `main`.
 - [ ] Use uniform interpreter values, global environments, call frames, and
@@ -127,7 +142,7 @@ typing judgments.
 - [ ] Define the builtin runtime plugin contract and runtime error reports.
 - [ ] Use the interpreter as the semantic oracle for later execution targets.
 
-## 6. Prelude And Conformance
+## 7. Prelude And Conformance
 
 - [ ] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial preopen namespace from prelude-provided open
@@ -135,8 +150,8 @@ typing judgments.
 - [ ] Provide required intrinsic implementations through builtin runtime
   plugins.
 - [ ] Expand valid and invalid conformance fixtures under `spec/examples`.
-- [ ] Run parser, semantic checker, and interpreter tests over shared fixtures
-  where practical.
+- [ ] Run parser, type checker, elaborator, and interpreter tests over shared
+  fixtures where practical.
 
 ## Later Execution Work
 

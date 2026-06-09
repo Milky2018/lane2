@@ -29,7 +29,7 @@ fn SemanticChecker::synthesize_binary_operator(
   match operator {
     And | Or => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression("thunked operator"),
+        kind: TypeCheckDiagnosticKind::CannotInferExpression("thunked operator"),
         loc,
       })
       return @types.Type::Error
@@ -79,7 +79,7 @@ fn SemanticChecker::synthesize_resolved_operator_call(
     }
     NoMatch(name~) => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression(
+        kind: TypeCheckDiagnosticKind::CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,
@@ -123,7 +123,7 @@ fn SemanticChecker::check_binary_operator(
   match operator {
     And | Or => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression("thunked operator"),
+        kind: TypeCheckDiagnosticKind::CannotInferExpression("thunked operator"),
         loc,
       })
       return
@@ -175,7 +175,7 @@ fn SemanticChecker::check_resolved_operator_call(
     Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
     NoMatch(name~) =>
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression(
+        kind: TypeCheckDiagnosticKind::CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,

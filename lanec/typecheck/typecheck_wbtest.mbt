@@ -11,22 +11,24 @@ fn expect_parse_ok(source : String) -> @syntax.SourceFile {
 }
 
 ///|
-fn expect_check_result(source : String) -> CheckResult {
+fn expect_declaration_typecheck_result(
+  source : String,
+) -> DeclarationTypeCheckResult {
   let file = expect_parse_ok(source)
   let resolved = @resolve.resolve_source_file(file)
-  check_declarations(resolved)
+  typecheck_declarations(resolved)
 }
 
 ///|
-fn expect_checked_source(source : String) -> CheckedSourceFile {
+fn expect_typecheck_result(source : String) -> TypeCheckResult {
   let file = expect_parse_ok(source)
   let resolved = @resolve.resolve_source_file(file)
-  check_source_file(resolved)
+  typecheck_source_file(resolved)
 }
 
 ///|
-test "check custom type declaration environment" {
-  let result = expect_check_result(
+test "typecheck custom type declaration environment" {
+  let result = expect_declaration_typecheck_result(
     (
       #|struct Box[A] {
       #|  value : A
@@ -44,7 +46,7 @@ test "check custom type declaration environment" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|check_result {
+      #|declaration_typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 Box[tparam#0 A : Type] {
@@ -76,8 +78,8 @@ test "check custom type declaration environment" {
 }
 
 ///|
-test "check top level values and direct calls" {
-  let result = expect_checked_source(
+test "typecheck top level values and direct calls" {
+  let result = expect_typecheck_result(
     (
       #|fn id(value : Int) -> Int {
       #|  value
@@ -91,7 +93,7 @@ test "check top level values and direct calls" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -109,8 +111,8 @@ test "check top level values and direct calls" {
 }
 
 ///|
-test "check top level functions recurse and values stay ordered" {
-  let result = expect_checked_source(
+test "typecheck top level functions recurse and values stay ordered" {
+  let result = expect_typecheck_result(
     (
       #|fn first(value : Int) -> Int {
       #|  second(value)
@@ -128,7 +130,7 @@ test "check top level functions recurse and values stay ordered" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -148,8 +150,8 @@ test "check top level functions recurse and values stay ordered" {
 }
 
 ///|
-test "check reports forward top level value use" {
-  let result = expect_checked_source(
+test "typecheck reports forward top level value use" {
+  let result = expect_typecheck_result(
     (
       #|let first : Int = second
       #|let second : Int = 1
@@ -162,8 +164,8 @@ test "check reports forward top level value use" {
 }
 
 ///|
-test "check local let inference and opened field reference" {
-  let result = expect_checked_source(
+test "typecheck local let inference and opened field reference" {
+  let result = expect_typecheck_result(
     (
       #|struct Box {
       #|  value : Int
@@ -181,7 +183,7 @@ test "check local let inference and opened field reference" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 Box {
@@ -204,8 +206,8 @@ test "check local let inference and opened field reference" {
 }
 
 ///|
-test "check local bindings are sequential and local functions see prior scope" {
-  let result = expect_checked_source(
+test "typecheck local bindings are sequential and local functions see prior scope" {
+  let result = expect_typecheck_result(
     (
       #|fn use() -> Int {
       #|  {
@@ -221,7 +223,7 @@ test "check local bindings are sequential and local functions see prior scope" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -237,8 +239,8 @@ test "check local bindings are sequential and local functions see prior scope" {
 }
 
 ///|
-test "check local function can call itself after declaration" {
-  let result = expect_checked_source(
+test "typecheck local function can call itself after declaration" {
+  let result = expect_typecheck_result(
     (
       #|fn use() -> Int {
       #|  {
@@ -253,7 +255,7 @@ test "check local function can call itself after declaration" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -269,8 +271,8 @@ test "check local function can call itself after declaration" {
 }
 
 ///|
-test "check reports local function forward reference" {
-  let result = expect_checked_source(
+test "typecheck reports local function forward reference" {
+  let result = expect_typecheck_result(
     (
       #|fn use() -> Int {
       #|  {
@@ -290,8 +292,8 @@ test "check reports local function forward reference" {
 }
 
 ///|
-test "check local generic function after declaration" {
-  let result = expect_checked_source(
+test "typecheck local generic function after declaration" {
+  let result = expect_typecheck_result(
     (
       #|fn use() -> Int {
       #|  {
@@ -306,7 +308,7 @@ test "check local generic function after declaration" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -322,8 +324,8 @@ test "check local generic function after declaration" {
 }
 
 ///|
-test "check selects open candidate by expected type" {
-  let result = expect_checked_source(
+test "typecheck selects open candidate by expected type" {
+  let result = expect_typecheck_result(
     (
       #|struct IntSource {
       #|  value : Int
@@ -343,7 +345,7 @@ test "check selects open candidate by expected type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IntSource {
@@ -371,8 +373,8 @@ test "check selects open candidate by expected type" {
 }
 
 ///|
-test "check keeps same typed open candidates ambiguous" {
-  let result = expect_checked_source(
+test "typecheck keeps same typed open candidates ambiguous" {
+  let result = expect_typecheck_result(
     (
       #|struct Left {
       #|  value : Int
@@ -396,8 +398,8 @@ test "check keeps same typed open candidates ambiguous" {
 }
 
 ///|
-test "check selects callable open candidate by argument types" {
-  let result = expect_checked_source(
+test "typecheck selects callable open candidate by argument types" {
+  let result = expect_typecheck_result(
     (
       #|struct IntOps {
       #|  op_add : (Int, Int) -> Int
@@ -423,7 +425,7 @@ test "check selects callable open candidate by argument types" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IntOps {
@@ -453,8 +455,8 @@ test "check selects callable open candidate by argument types" {
 }
 
 ///|
-test "check direct binary operator alias" {
-  let result = expect_checked_source(
+test "typecheck direct binary operator alias" {
+  let result = expect_typecheck_result(
     (
       #|fn op_add(a : Int, b : Int) -> Int {
       #|  a
@@ -467,7 +469,7 @@ test "check direct binary operator alias" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -484,8 +486,8 @@ test "check direct binary operator alias" {
 }
 
 ///|
-test "check direct binary operator result mismatch" {
-  let result = expect_checked_source(
+test "typecheck direct binary operator result mismatch" {
+  let result = expect_typecheck_result(
     (
       #|fn op_add(a : Int, b : Int) -> Bool {
       #|  true
@@ -502,8 +504,8 @@ test "check direct binary operator result mismatch" {
 }
 
 ///|
-test "check direct unary operator alias" {
-  let result = expect_checked_source(
+test "typecheck direct unary operator alias" {
+  let result = expect_typecheck_result(
     (
       #|fn op_neg(value : Int) -> Int {
       #|  value
@@ -516,7 +518,7 @@ test "check direct unary operator alias" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -533,8 +535,8 @@ test "check direct unary operator alias" {
 }
 
 ///|
-test "check selects open binary operator candidate by argument types" {
-  let result = expect_checked_source(
+test "typecheck selects open binary operator candidate by argument types" {
+  let result = expect_typecheck_result(
     (
       #|struct IntOps {
       #|  op_add : (Int, Int) -> Int
@@ -560,7 +562,7 @@ test "check selects open binary operator candidate by argument types" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IntOps {
@@ -590,8 +592,8 @@ test "check selects open binary operator candidate by argument types" {
 }
 
 ///|
-test "check keeps same typed binary operator candidates ambiguous" {
-  let result = expect_checked_source(
+test "typecheck keeps same typed binary operator candidates ambiguous" {
+  let result = expect_typecheck_result(
     (
       #|struct LeftOps {
       #|  op_add : (Int, Int) -> Int
@@ -621,8 +623,8 @@ test "check keeps same typed binary operator candidates ambiguous" {
 }
 
 ///|
-test "check selects open candidate in if branches by expected type" {
-  let result = expect_checked_source(
+test "typecheck selects open candidate in if branches by expected type" {
+  let result = expect_typecheck_result(
     (
       #|struct IntSource {
       #|  value : Int
@@ -646,7 +648,7 @@ test "check selects open candidate in if branches by expected type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IntSource {
@@ -674,8 +676,8 @@ test "check selects open candidate in if branches by expected type" {
 }
 
 ///|
-test "check selects argument candidate from known function parameter type" {
-  let result = expect_checked_source(
+test "typecheck selects argument candidate from known function parameter type" {
+  let result = expect_typecheck_result(
     (
       #|struct IntSource {
       #|  value : Int
@@ -698,7 +700,7 @@ test "check selects argument candidate from known function parameter type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IntSource {
@@ -727,8 +729,8 @@ test "check selects argument candidate from known function parameter type" {
 }
 
 ///|
-test "check selects callable open candidate by expected result type" {
-  let result = expect_checked_source(
+test "typecheck selects callable open candidate by expected result type" {
+  let result = expect_typecheck_result(
     (
       #|struct IntFactory {
       #|  make : () -> Int
@@ -754,7 +756,7 @@ test "check selects callable open candidate by expected result type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IntFactory {
@@ -784,8 +786,8 @@ test "check selects callable open candidate by expected result type" {
 }
 
 ///|
-test "check selects callable candidate by checking argument candidates" {
-  let result = expect_checked_source(
+test "typecheck selects callable candidate by checking argument candidates" {
+  let result = expect_typecheck_result(
     (
       #|struct IntSource {
       #|  value : Int
@@ -821,7 +823,7 @@ test "check selects callable candidate by checking argument candidates" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IntSource {
@@ -861,8 +863,8 @@ test "check selects callable candidate by checking argument candidates" {
 }
 
 ///|
-test "check reports ambiguous candidate without expected type" {
-  let result = expect_checked_source(
+test "typecheck reports ambiguous candidate without expected type" {
+  let result = expect_typecheck_result(
     (
       #|struct IntSource {
       #|  value : Int
@@ -889,8 +891,8 @@ test "check reports ambiguous candidate without expected type" {
 }
 
 ///|
-test "check reports no callable candidate when arguments reject all candidates" {
-  let result = expect_checked_source(
+test "typecheck reports no callable candidate when arguments reject all candidates" {
+  let result = expect_typecheck_result(
     (
       #|struct IntApply {
       #|  apply : (Int) -> Int
@@ -920,8 +922,8 @@ test "check reports no callable candidate when arguments reject all candidates" 
 }
 
 ///|
-test "check function literal parameters from expected function type" {
-  let result = expect_checked_source(
+test "typecheck function literal parameters from expected function type" {
+  let result = expect_typecheck_result(
     (
       #|fn apply(callback : (Int) -> Int) -> Int {
       #|  callback(1)
@@ -936,7 +938,7 @@ test "check function literal parameters from expected function type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -953,8 +955,8 @@ test "check function literal parameters from expected function type" {
 }
 
 ///|
-test "check generic function literal parameters from expected forall type" {
-  let result = expect_checked_source(
+test "typecheck generic function literal parameters from expected forall type" {
+  let result = expect_typecheck_result(
     (
       #|let id : [A](A) -> A = fn[A](value) {
       #|  value
@@ -967,7 +969,7 @@ test "check generic function literal parameters from expected forall type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -984,8 +986,8 @@ test "check generic function literal parameters from expected forall type" {
 }
 
 ///|
-test "check reports generic function literal arity mismatch" {
-  let result = expect_checked_source(
+test "typecheck reports generic function literal arity mismatch" {
+  let result = expect_typecheck_result(
     (
       #|let id : [A](A) -> A = fn(value) {
       #|  value
@@ -999,8 +1001,8 @@ test "check reports generic function literal arity mismatch" {
 }
 
 ///|
-test "check reports generic literal against non-generic function type" {
-  let result = expect_checked_source(
+test "typecheck reports generic literal against non-generic function type" {
+  let result = expect_typecheck_result(
     (
       #|let id : (Int) -> Int = fn[A](value : A) -> A {
       #|  value
@@ -1014,8 +1016,8 @@ test "check reports generic literal against non-generic function type" {
 }
 
 ///|
-test "check synthesizes direct generic call from argument type" {
-  let result = expect_checked_source(
+test "typecheck synthesizes direct generic call from argument type" {
+  let result = expect_typecheck_result(
     (
       #|fn[A] id(value : A) -> A {
       #|  value
@@ -1028,7 +1030,7 @@ test "check synthesizes direct generic call from argument type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -1045,8 +1047,8 @@ test "check synthesizes direct generic call from argument type" {
 }
 
 ///|
-test "check generic call uses expected result type" {
-  let result = expect_checked_source(
+test "typecheck generic call uses expected result type" {
+  let result = expect_typecheck_result(
     (
       #|fn[A] make() -> A {
       #|  builtin("%make")
@@ -1059,7 +1061,7 @@ test "check generic call uses expected result type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -1076,8 +1078,8 @@ test "check generic call uses expected result type" {
 }
 
 ///|
-test "check generic call drives function literal argument" {
-  let result = expect_checked_source(
+test "typecheck generic call drives function literal argument" {
+  let result = expect_typecheck_result(
     (
       #|fn[A] apply(callback : (A) -> A, value : A) -> A {
       #|  callback(value)
@@ -1092,7 +1094,7 @@ test "check generic call drives function literal argument" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -1109,8 +1111,8 @@ test "check generic call drives function literal argument" {
 }
 
 ///|
-test "check polymorphic function parameter instantiation" {
-  let result = expect_checked_source(
+test "typecheck polymorphic function parameter instantiation" {
+  let result = expect_typecheck_result(
     (
       #|fn[B] apply(f : [A](A) -> A, x : B) -> B {
       #|  f(x)
@@ -1126,7 +1128,7 @@ test "check polymorphic function parameter instantiation" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
       #|    fields {}
@@ -1146,8 +1148,8 @@ test "check polymorphic function parameter instantiation" {
 }
 
 ///|
-test "check selects generic open callable candidate by argument type" {
-  let result = expect_checked_source(
+test "typecheck selects generic open callable candidate by argument type" {
+  let result = expect_typecheck_result(
     (
       #|struct IdOps {
       #|  id : [A](A) -> A
@@ -1165,7 +1167,7 @@ test "check selects generic open callable candidate by argument type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 IdOps {
@@ -1189,8 +1191,8 @@ test "check selects generic open callable candidate by argument type" {
 }
 
 ///|
-test "check keeps generic callable candidates ambiguous" {
-  let result = expect_checked_source(
+test "typecheck keeps generic callable candidates ambiguous" {
+  let result = expect_typecheck_result(
     (
       #|struct LeftOps {
       #|  id : [A](A) -> A
@@ -1220,8 +1222,8 @@ test "check keeps generic callable candidates ambiguous" {
 }
 
 ///|
-test "check reports unresolved generic type arguments" {
-  let result = expect_checked_source(
+test "typecheck reports unresolved generic type arguments" {
+  let result = expect_typecheck_result(
     (
       #|fn[A] make() -> A {
       #|  builtin("%make")
@@ -1241,8 +1243,8 @@ test "check reports unresolved generic type arguments" {
 }
 
 ///|
-test "check generic struct construction and field access" {
-  let result = expect_checked_source(
+test "typecheck generic struct construction and field access" {
+  let result = expect_typecheck_result(
     (
       #|struct Box[A] {
       #|  value : A
@@ -1258,7 +1260,7 @@ test "check generic struct construction and field access" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 Box[tparam#0 A : Type] {
@@ -1280,8 +1282,8 @@ test "check generic struct construction and field access" {
 }
 
 ///|
-test "check reports field access on non-struct value" {
-  let result = expect_checked_source(
+test "typecheck reports field access on non-struct value" {
+  let result = expect_typecheck_result(
     (
       #|fn bad() -> Int {
       #|  1.value
@@ -1295,8 +1297,8 @@ test "check reports field access on non-struct value" {
 }
 
 ///|
-test "check qualified enum variant construction" {
-  let result = expect_checked_source(
+test "typecheck qualified enum variant construction" {
+  let result = expect_typecheck_result(
     (
       #|enum Option[A] {
       #|  none
@@ -1313,7 +1315,7 @@ test "check qualified enum variant construction" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      enum type#0 Option[tparam#0 A : Type] {
@@ -1338,8 +1340,8 @@ test "check qualified enum variant construction" {
 }
 
 ///|
-test "check unqualified enum variant construction" {
-  let result = expect_checked_source(
+test "typecheck unqualified enum variant construction" {
+  let result = expect_typecheck_result(
     (
       #|enum Option[A] {
       #|  none
@@ -1356,7 +1358,7 @@ test "check unqualified enum variant construction" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|checked_source {
+      #|typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      enum type#0 Option[tparam#0 A : Type] {
@@ -1381,8 +1383,8 @@ test "check unqualified enum variant construction" {
 }
 
 ///|
-test "check reports unresolved variant type arguments" {
-  let result = expect_checked_source(
+test "typecheck reports unresolved variant type arguments" {
+  let result = expect_typecheck_result(
     (
       #|enum Option[A] {
       #|  none
@@ -1403,8 +1405,8 @@ test "check reports unresolved variant type arguments" {
 }
 
 ///|
-test "check reports enum variant payload mismatch" {
-  let result = expect_checked_source(
+test "typecheck reports enum variant payload mismatch" {
+  let result = expect_typecheck_result(
     (
       #|enum Option[A] {
       #|  none
@@ -1422,8 +1424,8 @@ test "check reports enum variant payload mismatch" {
 }
 
 ///|
-test "check reports enum variant arity mismatch" {
-  let result = expect_checked_source(
+test "typecheck reports enum variant arity mismatch" {
+  let result = expect_typecheck_result(
     (
       #|enum Option[A] {
       #|  none
@@ -1441,8 +1443,8 @@ test "check reports enum variant arity mismatch" {
 }
 
 ///|
-test "check reports ambiguous unqualified enum variant" {
-  let result = expect_checked_source(
+test "typecheck reports ambiguous unqualified enum variant" {
+  let result = expect_typecheck_result(
     (
       #|enum Left {
       #|  same(Int)
@@ -1462,8 +1464,8 @@ test "check reports ambiguous unqualified enum variant" {
 }
 
 ///|
-test "check reports type mismatch" {
-  let result = expect_checked_source(
+test "typecheck reports type mismatch" {
+  let result = expect_typecheck_result(
     (
       #|fn bad() -> Int {
       #|  true
@@ -1477,8 +1479,8 @@ test "check reports type mismatch" {
 }
 
 ///|
-test "check struct literal punning and required fields" {
-  let result = expect_checked_source(
+test "typecheck struct literal punning and required fields" {
+  let result = expect_typecheck_result(
     (
       #|struct Point {
       #|  x : Int
@@ -1496,8 +1498,8 @@ test "check struct literal punning and required fields" {
 }
 
 ///|
-test "check reports nominal type arity mismatch" {
-  let result = expect_check_result(
+test "typecheck reports nominal type arity mismatch" {
+  let result = expect_declaration_typecheck_result(
     (
       #|struct Box[A] {
       #|  value : A
@@ -1514,8 +1516,8 @@ test "check reports nominal type arity mismatch" {
 }
 
 ///|
-test "check keeps unresolved type as error type" {
-  let result = expect_check_result(
+test "typecheck keeps unresolved type as error type" {
+  let result = expect_declaration_typecheck_result(
     (
       #|struct Bad {
       #|  missing : Missing
@@ -1525,7 +1527,7 @@ test "check keeps unresolved type as error type" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|check_result {
+      #|declaration_typecheck_result {
       #|  checked_declarations {
       #|    types {
       #|      struct type#0 Bad {

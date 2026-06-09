@@ -35,7 +35,7 @@ fn CheckedDeclarationEnvironment::checked_enum(
 ///|
 fn CheckedDeclarationEnvironment::field_path_type(
   self : CheckedDeclarationEnvironment,
-  diagnostics : Array[CheckDiagnostic],
+  diagnostics : Array[TypeCheckDiagnostic],
   base_type : @types.Type,
   path : Array[FieldSymbolId],
   name : String,
@@ -51,7 +51,7 @@ fn CheckedDeclarationEnvironment::field_path_type(
 ///|
 fn CheckedDeclarationEnvironment::field_type(
   self : CheckedDeclarationEnvironment,
-  diagnostics : Array[CheckDiagnostic],
+  diagnostics : Array[TypeCheckDiagnostic],
   base_type : @types.Type,
   field : FieldSymbolId,
   name : String,
@@ -68,7 +68,7 @@ fn CheckedDeclarationEnvironment::field_type(
               )
             None => {
               diagnostics.push({
-                kind: CheckDiagnosticKind::UnknownField(name~),
+                kind: TypeCheckDiagnosticKind::UnknownField(name~),
                 loc,
               })
               @types.Type::Error
@@ -76,7 +76,7 @@ fn CheckedDeclarationEnvironment::field_type(
           }
         None => {
           diagnostics.push({
-            kind: CheckDiagnosticKind::NotAStruct(base_type),
+            kind: TypeCheckDiagnosticKind::NotAStruct(base_type),
             loc,
           })
           @types.Type::Error
@@ -84,7 +84,10 @@ fn CheckedDeclarationEnvironment::field_type(
       }
     @types.Type::Error => @types.Type::Error
     _ => {
-      diagnostics.push({ kind: CheckDiagnosticKind::NotAStruct(base_type), loc })
+      diagnostics.push({
+        kind: TypeCheckDiagnosticKind::NotAStruct(base_type),
+        loc,
+      })
       @types.Type::Error
     }
   }

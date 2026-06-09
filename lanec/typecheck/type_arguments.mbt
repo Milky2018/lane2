@@ -164,7 +164,7 @@ fn SemanticChecker::instantiate_generic_callable(
   guard body is @types.Type::Function(parameters, result) else {
     if report_failure {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::NotCallable(
+        kind: TypeCheckDiagnosticKind::NotCallable(
           @types.Type::Forall(type_parameters, body),
         ),
         loc,
@@ -175,7 +175,7 @@ fn SemanticChecker::instantiate_generic_callable(
   if parameters.length() != arguments.length() {
     if report_failure {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression("call arity"),
+        kind: TypeCheckDiagnosticKind::CannotInferExpression("call arity"),
         loc,
       })
     }
@@ -194,7 +194,7 @@ fn SemanticChecker::instantiate_generic_callable(
   guard inference.substitution() is Some(substitution) else {
     if report_failure {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::CannotInferExpression("type arguments"),
+        kind: TypeCheckDiagnosticKind::CannotInferExpression("type arguments"),
         loc,
       })
     }

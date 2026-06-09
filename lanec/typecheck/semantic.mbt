@@ -2,17 +2,17 @@
 priv struct SemanticChecker {
   source : @resolve.ResolvedSourceFile
   declarations : CheckedDeclarationEnvironment
-  diagnostics : Array[CheckDiagnostic]
+  diagnostics : Array[TypeCheckDiagnostic]
   values : Array[CheckedValueDeclaration]
   value_types : Array[ValueTypeBinding]
 }
 
 ///|
 /// Checks a resolved source file and returns checked declarations, values, and diagnostics.
-pub fn check_source_file(
+pub fn typecheck_source_file(
   source : @resolve.ResolvedSourceFile,
-) -> CheckedSourceFile {
-  let declaration_result = check_declarations(source)
+) -> TypeCheckResult {
+  let declaration_result = typecheck_declarations(source)
   let checker = SemanticChecker::{
     source,
     declarations: declaration_result.declarations,
@@ -101,7 +101,7 @@ fn SemanticChecker::check_top_level_let(
     }
     None => {
       self.diagnostics.push({
-        kind: CheckDiagnosticKind::MissingTopLevelLetAnnotation,
+        kind: TypeCheckDiagnosticKind::MissingTopLevelLetAnnotation,
         loc: declaration.loc,
       })
       self.synthesize_expr(self.root_scope(), declaration.initializer)

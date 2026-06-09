@@ -1,30 +1,30 @@
 ///|
-pub impl @prettyprinter.Pretty for CheckResult with fn pretty(
-  result : CheckResult,
+pub impl @prettyprinter.Pretty for DeclarationTypeCheckResult with fn pretty(
+  result : DeclarationTypeCheckResult,
 ) {
-  text("check_result") +
+  text("declaration_typecheck_result") +
   space +
   @pretty.braced_block([
     result.declarations.pretty(),
     @pretty.section(
       "diagnostics",
-      result.diagnostics.map(CheckDiagnostic::pretty),
+      result.diagnostics.map(TypeCheckDiagnostic::pretty),
     ),
   ])
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CheckedSourceFile with fn pretty(
-  source : CheckedSourceFile,
+pub impl @prettyprinter.Pretty for TypeCheckResult with fn pretty(
+  source : TypeCheckResult,
 ) {
-  text("checked_source") +
+  text("typecheck_result") +
   space +
   @pretty.braced_block([
     source.declarations.pretty(),
     source.values.pretty(),
     @pretty.section(
       "diagnostics",
-      source.diagnostics.map(CheckDiagnostic::pretty),
+      source.diagnostics.map(TypeCheckDiagnostic::pretty),
     ),
   ])
 }
@@ -181,15 +181,15 @@ pub impl @prettyprinter.Pretty for CheckedVariantDeclaration with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CheckDiagnostic with fn pretty(
-  diagnostic : CheckDiagnostic,
+pub impl @prettyprinter.Pretty for TypeCheckDiagnostic with fn pretty(
+  diagnostic : TypeCheckDiagnostic,
 ) {
   diagnostic.kind.pretty()
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CheckDiagnosticKind with fn pretty(
-  kind : CheckDiagnosticKind,
+pub impl @prettyprinter.Pretty for TypeCheckDiagnosticKind with fn pretty(
+  kind : TypeCheckDiagnosticKind,
 ) {
   match kind {
     UnresolvedType(name) => text("unresolved_type") + space + text(name)
