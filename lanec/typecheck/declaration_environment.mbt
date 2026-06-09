@@ -5,7 +5,7 @@ fn CheckedDeclarationEnvironment::checked_struct(
 ) -> CheckedStructDeclaration? {
   for declaration in self.types {
     match declaration {
-      CheckedTypeDeclaration::Struct(declaration) =>
+      Struct(declaration) =>
         if declaration.symbol == symbol {
           return Some(declaration)
         }
@@ -22,7 +22,7 @@ fn CheckedDeclarationEnvironment::checked_enum(
 ) -> CheckedEnumDeclaration? {
   for declaration in self.types {
     match declaration {
-      CheckedTypeDeclaration::Enum(declaration) =>
+      Enum(declaration) =>
         if declaration.symbol == symbol {
           return Some(declaration)
         }
@@ -58,7 +58,7 @@ fn CheckedDeclarationEnvironment::field_type(
   loc : SourceSpan,
 ) -> @types.Type {
   match base_type {
-    @types.Type::Nominal(owner, arguments) =>
+    Nominal(owner, arguments) =>
       match self.checked_struct(owner) {
         Some(declaration) =>
           match declaration.field(field) {
@@ -67,28 +67,19 @@ fn CheckedDeclarationEnvironment::field_type(
                 declaration.nominal_substitution(arguments),
               )
             None => {
-              diagnostics.push({
-                kind: TypeCheckDiagnosticKind::UnknownField(name~),
-                loc,
-              })
-              @types.Type::Error
+              diagnostics.push({ kind: UnknownField(name~), loc })
+              Error
             }
           }
         None => {
-          diagnostics.push({
-            kind: TypeCheckDiagnosticKind::NotAStruct(base_type),
-            loc,
-          })
-          @types.Type::Error
+          diagnostics.push({ kind: NotAStruct(base_type), loc })
+          Error
         }
       }
-    @types.Type::Error => @types.Type::Error
+    Error => Error
     _ => {
-      diagnostics.push({
-        kind: TypeCheckDiagnosticKind::NotAStruct(base_type),
-        loc,
-      })
-      @types.Type::Error
+      diagnostics.push({ kind: NotAStruct(base_type), loc })
+      Error
     }
   }
 }

@@ -23,10 +23,8 @@ pub fn typecheck_source_file(
   checker.collect_top_level_function_types()
   for declaration in source.declarations {
     match declaration {
-      @resolve.ResolvedTopLevelDeclaration::Function(declaration) =>
-        checker.check_top_level_function(declaration)
-      @resolve.ResolvedTopLevelDeclaration::Let(declaration) =>
-        checker.check_top_level_let(declaration)
+      Function(declaration) => checker.check_top_level_function(declaration)
+      Let(declaration) => checker.check_top_level_let(declaration)
       _ => ()
     }
   }
@@ -43,7 +41,7 @@ fn SemanticChecker::collect_top_level_function_types(
 ) -> Unit {
   for declaration in self.source.declarations {
     match declaration {
-      @resolve.ResolvedTopLevelDeclaration::Function(declaration) => {
+      Function(declaration) => {
         let type_ = self.function_type(
           declaration.type_parameters,
           declaration.parameters,
@@ -55,7 +53,7 @@ fn SemanticChecker::collect_top_level_function_types(
           type_,
         })
         self.values.push(
-          CheckedValueDeclaration::Function({
+          Function({
             symbol: declaration.symbol,
             name: declaration.name,
             type_,
@@ -101,7 +99,7 @@ fn SemanticChecker::check_top_level_let(
     }
     None => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::MissingTopLevelLetAnnotation,
+        kind: MissingTopLevelLetAnnotation,
         loc: declaration.loc,
       })
       self.synthesize_expr(self.root_scope(), declaration.initializer)
@@ -113,7 +111,7 @@ fn SemanticChecker::check_top_level_let(
     type_,
   })
   self.values.push(
-    CheckedValueDeclaration::Let({
+    Let({
       symbol: declaration.symbol,
       name: declaration.name,
       type_,
@@ -137,7 +135,7 @@ fn SemanticChecker::function_type(
   if type_parameters.is_empty() {
     type_
   } else {
-    @types.Type::Forall(type_parameters.map(checked_type_parameter), type_)
+    Forall(type_parameters.map(checked_type_parameter), type_)
   }
 }
 

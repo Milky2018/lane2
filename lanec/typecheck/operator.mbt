@@ -29,10 +29,10 @@ fn SemanticChecker::synthesize_binary_operator(
   match operator {
     And | Or => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression("thunked operator"),
+        kind: CannotInferExpression("thunked operator"),
         loc,
       })
-      return @types.Type::Error
+      return Error
     }
     _ => ()
   }
@@ -55,7 +55,7 @@ fn SemanticChecker::synthesize_resolved_operator_call(
   loc : SourceSpan,
 ) -> @types.Type {
   let typed_candidates = match reference {
-    @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+    Candidates(candidates~, ..) =>
       self.typed_candidates(scope, candidates, name, loc)
     _ =>
       match self.typed_candidate(scope, reference, name, loc) {
@@ -75,16 +75,16 @@ fn SemanticChecker::synthesize_resolved_operator_call(
     Selected(candidate) => candidate.result
     Ambiguous(name~, ..) => {
       self.report_ambiguous_value_reference(name, loc)
-      @types.Type::Error
+      Error
     }
     NoMatch(name~) => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
+        kind: CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,
       })
-      @types.Type::Error
+      Error
     }
   }
 }
@@ -123,7 +123,7 @@ fn SemanticChecker::check_binary_operator(
   match operator {
     And | Or => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression("thunked operator"),
+        kind: CannotInferExpression("thunked operator"),
         loc,
       })
       return
@@ -151,7 +151,7 @@ fn SemanticChecker::check_resolved_operator_call(
   loc : SourceSpan,
 ) -> Unit {
   let typed_candidates = match reference {
-    @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+    Candidates(candidates~, ..) =>
       self.typed_candidates(scope, candidates, name, loc)
     _ => {
       let actual = self.synthesize_resolved_operator_call(
@@ -175,7 +175,7 @@ fn SemanticChecker::check_resolved_operator_call(
     Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
     NoMatch(name~) =>
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
+        kind: CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,

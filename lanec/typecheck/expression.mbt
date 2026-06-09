@@ -14,21 +14,21 @@ fn SemanticChecker::check_expr(
   // literals, calls, and operators. This is the local part of LTI; it never
   // creates global inference variables to be solved elsewhere.
   match expr {
-    @resolve.ResolvedExpr::Builtin(_, ..) => ()
-    @resolve.ResolvedExpr::Var(name~, reference~, loc~) =>
+    Builtin(_, ..) => ()
+    Var(name~, reference~, loc~) =>
       match reference {
-        @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+        Candidates(candidates~, ..) =>
           self.check_candidate_reference(scope, name, candidates, expected, loc)
         _ => {
           let actual = self.synthesize_expr(scope, expr)
           self.expect_type(expected, actual, resolved_expr_loc(expr))
         }
       }
-    @resolve.ResolvedExpr::Block(items~, result~, ..) =>
+    Block(items~, result~, ..) =>
       self.check_block(scope, items, result, expected)
-    @resolve.ResolvedExpr::If(condition~, then_branch~, else_branch~, ..) =>
+    If(condition~, then_branch~, else_branch~, ..) =>
       self.check_if(scope, condition, then_branch, else_branch, expected)
-    @resolve.ResolvedExpr::QualifiedVariant(
+    QualifiedVariant(
       type_name~,
       type_arguments~,
       variant~,
@@ -48,12 +48,7 @@ fn SemanticChecker::check_expr(
       )
       self.expect_type(expected, actual, loc)
     }
-    @resolve.ResolvedExpr::UnqualifiedVariant(
-      variant~,
-      reference~,
-      arguments~,
-      loc~
-    ) => {
+    UnqualifiedVariant(variant~, reference~, arguments~, loc~) => {
       let actual = self.synthesize_unqualified_variant(
         scope,
         variant,
@@ -64,23 +59,17 @@ fn SemanticChecker::check_expr(
       )
       self.expect_type(expected, actual, loc)
     }
-    @resolve.ResolvedExpr::Call(callee~, arguments~, loc~) =>
+    Call(callee~, arguments~, loc~) =>
       self.check_call(scope, callee, arguments, expected, loc)
-    @resolve.ResolvedExpr::Unary(operator~, reference~, operand~, loc~) =>
+    Unary(operator~, reference~, operand~, loc~) =>
       self.check_unary_operator(
         scope, operator, reference, operand, expected, loc,
       )
-    @resolve.ResolvedExpr::Binary(operator~, reference~, left~, right~, loc~) =>
+    Binary(operator~, reference~, left~, right~, loc~) =>
       self.check_binary_operator(
         scope, operator, reference, left, right, expected, loc,
       )
-    @resolve.ResolvedExpr::FunctionLiteral(
-      type_parameters~,
-      parameters~,
-      return_type~,
-      body~,
-      loc~
-    ) =>
+    FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
       self.check_function_literal(
         scope, type_parameters, parameters, return_type, body, expected, loc,
       )
@@ -105,11 +94,7 @@ fn SemanticChecker::check_if(
   // Gamma |- else <= Expected
   // ---
   // Gamma |- if condition { then } else { else } <= Expected
-  self.check_expr(
-    scope,
-    condition,
-    @types.Type::Primitive(@types.PrimitiveType::Bool),
-  )
+  self.check_expr(scope, condition, Primitive(Bool))
   self.check_expr(scope, then_branch, expected)
   self.check_expr(scope, else_branch, expected)
 }
@@ -133,11 +118,10 @@ fn SemanticChecker::check_block(
   let next_scope : TypeScope = { values: scope.values.copy() }
   for item in items {
     match item {
-      @resolve.ResolvedLocalItem::Let(declaration) =>
-        self.check_local_let(next_scope, declaration)
-      @resolve.ResolvedLocalItem::Function(declaration) =>
+      Let(declaration) => self.check_local_let(next_scope, declaration)
+      Function(declaration) =>
         self.check_local_function(next_scope, declaration)
-      @resolve.ResolvedLocalItem::Open(_) => ()
+      Open(_) => ()
     }
   }
   self.check_expr(next_scope, result, expected)
@@ -157,31 +141,20 @@ fn SemanticChecker::synthesize_expr(
   // needs an adjacent expected type, it must be handled by `check_expr` instead
   // of inventing a non-local type.
   match expr {
-    @resolve.ResolvedExpr::IntLiteral(_, ..) =>
-      @types.Type::Primitive(@types.PrimitiveType::Int)
-    @resolve.ResolvedExpr::StringLiteral(_, ..) =>
-      @types.Type::Primitive(@types.PrimitiveType::String)
-    @resolve.ResolvedExpr::BoolLiteral(_, ..) =>
-      @types.Type::Primitive(@types.PrimitiveType::Bool)
-    @resolve.ResolvedExpr::UnitLiteral(..) =>
-      @types.Type::Primitive(@types.PrimitiveType::Unit)
-    @resolve.ResolvedExpr::Var(name~, reference~, loc~) =>
+    IntLiteral(_, ..) => Primitive(Int)
+    StringLiteral(_, ..) => Primitive(String)
+    BoolLiteral(_, ..) => Primitive(Bool)
+    UnitLiteral(..) => Primitive(Unit)
+    Var(name~, reference~, loc~) =>
       self.synthesize_value_reference(scope, reference, name, loc)
-    @resolve.ResolvedExpr::FunctionLiteral(
-      type_parameters~,
-      parameters~,
-      return_type~,
-      body~,
-      loc~
-    ) =>
+    FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
       self.synthesize_function_literal(
         scope, type_parameters, parameters, return_type, body, loc,
       )
-    @resolve.ResolvedExpr::Block(items~, result~, ..) =>
-      self.synthesize_block(scope, items, result)
-    @resolve.ResolvedExpr::If(condition~, then_branch~, else_branch~, loc~) =>
+    Block(items~, result~, ..) => self.synthesize_block(scope, items, result)
+    If(condition~, then_branch~, else_branch~, loc~) =>
       self.synthesize_if(scope, condition, then_branch, else_branch, loc)
-    @resolve.ResolvedExpr::QualifiedVariant(
+    QualifiedVariant(
       type_name~,
       type_arguments~,
       variant~,
@@ -199,12 +172,7 @@ fn SemanticChecker::synthesize_expr(
         None,
         loc,
       )
-    @resolve.ResolvedExpr::UnqualifiedVariant(
-      variant~,
-      reference~,
-      arguments~,
-      loc~
-    ) =>
+    UnqualifiedVariant(variant~, reference~, arguments~, loc~) =>
       self.synthesize_unqualified_variant(
         scope,
         variant,
@@ -213,38 +181,30 @@ fn SemanticChecker::synthesize_expr(
         None,
         loc,
       )
-    @resolve.ResolvedExpr::Call(callee~, arguments~, loc~) =>
+    Call(callee~, arguments~, loc~) =>
       self.synthesize_call(scope, callee, arguments, loc)
-    @resolve.ResolvedExpr::Field(base~, name~, reference~, loc~) =>
+    Field(base~, name~, reference~, loc~) =>
       self.synthesize_field(scope, base, name, reference, loc)
-    @resolve.ResolvedExpr::Unary(operator~, reference~, operand~, loc~) =>
+    Unary(operator~, reference~, operand~, loc~) =>
       self.synthesize_unary_operator(scope, operator, reference, operand, loc)
-    @resolve.ResolvedExpr::Binary(operator~, reference~, left~, right~, loc~) =>
+    Binary(operator~, reference~, left~, right~, loc~) =>
       self.synthesize_binary_operator(
         scope, operator, reference, left, right, loc,
       )
-    @resolve.ResolvedExpr::StructLiteral(
-      type_name~,
-      type_arguments~,
-      fields~,
-      loc~
-    ) =>
+    StructLiteral(type_name~, type_arguments~, fields~, loc~) =>
       self.synthesize_struct_literal(
         scope, type_name, type_arguments, fields, loc,
       )
-    @resolve.ResolvedExpr::Builtin(_, loc~) => {
-      self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression("builtin"),
-        loc,
-      })
-      @types.Type::Error
+    Builtin(_, loc~) => {
+      self.diagnostics.push({ kind: CannotInferExpression("builtin"), loc })
+      Error
     }
     _ => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression("expression"),
+        kind: CannotInferExpression("expression"),
         loc: resolved_expr_loc(expr),
       })
-      @types.Type::Error
+      Error
     }
   }
 }
@@ -252,24 +212,24 @@ fn SemanticChecker::synthesize_expr(
 ///|
 fn resolved_expr_loc(expr : @resolve.ResolvedExpr) -> SourceSpan {
   match expr {
-    @resolve.ResolvedExpr::IntLiteral(_, loc~)
-    | @resolve.ResolvedExpr::StringLiteral(_, loc~)
-    | @resolve.ResolvedExpr::BoolLiteral(_, loc~)
-    | @resolve.ResolvedExpr::UnitLiteral(loc~)
-    | @resolve.ResolvedExpr::Var(loc~, ..)
-    | @resolve.ResolvedExpr::QualifiedVariant(loc~, ..)
-    | @resolve.ResolvedExpr::UnqualifiedVariant(loc~, ..)
-    | @resolve.ResolvedExpr::StructLiteral(loc~, ..)
-    | @resolve.ResolvedExpr::Builtin(_, loc~)
-    | @resolve.ResolvedExpr::FunctionLiteral(loc~, ..)
-    | @resolve.ResolvedExpr::Block(loc~, ..)
-    | @resolve.ResolvedExpr::If(loc~, ..)
-    | @resolve.ResolvedExpr::Match(loc~, ..)
-    | @resolve.ResolvedExpr::Call(loc~, ..)
-    | @resolve.ResolvedExpr::Field(loc~, ..)
-    | @resolve.ResolvedExpr::Unary(loc~, ..)
-    | @resolve.ResolvedExpr::Binary(loc~, ..)
-    | @resolve.ResolvedExpr::Pipeline(loc~, ..) => loc
+    IntLiteral(_, loc~)
+    | StringLiteral(_, loc~)
+    | BoolLiteral(_, loc~)
+    | UnitLiteral(loc~)
+    | Var(loc~, ..)
+    | QualifiedVariant(loc~, ..)
+    | UnqualifiedVariant(loc~, ..)
+    | StructLiteral(loc~, ..)
+    | Builtin(_, loc~)
+    | FunctionLiteral(loc~, ..)
+    | Block(loc~, ..)
+    | If(loc~, ..)
+    | Match(loc~, ..)
+    | Call(loc~, ..)
+    | Field(loc~, ..)
+    | Unary(loc~, ..)
+    | Binary(loc~, ..)
+    | Pipeline(loc~, ..) => loc
   }
 }
 
@@ -283,11 +243,10 @@ fn SemanticChecker::synthesize_block(
   let next_scope : TypeScope = { values: scope.values.copy() }
   for item in items {
     match item {
-      @resolve.ResolvedLocalItem::Let(declaration) =>
-        self.check_local_let(next_scope, declaration)
-      @resolve.ResolvedLocalItem::Function(declaration) =>
+      Let(declaration) => self.check_local_let(next_scope, declaration)
+      Function(declaration) =>
         self.check_local_function(next_scope, declaration)
-      @resolve.ResolvedLocalItem::Open(_) => ()
+      Open(_) => ()
     }
   }
   self.synthesize_expr(next_scope, result)
@@ -302,11 +261,7 @@ fn SemanticChecker::synthesize_if(
   else_branch : @resolve.ResolvedExpr,
   loc : SourceSpan,
 ) -> @types.Type {
-  self.check_expr(
-    scope,
-    condition,
-    @types.Type::Primitive(@types.PrimitiveType::Bool),
-  )
+  self.check_expr(scope, condition, Primitive(Bool))
   let then_type = self.synthesize_expr(scope, then_branch)
   let else_type = self.synthesize_expr(scope, else_branch)
   self.expect_type(then_type, else_type, loc)
@@ -321,17 +276,14 @@ fn SemanticChecker::expect_type(
   loc : SourceSpan,
 ) -> Unit {
   if !type_matches(expected, actual) {
-    self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::TypeMismatch(expected~, actual~),
-      loc,
-    })
+    self.diagnostics.push({ kind: TypeMismatch(expected~, actual~), loc })
   }
 }
 
 ///|
 fn type_matches(expected : @types.Type, actual : @types.Type) -> Bool {
   match (expected, actual) {
-    (@types.Type::Error, _) | (_, @types.Type::Error) => true
+    (Error, _) | (_, Error) => true
     _ => expected.equals(actual)
   }
 }

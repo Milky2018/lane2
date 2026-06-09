@@ -20,9 +20,7 @@ fn SemanticChecker::check_candidate_reference(
     Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
     NoMatch(name~) =>
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
-          "no matching value reference " + name,
-        ),
+        kind: CannotInferExpression("no matching value reference " + name),
         loc,
       })
   }
@@ -37,18 +35,15 @@ fn SemanticChecker::synthesize_value_reference(
   loc : SourceSpan,
 ) -> @types.Type {
   match reference {
-    @resolve.ResolvedValueReference::Symbol(symbol) =>
+    Symbol(symbol) =>
       match scope.lookup(symbol) {
         Some(type_) => type_
         None => {
-          self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
-            loc,
-          })
-          @types.Type::Error
+          self.diagnostics.push({ kind: UnresolvedValue(name), loc })
+          Error
         }
       }
-    @resolve.ResolvedValueReference::OpenedField(base~, path~) =>
+    OpenedField(base~, path~) =>
       match scope.lookup(base) {
         Some(base_type) =>
           self.declarations.field_path_type(
@@ -59,38 +54,30 @@ fn SemanticChecker::synthesize_value_reference(
             loc,
           )
         None => {
-          self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
-            loc,
-          })
-          @types.Type::Error
+          self.diagnostics.push({ kind: UnresolvedValue(name), loc })
+          Error
         }
       }
-    @resolve.ResolvedValueReference::Candidates(name~, candidates~) => {
+    Candidates(name~, candidates~) => {
       let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
       match @candidates.select_without_context(name, typed_candidates) {
         Selected(candidate) => candidate.type_
         Ambiguous(name~, ..) => {
           self.report_ambiguous_value_reference(name, loc)
-          @types.Type::Error
+          Error
         }
         NoMatch(name~) => {
           self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::CannotInferExpression(
-              "no matching value reference " + name,
-            ),
+            kind: CannotInferExpression("no matching value reference " + name),
             loc,
           })
-          @types.Type::Error
+          Error
         }
       }
     }
-    @resolve.ResolvedValueReference::Unresolved(name) => {
-      self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
-        loc,
-      })
-      @types.Type::Error
+    Unresolved(name) => {
+      self.diagnostics.push({ kind: UnresolvedValue(name), loc })
+      Error
     }
   }
 }
@@ -122,18 +109,15 @@ fn SemanticChecker::typed_candidate(
   loc : SourceSpan,
 ) -> @candidates.TypedCandidate? {
   match reference {
-    @resolve.ResolvedValueReference::Symbol(symbol) =>
+    Symbol(symbol) =>
       match scope.lookup(symbol) {
         Some(type_) => Some({ reference, type_ })
         None => {
-          self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
-            loc,
-          })
+          self.diagnostics.push({ kind: UnresolvedValue(name), loc })
           None
         }
       }
-    @resolve.ResolvedValueReference::OpenedField(base~, path~) =>
+    OpenedField(base~, path~) =>
       match scope.lookup(base) {
         Some(base_type) =>
           Some({
@@ -147,19 +131,13 @@ fn SemanticChecker::typed_candidate(
             ),
           })
         None => {
-          self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
-            loc,
-          })
+          self.diagnostics.push({ kind: UnresolvedValue(name), loc })
           None
         }
       }
-    @resolve.ResolvedValueReference::Candidates(..) => None
-    @resolve.ResolvedValueReference::Unresolved(name) => {
-      self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::UnresolvedValue(name),
-        loc,
-      })
+    Candidates(..) => None
+    Unresolved(name) => {
+      self.diagnostics.push({ kind: UnresolvedValue(name), loc })
       None
     }
   }

@@ -55,7 +55,7 @@ fn TypeArgumentInference::remember(
   parameter : TypeParameterId,
   type_ : @types.Type,
 ) -> Unit {
-  if type_ is @types.Type::Error {
+  if type_ is Error {
     return
   }
   // A later conflict does not rewrite the chosen type argument. The final
@@ -75,21 +75,21 @@ fn TypeArgumentInference::collect(
   // parameters bound by this one forall are remembered, and only from types
   // adjacent to this call.
   match (template, actual) {
-    (@types.Type::Error, _) | (_, @types.Type::Error) => ()
-    (@types.Type::Parameter(parameter), actual) =>
+    (Error, _) | (_, Error) => ()
+    (Parameter(parameter), actual) =>
       if self.tracks(parameter) {
         self.remember(parameter, actual)
       }
     (
-      @types.Type::Nominal(left_symbol, left_arguments),
-      @types.Type::Nominal(right_symbol, right_arguments),
+      Nominal(left_symbol, left_arguments),
+      Nominal(right_symbol, right_arguments),
     ) =>
       if left_symbol == right_symbol {
         self.collect_array(left_arguments, right_arguments)
       }
     (
-      @types.Type::Function(left_parameters, left_result),
-      @types.Type::Function(right_parameters, right_result),
+      Function(left_parameters, left_result),
+      Function(right_parameters, right_result),
     ) => {
       self.collect_array(left_parameters, right_parameters)
       self.collect(left_result, right_result)
@@ -161,12 +161,10 @@ fn SemanticChecker::instantiate_generic_callable(
   //   2. collect result constraints from a checking context, if present;
   //   3. substitute only when every A_i is known;
   //   4. let normal argument/result checking report concrete mismatches.
-  guard body is @types.Type::Function(parameters, result) else {
+  guard body is Function(parameters, result) else {
     if report_failure {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::NotCallable(
-          @types.Type::Forall(type_parameters, body),
-        ),
+        kind: NotCallable(Forall(type_parameters, body)),
         loc,
       })
     }
@@ -174,10 +172,7 @@ fn SemanticChecker::instantiate_generic_callable(
   }
   if parameters.length() != arguments.length() {
     if report_failure {
-      self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression("call arity"),
-        loc,
-      })
+      self.diagnostics.push({ kind: CannotInferExpression("call arity"), loc })
     }
     return None
   }
@@ -194,7 +189,7 @@ fn SemanticChecker::instantiate_generic_callable(
   guard inference.substitution() is Some(substitution) else {
     if report_failure {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression("type arguments"),
+        kind: CannotInferExpression("type arguments"),
         loc,
       })
     }

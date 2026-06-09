@@ -14,7 +14,7 @@ fn SemanticChecker::synthesize_qualified_variant(
     self.check_type(type_)
   })
   match reference {
-    @resolve.ResolvedVariantReference::Symbol(symbol) =>
+    Symbol(symbol) =>
       self.synthesize_variant_symbol(
         scope,
         symbol,
@@ -24,27 +24,25 @@ fn SemanticChecker::synthesize_qualified_variant(
         expected_result,
         loc,
       )
-    @resolve.ResolvedVariantReference::Unresolved(type_name~, variant~) => {
+    Unresolved(type_name~, variant~) => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
+        kind: CannotInferExpression(
           "unresolved variant " + type_name + "::" + variant,
         ),
         loc,
       })
-      @types.Type::Error
+      Error
     }
-    @resolve.ResolvedVariantReference::Ambiguous(name~, ..) => {
+    Ambiguous(name~, ..) => {
       self.report_ambiguous_variant_reference(name, loc)
-      @types.Type::Error
+      Error
     }
-    @resolve.ResolvedVariantReference::UnresolvedUnqualified(name) => {
+    UnresolvedUnqualified(name) => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
-          "unresolved variant " + name,
-        ),
+        kind: CannotInferExpression("unresolved variant " + name),
         loc,
       })
-      @types.Type::Error
+      Error
     }
   }
 }
@@ -60,7 +58,7 @@ fn SemanticChecker::synthesize_unqualified_variant(
   loc : SourceSpan,
 ) -> @types.Type {
   match reference {
-    @resolve.ResolvedVariantReference::Symbol(symbol) =>
+    Symbol(symbol) =>
       self.synthesize_variant_symbol(
         scope,
         symbol,
@@ -70,27 +68,25 @@ fn SemanticChecker::synthesize_unqualified_variant(
         expected_result,
         loc,
       )
-    @resolve.ResolvedVariantReference::Ambiguous(name~, ..) => {
+    Ambiguous(name~, ..) => {
       self.report_ambiguous_variant_reference(name, loc)
-      @types.Type::Error
+      Error
     }
-    @resolve.ResolvedVariantReference::UnresolvedUnqualified(name) => {
+    UnresolvedUnqualified(name) => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
-          "unresolved variant " + name,
-        ),
+        kind: CannotInferExpression("unresolved variant " + name),
         loc,
       })
-      @types.Type::Error
+      Error
     }
-    @resolve.ResolvedVariantReference::Unresolved(type_name~, variant~) => {
+    Unresolved(type_name~, variant~) => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
+        kind: CannotInferExpression(
           "unresolved variant " + type_name + "::" + variant,
         ),
         loc,
       })
-      @types.Type::Error
+      Error
     }
   }
 }
@@ -108,37 +104,28 @@ fn SemanticChecker::synthesize_variant_symbol(
 ) -> @types.Type {
   guard self.source.symbols.variant_metadata(symbol) is Some(metadata) else {
     self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::CannotInferExpression(
-        "unknown variant " + display_name,
-      ),
+      kind: CannotInferExpression("unknown variant " + display_name),
       loc,
     })
-    return @types.Type::Error
+    return Error
   }
   guard self.declarations.checked_enum(metadata.owner) is Some(declaration) else {
     self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::CannotInferExpression(
-        "unknown variant owner " + display_name,
-      ),
+      kind: CannotInferExpression("unknown variant owner " + display_name),
       loc,
     })
-    return @types.Type::Error
+    return Error
   }
   guard declaration.variant(symbol) is Some(variant_declaration) else {
     self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::CannotInferExpression(
-        "unknown variant " + display_name,
-      ),
+      kind: CannotInferExpression("unknown variant " + display_name),
       loc,
     })
-    return @types.Type::Error
+    return Error
   }
   if variant_declaration.payload.length() != arguments.length() {
-    self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::CannotInferExpression("variant arity"),
-      loc,
-    })
-    return @types.Type::Nominal(metadata.owner, explicit_type_arguments)
+    self.diagnostics.push({ kind: CannotInferExpression("variant arity"), loc })
+    return Nominal(metadata.owner, explicit_type_arguments)
   }
   let type_arguments = if explicit_type_arguments.is_empty() &&
     !declaration.type_parameters.is_empty() {
@@ -147,7 +134,7 @@ fn SemanticChecker::synthesize_variant_symbol(
         scope, declaration, variant_declaration, arguments, expected_result, loc,
       ) {
       Some(type_arguments) => type_arguments
-      None => return @types.Type::Error
+      None => return Error
     }
   } else {
     check_type_arity(
@@ -171,7 +158,7 @@ fn SemanticChecker::synthesize_variant_symbol(
       variant_declaration.payload[index].substitute(substitution),
     )
   }
-  @types.Type::Nominal(metadata.owner, type_arguments)
+  Nominal(metadata.owner, type_arguments)
 }
 
 ///|
@@ -190,9 +177,7 @@ fn SemanticChecker::infer_variant_type_arguments(
   if expected_result is Some(expected) {
     let result_template = @types.Type::Nominal(
       declaration.symbol,
-      declaration.type_parameters.map(fn(parameter) {
-        @types.Type::Parameter(parameter.id)
-      }),
+      declaration.type_parameters.map(fn(parameter) { Parameter(parameter.id) }),
     )
     inference.collect(result_template, expected)
   }
@@ -203,10 +188,7 @@ fn SemanticChecker::infer_variant_type_arguments(
     }
   }
   guard inference.substitution() is Some(substitution) else {
-    self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::CannotInferExpression("type arguments"),
-      loc,
-    })
+    self.diagnostics.push({ kind: CannotInferExpression("type arguments"), loc })
     return None
   }
   Some(
@@ -257,18 +239,15 @@ fn SemanticChecker::synthesize_struct_literal(
       let struct_declaration = match self.declarations.checked_struct(symbol) {
         Some(declaration) => declaration
         None => {
-          self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::NotAStruct(type_),
-            loc,
-          })
-          return @types.Type::Error
+          self.diagnostics.push({ kind: NotAStruct(type_), loc })
+          return Error
         }
       }
       let seen = []
       for field in fields {
         if seen.contains(field.name) {
           self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::DuplicateField(name=field.name),
+            kind: DuplicateField(name=field.name),
             loc: field.loc,
           })
         } else {
@@ -290,7 +269,7 @@ fn SemanticChecker::synthesize_struct_literal(
                   Some(actual) => self.expect_type(expected, actual, field.loc)
                   None =>
                     self.diagnostics.push({
-                      kind: TypeCheckDiagnosticKind::UnresolvedValue(field.name),
+                      kind: UnresolvedValue(field.name),
                       loc: field.loc,
                     })
                 }
@@ -298,27 +277,21 @@ fn SemanticChecker::synthesize_struct_literal(
           }
           None =>
             self.diagnostics.push({
-              kind: TypeCheckDiagnosticKind::UnknownField(name=field.name),
+              kind: UnknownField(name=field.name),
               loc: field.loc,
             })
         }
       }
       for field in struct_declaration.fields {
         if !seen.contains(field.name) {
-          self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::MissingField(name=field.name),
-            loc,
-          })
+          self.diagnostics.push({ kind: MissingField(name=field.name), loc })
         }
       }
       type_
     }
     None => {
-      self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::UnresolvedType(type_name),
-        loc,
-      })
-      @types.Type::Error
+      self.diagnostics.push({ kind: UnresolvedType(type_name), loc })
+      Error
     }
   }
 }
@@ -334,7 +307,7 @@ fn SemanticChecker::synthesize_field(
 ) -> @types.Type {
   let base_type = self.synthesize_expr(scope, base)
   match reference {
-    @resolve.ResolvedFieldReference::Symbol(field) =>
+    Symbol(field) =>
       self.declarations.field_type(
         self.diagnostics,
         base_type,
@@ -342,16 +315,13 @@ fn SemanticChecker::synthesize_field(
         name,
         loc,
       )
-    @resolve.ResolvedFieldReference::Unresolved(..) => {
-      self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::UnknownField(name~),
-        loc,
-      })
-      @types.Type::Error
+    Unresolved(..) => {
+      self.diagnostics.push({ kind: UnknownField(name~), loc })
+      Error
     }
-    @resolve.ResolvedFieldReference::Deferred(_) =>
+    Deferred(_) =>
       match base_type {
-        @types.Type::Nominal(symbol, _) =>
+        Nominal(symbol, _) =>
           match self.source.symbols.field_named(symbol, name) {
             Some(field) =>
               self.declarations.field_type(
@@ -362,20 +332,14 @@ fn SemanticChecker::synthesize_field(
                 loc,
               )
             None => {
-              self.diagnostics.push({
-                kind: TypeCheckDiagnosticKind::UnknownField(name~),
-                loc,
-              })
-              @types.Type::Error
+              self.diagnostics.push({ kind: UnknownField(name~), loc })
+              Error
             }
           }
-        @types.Type::Error => @types.Type::Error
+        Error => Error
         _ => {
-          self.diagnostics.push({
-            kind: TypeCheckDiagnosticKind::NotAStruct(base_type),
-            loc,
-          })
-          @types.Type::Error
+          self.diagnostics.push({ kind: NotAStruct(base_type), loc })
+          Error
         }
       }
   }

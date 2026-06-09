@@ -16,7 +16,7 @@ fn expect_resolved_body(source : String, name : String) -> ResolvedExpr {
   let resolved = resolve_source_file(file)
   for declaration in resolved.declarations {
     match declaration {
-      ResolvedTopLevelDeclaration::Function(declaration) =>
+      Function(declaration) =>
         if declaration.name == name {
           return declaration.body
         }

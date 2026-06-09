@@ -75,7 +75,7 @@ test "skip comments and preserve following token positions" {
     result.tokens[0] ==
     (
       LET,
-      SourceSpan::{
+      {
         start_offset: 10,
         end_offset: 13,
         start_line: 2,
@@ -89,7 +89,7 @@ test "skip comments and preserve following token positions" {
     result.tokens[1] ==
     (
       IDENT("x"),
-      SourceSpan::{
+      {
         start_offset: 31,
         end_offset: 32,
         start_line: 2,

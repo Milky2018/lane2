@@ -20,13 +20,11 @@ fn SemanticChecker::synthesize_function_literal(
       }
       None => {
         self.diagnostics.push({
-          kind: TypeCheckDiagnosticKind::CannotInferExpression(
-            "function literal parameter",
-          ),
+          kind: CannotInferExpression("function literal parameter"),
           loc: parameter.loc,
         })
-        body_scope.bind(parameter.symbol, parameter.name, @types.Type::Error)
-        parameter_types.push(@types.Type::Error)
+        body_scope.bind(parameter.symbol, parameter.name, Error)
+        parameter_types.push(Error)
       }
     }
   }
@@ -42,7 +40,7 @@ fn SemanticChecker::synthesize_function_literal(
   if type_parameters.is_empty() {
     type_
   } else {
-    @types.Type::Forall(type_parameters.map(checked_type_parameter), type_)
+    Forall(type_parameters.map(checked_type_parameter), type_)
   }
 }
 
@@ -58,17 +56,15 @@ fn SemanticChecker::check_function_literal(
   loc : SourceSpan,
 ) -> Unit {
   match expected {
-    @types.Type::Forall(expected_parameters, expected_body) =>
+    Forall(expected_parameters, expected_body) =>
       self.check_generic_function_literal(
         scope, type_parameters, expected_parameters, expected_body, parameters, return_type,
         body, loc,
       )
-    @types.Type::Function(expected_parameters, expected_result) => {
+    Function(expected_parameters, expected_result) => {
       if !type_parameters.is_empty() {
         self.diagnostics.push({
-          kind: TypeCheckDiagnosticKind::CannotInferExpression(
-            "generic function arity",
-          ),
+          kind: CannotInferExpression("generic function arity"),
           loc,
         })
         return
@@ -82,7 +78,7 @@ fn SemanticChecker::check_function_literal(
       // function type.
       if expected_parameters.length() != parameters.length() {
         self.diagnostics.push({
-          kind: TypeCheckDiagnosticKind::CannotInferExpression("function arity"),
+          kind: CannotInferExpression("function arity"),
           loc,
         })
         return
@@ -116,7 +112,7 @@ fn SemanticChecker::check_function_literal(
       }
       self.check_expr(body_scope, body, expected_result)
     }
-    @types.Type::Error => ()
+    Error => ()
     _ => {
       let actual = self.synthesize_function_literal(
         scope, type_parameters, parameters, return_type, body, loc,
@@ -143,9 +139,7 @@ fn SemanticChecker::check_generic_function_literal(
   // expected forall parameters with those local parameters.
   if type_parameters.length() != expected_parameters.length() {
     self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::CannotInferExpression(
-        "generic function arity",
-      ),
+      kind: CannotInferExpression("generic function arity"),
       loc,
     })
     return
@@ -154,7 +148,7 @@ fn SemanticChecker::check_generic_function_literal(
   for index in 0..<expected_parameters.length() {
     substitution.insert(
       expected_parameters[index].id,
-      @types.Type::Parameter(type_parameters[index].symbol),
+      Parameter(type_parameters[index].symbol),
     )
   }
   self.check_function_literal(

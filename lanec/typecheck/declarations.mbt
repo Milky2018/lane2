@@ -15,19 +15,19 @@ pub fn typecheck_declarations(
   let variants = []
   for declaration in source.declarations {
     match declaration {
-      @resolve.ResolvedTopLevelDeclaration::Struct(declaration) => {
+      Struct(declaration) => {
         let checked = checker.check_struct(declaration)
         for field in checked.fields {
           fields.push(field)
         }
         types.push(CheckedTypeDeclaration::Struct(checked))
       }
-      @resolve.ResolvedTopLevelDeclaration::Enum(declaration) => {
+      Enum(declaration) => {
         let checked = checker.check_enum(declaration)
         for variant in checked.variants {
           variants.push(variant)
         }
-        types.push(CheckedTypeDeclaration::Enum(checked))
+        types.push(Enum(checked))
       }
       _ => ()
     }
@@ -46,9 +46,8 @@ fn DeclarationChecker::check_struct(
   let fields = []
   for item in declaration.members {
     match item {
-      @resolve.ResolvedStructMember::Field(field) =>
-        fields.push(self.check_field(field))
-      @resolve.ResolvedStructMember::Open(_) => ()
+      Field(field) => fields.push(self.check_field(field))
+      Open(_) => ()
     }
   }
   {
@@ -121,9 +120,8 @@ fn check_resolved_type(
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
   match type_ {
-    @resolve.ResolvedType::Primitive(primitive, ..) =>
-      @types.Type::Primitive(primitive)
-    @resolve.ResolvedType::Nominal(symbol~, name~, arguments~, loc~) => {
+    Primitive(primitive, ..) => Primitive(primitive)
+    Nominal(symbol~, name~, arguments~, loc~) => {
       let checked_arguments = arguments.map(fn(argument) {
         check_resolved_type(source, diagnostics, argument)
       })
@@ -135,11 +133,10 @@ fn check_resolved_type(
         checked_arguments.length(),
         loc,
       )
-      @types.Type::Nominal(symbol, checked_arguments)
+      Nominal(symbol, checked_arguments)
     }
-    @resolve.ResolvedType::Parameter(symbol~, ..) =>
-      @types.Type::Parameter(symbol)
-    @resolve.ResolvedType::Function(type_parameters~, parameters~, result~, ..) => {
+    Parameter(symbol~, ..) => Parameter(symbol)
+    Function(type_parameters~, parameters~, result~, ..) => {
       let checked_parameters = parameters.map(fn(parameter) {
         check_resolved_type(source, diagnostics, parameter)
       })
@@ -150,21 +147,15 @@ fn check_resolved_type(
       if type_parameters.is_empty() {
         function_type
       } else {
-        @types.Type::Forall(
-          type_parameters.map(checked_type_parameter),
-          function_type,
-        )
+        Forall(type_parameters.map(checked_type_parameter), function_type)
       }
     }
-    @resolve.ResolvedType::Unresolved(name~, arguments~, loc~) => {
+    Unresolved(name~, arguments~, loc~) => {
       for argument in arguments {
         ignore(check_resolved_type(source, diagnostics, argument))
       }
-      diagnostics.push({
-        kind: TypeCheckDiagnosticKind::UnresolvedType(name),
-        loc,
-      })
-      @types.Type::Error
+      diagnostics.push({ kind: UnresolvedType(name), loc })
+      Error
     }
   }
 }
@@ -182,7 +173,7 @@ fn check_type_arity(
     Some(metadata) =>
       if metadata.arity != actual {
         diagnostics.push({
-          kind: TypeCheckDiagnosticKind::TypeArgumentArityMismatch(
+          kind: TypeArgumentArityMismatch(
             name~,
             expected=metadata.arity,
             actual~,
@@ -198,5 +189,5 @@ fn check_type_arity(
 fn checked_type_parameter(
   parameter : @resolve.ResolvedTypeParameter,
 ) -> @types.TypeParameter {
-  { id: parameter.symbol, name: parameter.name, kind: @types.Kind::Type }
+  { id: parameter.symbol, name: parameter.name, kind: Type }
 }

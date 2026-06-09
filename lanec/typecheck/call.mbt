@@ -14,9 +14,9 @@ fn SemanticChecker::synthesize_call(
   // In synthesis mode the result type must come from the callee. Candidate
   // callees are selected by checking the adjacent arguments only.
   match callee {
-    @resolve.ResolvedExpr::Var(name~, reference~, loc=callee_loc) =>
+    Var(name~, reference~, loc=callee_loc) =>
       match reference {
-        @resolve.ResolvedValueReference::Candidates(candidates~, ..) =>
+        Candidates(candidates~, ..) =>
           return self.synthesize_candidate_call(
             scope, name, candidates, arguments, callee_loc,
           )
@@ -43,27 +43,24 @@ fn SemanticChecker::synthesize_callable_call(
   loc : SourceSpan,
 ) -> @types.Type {
   match callee_type {
-    @types.Type::Function(parameters, result) => {
+    Function(parameters, result) => {
       self.check_call_arguments(scope, parameters, arguments, loc)
       result
     }
-    @types.Type::Forall(type_parameters, body) => {
+    Forall(type_parameters, body) => {
       guard self.instantiate_generic_callable(
           scope, type_parameters, body, arguments, expected_result, loc, true,
         )
         is Some(instantiated) else {
-        return @types.Type::Error
+        return Error
       }
       self.check_call_arguments(scope, instantiated.parameters, arguments, loc)
       instantiated.result
     }
-    @types.Type::Error => @types.Type::Error
+    Error => Error
     type_ => {
-      self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::NotCallable(type_),
-        loc,
-      })
-      @types.Type::Error
+      self.diagnostics.push({ kind: NotCallable(type_), loc })
+      Error
     }
   }
 }
@@ -90,16 +87,16 @@ fn SemanticChecker::synthesize_candidate_call(
     Selected(candidate) => candidate.result
     Ambiguous(name~, ..) => {
       self.report_ambiguous_value_reference(name, loc)
-      @types.Type::Error
+      Error
     }
     NoMatch(name~) => {
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
+        kind: CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,
       })
-      @types.Type::Error
+      Error
     }
   }
 }
@@ -121,9 +118,9 @@ fn SemanticChecker::check_call(
   // For open candidate callees, Expected also filters the candidate result type
   // before arguments are checked under the candidate's parameter types.
   match callee {
-    @resolve.ResolvedExpr::Var(name~, reference~, loc=callee_loc) =>
+    Var(name~, reference~, loc=callee_loc) =>
       match reference {
-        @resolve.ResolvedValueReference::Candidates(candidates~, ..) => {
+        Candidates(candidates~, ..) => {
           self.check_candidate_call(
             scope, name, candidates, arguments, expected, callee_loc,
           )
@@ -168,7 +165,7 @@ fn SemanticChecker::check_candidate_call(
     Ambiguous(name~, ..) => self.report_ambiguous_value_reference(name, loc)
     NoMatch(name~) =>
       self.diagnostics.push({
-        kind: TypeCheckDiagnosticKind::CannotInferExpression(
+        kind: CannotInferExpression(
           "no matching callable value reference " + name,
         ),
         loc,
@@ -223,7 +220,7 @@ fn SemanticChecker::viable_callable_candidate(
   loc : SourceSpan,
 ) -> @candidates.CallableCandidate? {
   match candidate.type_ {
-    @types.Type::Function(parameters, result) => {
+    Function(parameters, result) => {
       if !self.result_matches_expected(result, expected_result) {
         return None
       }
@@ -243,7 +240,7 @@ fn SemanticChecker::viable_callable_candidate(
         None
       }
     }
-    @types.Type::Forall(type_parameters, body) => {
+    Forall(type_parameters, body) => {
       guard self.instantiate_generic_callable(
           scope, type_parameters, body, arguments, expected_result, loc, false,
         )
@@ -301,10 +298,7 @@ fn SemanticChecker::check_call_arguments(
   // Argument checking is the direct-context step for calls: parameter types flow
   // down to each adjacent argument expression.
   if parameters.length() != arguments.length() {
-    self.diagnostics.push({
-      kind: TypeCheckDiagnosticKind::CannotInferExpression("call arity"),
-      loc,
-    })
+    self.diagnostics.push({ kind: CannotInferExpression("call arity"), loc })
     return
   }
   for index in 0..<parameters.length() {

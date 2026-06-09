@@ -35,12 +35,7 @@ pub fn resolve_source_file_result(source : @syntax.SourceFile) -> ResolveResult 
 
 ///|
 fn Resolver::Resolver(registry : SymbolRegistry) -> Resolver {
-  {
-    registry,
-    top_values: [],
-    diagnostics: [],
-    members: NominalMembers::NominalMembers(),
-  }
+  { registry, top_values: [], diagnostics: [], members: NominalMembers() }
 }
 
 ///|
