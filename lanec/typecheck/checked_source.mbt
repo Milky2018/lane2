@@ -1,0 +1,328 @@
+///|
+/// Checks a resolved source file and returns a complete Checked Source AST when
+/// every top-level body can currently be represented in `lanec/checked`.
+pub fn typecheck_checked_source_file(
+  source : @resolve.ResolvedSourceFile,
+) -> CheckedSourceTypeCheckResult {
+  let declaration_result = typecheck_declarations(source)
+  let checker = SemanticChecker::{
+    source,
+    declarations: declaration_result.declarations,
+    diagnostics: declaration_result.diagnostics.copy(),
+    values: [],
+    value_types: [],
+  }
+  checker.collect_top_level_function_types()
+  let checked_declarations : Array[@checked.CheckedTopLevelDeclaration] = []
+  let mut complete = true
+  for declaration in source.declarations {
+    if declaration is Open(_) {
+      continue
+    } else {
+      match checker.check_checked_top_level_declaration(declaration) {
+        Some(declaration) => checked_declarations.push(declaration)
+        None => complete = false
+      }
+    }
+  }
+  let checked_source = if complete && checker.diagnostics.is_empty() {
+    Some(@checked.CheckedSourceFile::{
+      declarations: checked_declarations,
+      loc: source.loc,
+    })
+  } else {
+    None
+  }
+  { source: checked_source, diagnostics: checker.diagnostics }
+}
+
+///|
+fn SemanticChecker::check_checked_top_level_declaration(
+  self : SemanticChecker,
+  declaration : @resolve.ResolvedTopLevelDeclaration,
+) -> @checked.CheckedTopLevelDeclaration? {
+  match declaration {
+    Struct(declaration) => self.checked_top_level_struct(declaration)
+    Enum(declaration) => self.checked_top_level_enum(declaration)
+    Function(declaration) => self.checked_top_level_function(declaration)
+    Let(declaration) => self.checked_top_level_let(declaration)
+    Open(_) => abort("top-level open should be skipped before elaboration")
+  }
+}
+
+///|
+fn SemanticChecker::checked_top_level_struct(
+  self : SemanticChecker,
+  declaration : @resolve.ResolvedStructDeclaration,
+) -> @checked.CheckedTopLevelDeclaration? {
+  guard self.declarations.checked_struct(declaration.symbol) is Some(checked) else {
+    self.diagnostics.push({
+      kind: CannotInferExpression("checked struct " + declaration.name),
+      loc: declaration.loc,
+    })
+    return None
+  }
+  Some(Struct(checked.to_checked_struct_declaration()))
+}
+
+///|
+fn SemanticChecker::checked_top_level_enum(
+  self : SemanticChecker,
+  declaration : @resolve.ResolvedEnumDeclaration,
+) -> @checked.CheckedTopLevelDeclaration? {
+  guard self.declarations.checked_enum(declaration.symbol) is Some(checked) else {
+    self.diagnostics.push({
+      kind: CannotInferExpression("checked enum " + declaration.name),
+      loc: declaration.loc,
+    })
+    return None
+  }
+  Some(Enum(checked.to_checked_enum_declaration()))
+}
+
+///|
+fn SemanticChecker::checked_top_level_function(
+  self : SemanticChecker,
+  declaration : @resolve.ResolvedFunctionDeclaration,
+) -> @checked.CheckedTopLevelDeclaration? {
+  let body_scope = self.root_scope()
+  let parameters = declaration.parameters.map(fn(parameter) {
+    self.checked_value_parameter(parameter)
+  })
+  for parameter in parameters {
+    body_scope.bind(parameter.symbol, parameter.name, parameter.type_)
+  }
+  let return_type = self.check_type(declaration.return_type)
+  let checked_body = self.check_checked_expr(
+    body_scope,
+    declaration.body,
+    return_type,
+  )
+  guard self.require_checked_expression(
+      checked_body,
+      resolved_expr_loc(declaration.body),
+      "function body",
+    )
+    is Some(body) else {
+    return None
+  }
+  Some(
+    Function({
+      symbol: declaration.symbol,
+      name: declaration.name,
+      type_parameters: declaration.type_parameters.map(checked_type_parameter),
+      parameters,
+      return_type,
+      body,
+      type_: self.function_type(
+        declaration.type_parameters,
+        declaration.parameters,
+        declaration.return_type,
+      ),
+      loc: declaration.loc,
+    }),
+  )
+}
+
+///|
+fn SemanticChecker::checked_top_level_let(
+  self : SemanticChecker,
+  declaration : @resolve.ResolvedLetDeclaration,
+) -> @checked.CheckedTopLevelDeclaration? {
+  let type_ = if declaration.type_annotation is Some(type_annotation) {
+    self.check_type(type_annotation)
+  } else {
+    self.diagnostics.push({
+      kind: MissingTopLevelLetAnnotation,
+      loc: declaration.loc,
+    })
+    self.synthesize_expr(self.root_scope(), declaration.initializer)
+  }
+  let checked_initializer = self.check_checked_expr(
+    self.root_scope(),
+    declaration.initializer,
+    type_,
+  )
+  self.value_types.push({
+    symbol: declaration.symbol,
+    name: declaration.name.unwrap_or("<anonymous>"),
+    type_,
+  })
+  self.values.push(
+    Let({
+      symbol: declaration.symbol,
+      name: declaration.name,
+      type_,
+      loc: declaration.loc,
+    }),
+  )
+  guard self.require_checked_expression(
+      checked_initializer,
+      resolved_expr_loc(declaration.initializer),
+      "let initializer",
+    )
+    is Some(initializer) else {
+    return None
+  }
+  Some(
+    Let({
+      symbol: declaration.symbol,
+      name: declaration.name,
+      initializer,
+      type_,
+      loc: declaration.loc,
+    }),
+  )
+}
+
+///|
+fn SemanticChecker::check_checked_local_let(
+  self : SemanticChecker,
+  scope : TypeScope,
+  declaration : @resolve.ResolvedLetDeclaration,
+) -> @checked.CheckedLetDeclaration? {
+  let type_ = if declaration.type_annotation is Some(type_annotation) {
+    self.check_type(type_annotation)
+  } else {
+    self.synthesize_expr(scope, declaration.initializer)
+  }
+  let checked_initializer = self.check_checked_expr(
+    scope,
+    declaration.initializer,
+    type_,
+  )
+  scope.bind(
+    declaration.symbol,
+    declaration.name.unwrap_or("<anonymous>"),
+    type_,
+  )
+  guard self.require_checked_expression(
+      checked_initializer,
+      resolved_expr_loc(declaration.initializer),
+      "local let initializer",
+    )
+    is Some(initializer) else {
+    return None
+  }
+  Some({
+    symbol: declaration.symbol,
+    name: declaration.name,
+    initializer,
+    type_,
+    loc: declaration.loc,
+  })
+}
+
+///|
+fn SemanticChecker::check_checked_local_function(
+  self : SemanticChecker,
+  scope : TypeScope,
+  declaration : @resolve.ResolvedFunctionDeclaration,
+) -> @checked.CheckedFunctionDeclaration? {
+  let type_ = self.function_type(
+    declaration.type_parameters,
+    declaration.parameters,
+    declaration.return_type,
+  )
+  scope.bind(declaration.symbol, declaration.name, type_)
+  let body_scope : TypeScope = { values: scope.values.copy() }
+  let parameters = declaration.parameters.map(fn(parameter) {
+    self.checked_value_parameter(parameter)
+  })
+  for parameter in parameters {
+    body_scope.bind(parameter.symbol, parameter.name, parameter.type_)
+  }
+  let return_type = self.check_type(declaration.return_type)
+  let checked_body = self.check_checked_expr(
+    body_scope,
+    declaration.body,
+    return_type,
+  )
+  guard self.require_checked_expression(
+      checked_body,
+      resolved_expr_loc(declaration.body),
+      "local function body",
+    )
+    is Some(body) else {
+    return None
+  }
+  Some({
+    symbol: declaration.symbol,
+    name: declaration.name,
+    type_parameters: declaration.type_parameters.map(checked_type_parameter),
+    parameters,
+    return_type,
+    body,
+    type_,
+    loc: declaration.loc,
+  })
+}
+
+///|
+fn SemanticChecker::checked_value_parameter(
+  self : SemanticChecker,
+  parameter : @resolve.ResolvedValueParameter,
+) -> @checked.CheckedValueParameter {
+  {
+    symbol: parameter.symbol,
+    name: parameter.name,
+    type_: self.check_type(parameter.type_),
+    loc: parameter.loc,
+  }
+}
+
+///|
+fn CheckedStructDeclaration::to_checked_struct_declaration(
+  self : CheckedStructDeclaration,
+) -> @checked.CheckedStructDeclaration {
+  {
+    symbol: self.symbol,
+    name: self.name,
+    type_parameters: self.type_parameters,
+    fields: self.fields.map(
+      CheckedFieldDeclaration::to_checked_field_declaration,
+    ),
+    loc: self.loc,
+  }
+}
+
+///|
+fn CheckedFieldDeclaration::to_checked_field_declaration(
+  self : CheckedFieldDeclaration,
+) -> @checked.CheckedFieldDeclaration {
+  {
+    symbol: self.symbol,
+    name: self.name,
+    index: self.index,
+    type_: self.type_,
+    loc: self.loc,
+  }
+}
+
+///|
+fn CheckedEnumDeclaration::to_checked_enum_declaration(
+  self : CheckedEnumDeclaration,
+) -> @checked.CheckedEnumDeclaration {
+  {
+    symbol: self.symbol,
+    name: self.name,
+    type_parameters: self.type_parameters,
+    variants: self.variants.map(
+      CheckedVariantDeclaration::to_checked_variant_declaration,
+    ),
+    loc: self.loc,
+  }
+}
+
+///|
+fn CheckedVariantDeclaration::to_checked_variant_declaration(
+  self : CheckedVariantDeclaration,
+) -> @checked.CheckedVariantDeclaration {
+  {
+    symbol: self.symbol,
+    name: self.name,
+    index: self.index,
+    payload: self.payload,
+    loc: self.loc,
+  }
+}

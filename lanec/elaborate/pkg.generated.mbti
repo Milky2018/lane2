@@ -1,11 +1,25 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "Milky2018/lane2/elaborate"
 
+import {
+  "Milky2018/lane2/checked",
+  "Milky2018/lane2/resolve",
+  "Milky2018/lane2/typecheck",
+  "moonbit-community/prettyprinter",
+  "moonbitlang/core/debug",
+}
+
 // Values
+pub fn elaborate_resolved_source_file(@resolve.ResolvedSourceFile) -> ElaborateResult
 
 // Errors
 
 // Types and methods
+pub(all) struct ElaborateResult {
+  source : @checked.CheckedSourceFile?
+  diagnostics : Array[@typecheck.TypeCheckDiagnostic]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ElaborateResult
 
 // Type aliases
 

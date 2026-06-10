@@ -1,2 +1,12 @@
 import {
+  "Milky2018/lane2/checked",
+  "Milky2018/lane2/pretty",
+  "Milky2018/lane2/resolve",
+  "Milky2018/lane2/typecheck",
+  "moonbit-community/prettyprinter",
 }
+
+import {
+  "Milky2018/lane2/parser",
+  "Milky2018/lane2/syntax",
+} for "wbtest"

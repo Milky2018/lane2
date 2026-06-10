@@ -12,6 +12,12 @@ pub(all) struct TypeCheckResult {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct CheckedSourceTypeCheckResult {
+  source : @checked.CheckedSourceFile?
+  diagnostics : Array[TypeCheckDiagnostic]
+} derive(Debug, Eq)
+
+///|
 pub(all) struct CheckedDeclarationEnvironment {
   types : Array[CheckedTypeDeclaration]
   fields : Array[CheckedFieldDeclaration]

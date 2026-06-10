@@ -3,6 +3,7 @@ package "Milky2018/lane2/typecheck"
 
 import {
   "Milky2018/lane2/basic",
+  "Milky2018/lane2/checked",
   "Milky2018/lane2/resolve",
   "Milky2018/lane2/symbol",
   "Milky2018/lane2/types",
@@ -11,6 +12,8 @@ import {
 }
 
 // Values
+pub fn typecheck_checked_source_file(@resolve.ResolvedSourceFile) -> CheckedSourceTypeCheckResult
+
 pub fn typecheck_declarations(@resolve.ResolvedSourceFile) -> DeclarationTypeCheckResult
 
 pub fn typecheck_source_file(@resolve.ResolvedSourceFile) -> TypeCheckResult
@@ -58,6 +61,11 @@ pub(all) struct CheckedLetDeclaration {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedLetDeclaration
+
+pub(all) struct CheckedSourceTypeCheckResult {
+  source : @checked.CheckedSourceFile?
+  diagnostics : Array[TypeCheckDiagnostic]
+} derive(Eq, @debug.Debug)
 
 pub(all) struct CheckedStructDeclaration {
   symbol : @symbol.TypeSymbolId

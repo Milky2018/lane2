@@ -2,17 +2,7 @@
 priv struct CheckedExpressionSynthesis {
   expression : @checked.CheckedExpr?
   type_ : @types.Type
-}
-
-///|
-fn discard_checked_expression(checked : CheckedExpressionSynthesis) -> Unit {
-  // TODO(checked-source): remove this once SemanticChecker stores checked
-  // top-level and local bodies in a complete CheckedSourceFile result. The
-  // current semantic path constructs checked nodes for diagnostics parity, then
-  // discards them to keep the existing public TypeCheckResult stable.
-  match checked.expression {
-    Some(_) | None => ()
-  }
+  missing_reported : Bool
 }
 
 ///|
@@ -32,6 +22,16 @@ fn SemanticChecker::check_checked_expr(
   match expression {
     Builtin(name, loc~) =>
       checked_expression(UnsafeBuiltin(name~, type_=expected, loc~), expected)
+    IntLiteral(_, ..)
+    | StringLiteral(_, ..)
+    | BoolLiteral(_, ..)
+    | UnitLiteral(..) => {
+      let checked = self.synthesize_checked_expr(scope, expression)
+      self.expect_type(expected, checked.type_, resolved_expr_loc(expression))
+      checked
+    }
+    Block(items~, result~, loc~) =>
+      self.check_checked_block(scope, items, result, expected, loc)
     Var(name~, reference~, loc~) =>
       match reference {
         Candidates(candidates~, ..) =>
@@ -93,9 +93,55 @@ fn SemanticChecker::synthesize_checked_expr(
       self.synthesize_checked_value_reference(scope, reference, name, loc)
     Builtin(_, loc~) => {
       self.diagnostics.push({ kind: CannotInferExpression("builtin"), loc })
-      checked_expression_none(Error)
+      checked_expression_none_reported(Error)
     }
     _ => checked_expression_none(self.synthesize_expr(scope, expression))
+  }
+}
+
+///|
+fn SemanticChecker::check_checked_block(
+  self : SemanticChecker,
+  scope : TypeScope,
+  items : Array[@resolve.ResolvedLocalItem],
+  result : @resolve.ResolvedExpr,
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let next_scope : TypeScope = { values: scope.values.copy() }
+  let checked_items : Array[@checked.CheckedLocalItem] = []
+  let mut complete = true
+  for item in items {
+    match item {
+      Let(declaration) =>
+        match self.check_checked_local_let(next_scope, declaration) {
+          Some(declaration) => checked_items.push(Let(declaration))
+          None => complete = false
+        }
+      Function(declaration) =>
+        match self.check_checked_local_function(next_scope, declaration) {
+          Some(declaration) => checked_items.push(Function(declaration))
+          None => complete = false
+        }
+      Open(_) => ()
+    }
+  }
+  let checked_result = self.check_checked_expr(next_scope, result, expected)
+  guard self.require_checked_expression(
+      checked_result,
+      resolved_expr_loc(result),
+      "block result",
+    )
+    is Some(result) else {
+    return checked_expression_none_reported(expected)
+  }
+  if complete {
+    checked_expression(
+      Block(items=checked_items, result~, type_=expected, loc~),
+      expected,
+    )
+  } else {
+    checked_expression_none_reported(expected)
   }
 }
 
@@ -242,10 +288,38 @@ fn checked_expression(
   expression : @checked.CheckedExpr,
   type_ : @types.Type,
 ) -> CheckedExpressionSynthesis {
-  { expression: Some(expression), type_ }
+  { expression: Some(expression), type_, missing_reported: false }
 }
 
 ///|
 fn checked_expression_none(type_ : @types.Type) -> CheckedExpressionSynthesis {
-  { expression: None, type_ }
+  { expression: None, type_, missing_reported: false }
+}
+
+///|
+fn checked_expression_none_reported(
+  type_ : @types.Type,
+) -> CheckedExpressionSynthesis {
+  { expression: None, type_, missing_reported: true }
+}
+
+///|
+fn SemanticChecker::require_checked_expression(
+  self : SemanticChecker,
+  checked : CheckedExpressionSynthesis,
+  loc : SourceSpan,
+  label : String,
+) -> @checked.CheckedExpr? {
+  match checked.expression {
+    Some(expression) => Some(expression)
+    None => {
+      if !checked.missing_reported {
+        self.diagnostics.push({
+          kind: CannotInferExpression("checked " + label),
+          loc,
+        })
+      }
+      None
+    }
+  }
 }
