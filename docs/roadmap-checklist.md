@@ -114,8 +114,8 @@ and unresolved or ambiguous states before typed core lowering.
 - [x] Define checked-source pipeline lowering into ordinary checked calls.
 - [x] Define checked-source ordinary operator alias lowering into resolved
   checked calls.
-- [ ] Elaborate `&&` and `||` into checked thunked calls to `op_and` and
-  `op_or`.
+- [x] Define checked-source `&&` and `||` lowering into thunked checked calls
+  to `op_and` and `op_or`.
 - [ ] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.
 - [ ] Integrate checked-source lowering with the resolved-to-checked source

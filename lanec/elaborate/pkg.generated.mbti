@@ -15,6 +15,8 @@ pub fn elaborate_operator_alias_expression(CheckedExpr, Array[CheckedExpr], @bas
 
 pub fn elaborate_pipeline_expression(CheckedExpr, CheckedExpr, @basic.SourceSpan) -> SourceElaborationResult
 
+pub fn elaborate_thunked_operator_alias_expression(CheckedExpr, CheckedExpr, CheckedExpr, @basic.SourceSpan) -> SourceElaborationResult
+
 // Errors
 
 // Types and methods
@@ -135,6 +137,7 @@ pub(all) enum SourceElaborationDiagnosticKind {
   InvalidPipelineRhs
   InvalidOperatorCallee(@types.Type)
   OperatorArgumentArityMismatch(expected~ : Int, actual~ : Int)
+  InvalidThunkedOperatorParameter(@types.Type)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for SourceElaborationDiagnosticKind
 

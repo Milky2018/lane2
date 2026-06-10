@@ -288,6 +288,8 @@ pub impl @prettyprinter.Pretty for SourceElaborationDiagnosticKind with fn prett
       space +
       text("actual=") +
       text(actual.to_string())
+    InvalidThunkedOperatorParameter(type_) =>
+      text("invalid_thunked_operator_parameter") + space + type_.pretty()
   }
 }
 

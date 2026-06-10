@@ -288,6 +288,118 @@ test "rejects operator alias argument arity mismatch" {
 }
 
 ///|
+test "elaborates thunked operator alias into checked call" {
+  let registry = @symbol.SymbolRegistry::SymbolRegistry()
+  let op_and_symbol = registry.define_value("op_and", TopLevelValue, loc())
+  let op_and = CheckedExpr::Value(
+    name="op_and",
+    symbol=op_and_symbol,
+    type_=function_type(
+      [bool_type(), function_type([], bool_type())],
+      bool_type(),
+    ),
+    loc=loc(),
+  )
+  let left = CheckedExpr::BoolLiteral(value=true, type_=bool_type(), loc=loc())
+  let right = CheckedExpr::BoolLiteral(
+    value=false,
+    type_=bool_type(),
+    loc=loc(),
+  )
+  inspect(
+    @prettyprinter.render(
+      elaborate_thunked_operator_alias_expression(op_and, left, right, loc()),
+    ),
+    content=(
+      #|source_elaboration {
+      #|  expression {
+      #|    call : Bool {
+      #|      callee {
+      #|        value : (Bool, () -> Bool) -> Bool value#0 op_and
+      #|      }
+      #|      arguments {
+      #|        bool true : Bool
+      #|        fn_literal : () -> Bool {
+      #|          parameters {}
+      #|          return : Bool
+      #|          body {
+      #|            bool false : Bool
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "rejects thunked operator alias callee that is not callable" {
+  let registry = @symbol.SymbolRegistry::SymbolRegistry()
+  let op_or_symbol = registry.define_value("op_or", TopLevelValue, loc())
+  let op_or = CheckedExpr::Value(
+    name="op_or",
+    symbol=op_or_symbol,
+    type_=bool_type(),
+    loc=loc(),
+  )
+  inspect(
+    @prettyprinter.render(
+      elaborate_thunked_operator_alias_expression(
+        op_or,
+        BoolLiteral(value=true, type_=bool_type(), loc=loc()),
+        BoolLiteral(value=false, type_=bool_type(), loc=loc()),
+        loc(),
+      ),
+    ),
+    content=(
+      #|source_elaboration {
+      #|  expression {
+      #|    <none>
+      #|  }
+      #|  diagnostics {
+      #|    invalid_operator_callee Bool
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "rejects thunked operator alias without thunk parameter" {
+  let registry = @symbol.SymbolRegistry::SymbolRegistry()
+  let op_or_symbol = registry.define_value("op_or", TopLevelValue, loc())
+  let op_or = CheckedExpr::Value(
+    name="op_or",
+    symbol=op_or_symbol,
+    type_=function_type([bool_type(), bool_type()], bool_type()),
+    loc=loc(),
+  )
+  inspect(
+    @prettyprinter.render(
+      elaborate_thunked_operator_alias_expression(
+        op_or,
+        BoolLiteral(value=true, type_=bool_type(), loc=loc()),
+        BoolLiteral(value=false, type_=bool_type(), loc=loc()),
+        loc(),
+      ),
+    ),
+    content=(
+      #|source_elaboration {
+      #|  expression {
+      #|    <none>
+      #|  }
+      #|  diagnostics {
+      #|    invalid_thunked_operator_parameter Bool
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
 test "pretty prints checked thunked short circuit call shape" {
   let registry = @symbol.SymbolRegistry::SymbolRegistry()
   let op_and_symbol = registry.define_value("op_and", TopLevelValue, loc())

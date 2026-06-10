@@ -15,6 +15,7 @@ pub(all) enum SourceElaborationDiagnosticKind {
   InvalidPipelineRhs
   InvalidOperatorCallee(@types.Type)
   OperatorArgumentArityMismatch(expected~ : Int, actual~ : Int)
+  InvalidThunkedOperatorParameter(@types.Type)
 } derive(Debug, Eq)
 
 ///|
@@ -70,6 +71,66 @@ pub fn elaborate_operator_alias_expression(
         }
       }
       ok(Call(callee=operation, arguments~, type_=result, loc~))
+    }
+    type_ =>
+      {
+        expression: None,
+        diagnostics: [{ kind: InvalidOperatorCallee(type_), loc }],
+      }
+  }
+}
+
+///|
+/// Lowers a thunked operator alias into a checked call.
+///
+/// `&&` and `||` pass their right operand as a zero-argument function, so
+/// `left && right` lowers to `op_and(left, fn () { right })` after the caller
+/// has selected the concrete `op_and` value. The selected operation must have
+/// two parameters and its second parameter must be a zero-argument function
+/// type.
+pub fn elaborate_thunked_operator_alias_expression(
+  operation : CheckedExpr,
+  left : CheckedExpr,
+  right : CheckedExpr,
+  loc : SourceSpan,
+) -> SourceElaborationResult {
+  match operation.type_() {
+    Function(parameters, result) => {
+      if parameters.length() != 2 {
+        return {
+          expression: None,
+          diagnostics: [
+            {
+              kind: OperatorArgumentArityMismatch(
+                expected=2,
+                actual=parameters.length(),
+              ),
+              loc,
+            },
+          ],
+        }
+      }
+      match parameters[1] {
+        Function([], thunk_result) => {
+          let thunk_type = parameters[1]
+          let thunk = FunctionLiteral(
+            type_parameters=[],
+            parameters=[],
+            return_type=thunk_result,
+            body=right,
+            type_=thunk_type,
+            loc~,
+          )
+          ok(
+            Call(callee=operation, arguments=[left, thunk], type_=result, loc~),
+          )
+        }
+        type_ =>
+          {
+            expression: None,
+            diagnostics: [{ kind: InvalidThunkedOperatorParameter(type_), loc }],
+          }
+      }
     }
     type_ =>
       {
