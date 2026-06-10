@@ -13,16 +13,11 @@ fn SemanticChecker::synthesize_call(
   //
   // In synthesis mode the result type must come from the callee. Candidate
   // callees are selected by checking the adjacent arguments only.
-  match callee {
-    Var(name~, reference~, loc=callee_loc) =>
-      match reference {
-        Candidates(candidates~, ..) =>
-          return self.synthesize_candidate_call(
-            scope, name, candidates, arguments, callee_loc,
-          )
-        _ => ()
-      }
-    _ => ()
+  if callee is Var(name~, reference~, loc=callee_loc) &&
+    reference is Candidates(candidates~, ..) {
+    return self.synthesize_candidate_call(
+      scope, name, candidates, arguments, callee_loc,
+    )
   }
   self.synthesize_callable_call(
     scope,
@@ -117,18 +112,12 @@ fn SemanticChecker::check_call(
   //
   // For open candidate callees, Expected also filters the candidate result type
   // before arguments are checked under the candidate's parameter types.
-  match callee {
-    Var(name~, reference~, loc=callee_loc) =>
-      match reference {
-        Candidates(candidates~, ..) => {
-          self.check_candidate_call(
-            scope, name, candidates, arguments, expected, callee_loc,
-          )
-          return
-        }
-        _ => ()
-      }
-    _ => ()
+  if callee is Var(name~, reference~, loc=callee_loc) &&
+    reference is Candidates(candidates~, ..) {
+    self.check_candidate_call(
+      scope, name, candidates, arguments, expected, callee_loc,
+    )
+    return
   }
   let actual = self.synthesize_callable_call(
     scope,

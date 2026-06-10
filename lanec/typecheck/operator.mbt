@@ -26,15 +26,12 @@ fn SemanticChecker::synthesize_binary_operator(
   right : @resolve.ResolvedExpr,
   loc : SourceSpan,
 ) -> @types.Type {
-  match operator {
-    And | Or => {
-      self.diagnostics.push({
-        kind: CannotInferExpression("thunked operator"),
-        loc,
-      })
-      return Error
-    }
-    _ => ()
+  if operator is And || operator is Or {
+    self.diagnostics.push({
+      kind: CannotInferExpression("thunked operator"),
+      loc,
+    })
+    return Error
   }
   self.synthesize_resolved_operator_call(
     scope,
@@ -54,14 +51,12 @@ fn SemanticChecker::synthesize_resolved_operator_call(
   arguments : Array[@resolve.ResolvedExpr],
   loc : SourceSpan,
 ) -> @types.Type {
-  let typed_candidates = match reference {
-    Candidates(candidates~, ..) =>
-      self.typed_candidates(scope, candidates, name, loc)
-    _ =>
-      match self.typed_candidate(scope, reference, name, loc) {
-        Some(candidate) => [candidate]
-        None => []
-      }
+  let typed_candidates = if reference is Candidates(candidates~, ..) {
+    self.typed_candidates(scope, candidates, name, loc)
+  } else if self.typed_candidate(scope, reference, name, loc) is Some(candidate) {
+    [candidate]
+  } else {
+    []
   }
   match
     self.select_callable_by_local_typing(
@@ -120,15 +115,12 @@ fn SemanticChecker::check_binary_operator(
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
-  match operator {
-    And | Or => {
-      self.diagnostics.push({
-        kind: CannotInferExpression("thunked operator"),
-        loc,
-      })
-      return
-    }
-    _ => ()
+  if operator is And || operator is Or {
+    self.diagnostics.push({
+      kind: CannotInferExpression("thunked operator"),
+      loc,
+    })
+    return
   }
   self.check_resolved_operator_call(
     scope,

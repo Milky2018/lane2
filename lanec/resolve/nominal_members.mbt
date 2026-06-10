@@ -106,15 +106,12 @@ fn NominalMembers::collect_opened_field_bindings(
   }
   for forwarding in self.field_forwardings {
     if forwarding.owner == owner {
-      match self.forwarded_owner(forwarding.field) {
-        Some(forwarded_owner) => {
-          let path = prefix.copy()
-          path.push(forwarding.field)
-          self.collect_opened_field_bindings(
-            registry, base, forwarded_owner, depth, path, next_visited, bindings,
-          )
-        }
-        None => ()
+      if self.forwarded_owner(forwarding.field) is Some(forwarded_owner) {
+        let path = prefix.copy()
+        path.push(forwarding.field)
+        self.collect_opened_field_bindings(
+          registry, base, forwarded_owner, depth, path, next_visited, bindings,
+        )
       }
     }
   }

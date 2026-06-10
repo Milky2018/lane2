@@ -45,9 +45,8 @@ fn DeclarationChecker::check_struct(
 ) -> CheckedStructDeclaration {
   let fields = []
   for item in declaration.members {
-    match item {
-      Field(field) => fields.push(self.check_field(field))
-      Open(_) => ()
+    if item is Field(field) {
+      fields.push(self.check_field(field))
     }
   }
   {
@@ -169,19 +168,12 @@ fn check_type_arity(
   actual : Int,
   loc : SourceSpan,
 ) -> Unit {
-  match source.symbols.type_metadata(symbol) {
-    Some(metadata) =>
-      if metadata.arity != actual {
-        diagnostics.push({
-          kind: TypeArgumentArityMismatch(
-            name~,
-            expected=metadata.arity,
-            actual~,
-          ),
-          loc,
-        })
-      }
-    None => ()
+  if source.symbols.type_metadata(symbol) is Some(metadata) &&
+    metadata.arity != actual {
+    diagnostics.push({
+      kind: TypeArgumentArityMismatch(name~, expected=metadata.arity, actual~),
+      loc,
+    })
   }
 }
 

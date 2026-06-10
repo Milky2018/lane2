@@ -40,28 +40,25 @@ fn SemanticChecker::collect_top_level_function_types(
   self : SemanticChecker,
 ) -> Unit {
   for declaration in self.source.declarations {
-    match declaration {
-      Function(declaration) => {
-        let type_ = self.function_type(
-          declaration.type_parameters,
-          declaration.parameters,
-          declaration.return_type,
-        )
-        self.value_types.push({
+    if declaration is Function(declaration) {
+      let type_ = self.function_type(
+        declaration.type_parameters,
+        declaration.parameters,
+        declaration.return_type,
+      )
+      self.value_types.push({
+        symbol: declaration.symbol,
+        name: declaration.name,
+        type_,
+      })
+      self.values.push(
+        Function({
           symbol: declaration.symbol,
           name: declaration.name,
           type_,
-        })
-        self.values.push(
-          Function({
-            symbol: declaration.symbol,
-            name: declaration.name,
-            type_,
-            loc: declaration.loc,
-          }),
-        )
-      }
-      _ => ()
+          loc: declaration.loc,
+        }),
+      )
     }
   }
 }
@@ -93,25 +90,18 @@ fn SemanticChecker::check_top_level_let(
   self : SemanticChecker,
   declaration : @resolve.ResolvedLetDeclaration,
 ) -> Unit {
-  let type_ = match declaration.type_annotation {
-    Some(type_annotation) => {
-      let type_ = self.check_type(type_annotation)
-      discard_checked_expression(
-        self.check_checked_expr(
-          self.root_scope(),
-          declaration.initializer,
-          type_,
-        ),
-      )
-      type_
-    }
-    None => {
-      self.diagnostics.push({
-        kind: MissingTopLevelLetAnnotation,
-        loc: declaration.loc,
-      })
-      self.synthesize_expr(self.root_scope(), declaration.initializer)
-    }
+  let type_ = if declaration.type_annotation is Some(type_annotation) {
+    let type_ = self.check_type(type_annotation)
+    discard_checked_expression(
+      self.check_checked_expr(self.root_scope(), declaration.initializer, type_),
+    )
+    type_
+  } else {
+    self.diagnostics.push({
+      kind: MissingTopLevelLetAnnotation,
+      loc: declaration.loc,
+    })
+    self.synthesize_expr(self.root_scope(), declaration.initializer)
   }
   self.value_types.push({
     symbol: declaration.symbol,

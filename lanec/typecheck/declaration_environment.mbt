@@ -4,12 +4,8 @@ fn CheckedDeclarationEnvironment::checked_struct(
   symbol : TypeSymbolId,
 ) -> CheckedStructDeclaration? {
   for declaration in self.types {
-    match declaration {
-      Struct(declaration) =>
-        if declaration.symbol == symbol {
-          return Some(declaration)
-        }
-      _ => ()
+    if declaration is Struct(declaration) && declaration.symbol == symbol {
+      return Some(declaration)
     }
   }
   None
@@ -21,12 +17,8 @@ fn CheckedDeclarationEnvironment::checked_enum(
   symbol : TypeSymbolId,
 ) -> CheckedEnumDeclaration? {
   for declaration in self.types {
-    match declaration {
-      Enum(declaration) =>
-        if declaration.symbol == symbol {
-          return Some(declaration)
-        }
-      _ => ()
+    if declaration is Enum(declaration) && declaration.symbol == symbol {
+      return Some(declaration)
     }
   }
   None

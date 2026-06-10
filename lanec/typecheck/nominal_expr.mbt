@@ -129,13 +129,13 @@ fn SemanticChecker::synthesize_variant_symbol(
   }
   let type_arguments = if explicit_type_arguments.is_empty() &&
     !declaration.type_parameters.is_empty() {
-    match
-      self.infer_variant_type_arguments(
+    guard self.infer_variant_type_arguments(
         scope, declaration, variant_declaration, arguments, expected_result, loc,
-      ) {
-      Some(type_arguments) => type_arguments
-      None => return Error
+      )
+      is Some(type_arguments) else {
+      return Error
     }
+    type_arguments
   } else {
     check_type_arity(
       self.source,
@@ -224,76 +224,65 @@ fn SemanticChecker::synthesize_struct_literal(
   fields : Array[@resolve.ResolvedStructLiteralField],
   loc : SourceSpan,
 ) -> @types.Type {
-  match self.source.symbols.type_named(type_name) {
-    Some(symbol) => {
-      let arguments = type_arguments.map(fn(type_) { self.check_type(type_) })
-      check_type_arity(
-        self.source,
-        self.diagnostics,
-        symbol,
-        type_name,
-        arguments.length(),
-        loc,
-      )
-      let type_ = @types.Type::Nominal(symbol, arguments)
-      let struct_declaration = match self.declarations.checked_struct(symbol) {
-        Some(declaration) => declaration
-        None => {
-          self.diagnostics.push({ kind: NotAStruct(type_), loc })
-          return Error
-        }
-      }
-      let seen = []
-      for field in fields {
-        if seen.contains(field.name) {
-          self.diagnostics.push({
-            kind: DuplicateField(name=field.name),
-            loc: field.loc,
-          })
-        } else {
-          seen.push(field.name)
-        }
-        match self.source.symbols.field_named(symbol, field.name) {
-          Some(field_symbol) => {
-            let expected = self.declarations.field_type(
-              self.diagnostics,
-              type_,
-              field_symbol,
-              field.name,
-              field.loc,
-            )
-            match field.value {
-              Some(value) => self.check_expr(scope, value, expected)
-              None =>
-                match scope.lookup_name(field.name) {
-                  Some(actual) => self.expect_type(expected, actual, field.loc)
-                  None =>
-                    self.diagnostics.push({
-                      kind: UnresolvedValue(field.name),
-                      loc: field.loc,
-                    })
-                }
-            }
-          }
-          None =>
-            self.diagnostics.push({
-              kind: UnknownField(name=field.name),
-              loc: field.loc,
-            })
-        }
-      }
-      for field in struct_declaration.fields {
-        if !seen.contains(field.name) {
-          self.diagnostics.push({ kind: MissingField(name=field.name), loc })
-        }
-      }
-      type_
+  guard self.source.symbols.type_named(type_name) is Some(symbol) else {
+    self.diagnostics.push({ kind: UnresolvedType(type_name), loc })
+    return Error
+  }
+  let arguments = type_arguments.map(fn(type_) { self.check_type(type_) })
+  check_type_arity(
+    self.source,
+    self.diagnostics,
+    symbol,
+    type_name,
+    arguments.length(),
+    loc,
+  )
+  let type_ = @types.Type::Nominal(symbol, arguments)
+  guard self.declarations.checked_struct(symbol) is Some(struct_declaration) else {
+    self.diagnostics.push({ kind: NotAStruct(type_), loc })
+    return Error
+  }
+  let seen = []
+  for field in fields {
+    if seen.contains(field.name) {
+      self.diagnostics.push({
+        kind: DuplicateField(name=field.name),
+        loc: field.loc,
+      })
+    } else {
+      seen.push(field.name)
     }
-    None => {
-      self.diagnostics.push({ kind: UnresolvedType(type_name), loc })
-      Error
+    if self.source.symbols.field_named(symbol, field.name) is Some(field_symbol) {
+      let expected = self.declarations.field_type(
+        self.diagnostics,
+        type_,
+        field_symbol,
+        field.name,
+        field.loc,
+      )
+      if field.value is Some(value) {
+        self.check_expr(scope, value, expected)
+      } else if scope.lookup_name(field.name) is Some(actual) {
+        self.expect_type(expected, actual, field.loc)
+      } else {
+        self.diagnostics.push({
+          kind: UnresolvedValue(field.name),
+          loc: field.loc,
+        })
+      }
+    } else {
+      self.diagnostics.push({
+        kind: UnknownField(name=field.name),
+        loc: field.loc,
+      })
     }
   }
+  for field in struct_declaration.fields {
+    if !seen.contains(field.name) {
+      self.diagnostics.push({ kind: MissingField(name=field.name), loc })
+    }
+  }
+  type_
 }
 
 ///|
@@ -320,27 +309,23 @@ fn SemanticChecker::synthesize_field(
       Error
     }
     Deferred(_) =>
-      match base_type {
-        Nominal(symbol, _) =>
-          match self.source.symbols.field_named(symbol, name) {
-            Some(field) =>
-              self.declarations.field_type(
-                self.diagnostics,
-                base_type,
-                field,
-                name,
-                loc,
-              )
-            None => {
-              self.diagnostics.push({ kind: UnknownField(name~), loc })
-              Error
-            }
-          }
-        Error => Error
-        _ => {
-          self.diagnostics.push({ kind: NotAStruct(base_type), loc })
-          Error
+      if base_type is Nominal(symbol, _) {
+        guard self.source.symbols.field_named(symbol, name) is Some(field) else {
+          self.diagnostics.push({ kind: UnknownField(name~), loc })
+          return Error
         }
+        self.declarations.field_type(
+          self.diagnostics,
+          base_type,
+          field,
+          name,
+          loc,
+        )
+      } else if base_type is Error {
+        Error
+      } else {
+        self.diagnostics.push({ kind: NotAStruct(base_type), loc })
+        Error
       }
   }
 }

@@ -92,9 +92,8 @@ fn SemanticChecker::typed_candidates(
 ) -> Array[@candidates.TypedCandidate] {
   let typed = []
   for candidate in candidates {
-    match self.typed_candidate(scope, candidate, name, loc) {
-      Some(candidate) => typed.push(candidate)
-      None => ()
+    if self.typed_candidate(scope, candidate, name, loc) is Some(candidate) {
+      typed.push(candidate)
     }
   }
   typed

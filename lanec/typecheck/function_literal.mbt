@@ -12,29 +12,25 @@ fn SemanticChecker::synthesize_function_literal(
   let parameter_types = []
   let body_scope : TypeScope = { values: scope.values.copy() }
   for parameter in parameters {
-    match parameter.type_annotation {
-      Some(type_annotation) => {
-        let type_ = self.check_type(type_annotation)
-        body_scope.bind(parameter.symbol, parameter.name, type_)
-        parameter_types.push(type_)
-      }
-      None => {
-        self.diagnostics.push({
-          kind: CannotInferExpression("function literal parameter"),
-          loc: parameter.loc,
-        })
-        body_scope.bind(parameter.symbol, parameter.name, Error)
-        parameter_types.push(Error)
-      }
+    if parameter.type_annotation is Some(type_annotation) {
+      let type_ = self.check_type(type_annotation)
+      body_scope.bind(parameter.symbol, parameter.name, type_)
+      parameter_types.push(type_)
+    } else {
+      self.diagnostics.push({
+        kind: CannotInferExpression("function literal parameter"),
+        loc: parameter.loc,
+      })
+      body_scope.bind(parameter.symbol, parameter.name, Error)
+      parameter_types.push(Error)
     }
   }
-  let result = match return_type {
-    Some(type_annotation) => {
-      let type_ = self.check_type(type_annotation)
-      self.check_expr(body_scope, body, type_)
-      type_
-    }
-    None => self.synthesize_expr(body_scope, body)
+  let result = if return_type is Some(type_annotation) {
+    let type_ = self.check_type(type_annotation)
+    self.check_expr(body_scope, body, type_)
+    type_
+  } else {
+    self.synthesize_expr(body_scope, body)
   }
   let type_ = @types.Type::Function(parameter_types, result)
   if type_parameters.is_empty() {
@@ -86,14 +82,12 @@ fn SemanticChecker::check_function_literal(
       let body_scope : TypeScope = { values: scope.values.copy() }
       for index in 0..<parameters.length() {
         let parameter = parameters[index]
-        match parameter.type_annotation {
-          Some(type_annotation) =>
-            self.expect_type(
-              expected_parameters[index],
-              self.check_type(type_annotation),
-              parameter.loc,
-            )
-          None => ()
+        if parameter.type_annotation is Some(type_annotation) {
+          self.expect_type(
+            expected_parameters[index],
+            self.check_type(type_annotation),
+            parameter.loc,
+          )
         }
         body_scope.bind(
           parameter.symbol,
@@ -101,14 +95,8 @@ fn SemanticChecker::check_function_literal(
           expected_parameters[index],
         )
       }
-      match return_type {
-        Some(type_annotation) =>
-          self.expect_type(
-            expected_result,
-            self.check_type(type_annotation),
-            loc,
-          )
-        None => ()
+      if return_type is Some(type_annotation) {
+        self.expect_type(expected_result, self.check_type(type_annotation), loc)
       }
       self.check_expr(body_scope, body, expected_result)
     }

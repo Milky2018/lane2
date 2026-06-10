@@ -4,10 +4,8 @@ fn expect_parse_ok(source : String) -> @syntax.SourceFile {
   if !result.lexical_errors.is_empty() || !result.parse_errors.is_empty() {
     abort("expected parse success")
   }
-  match result.source {
-    Some(file) => file
-    None => abort("expected source file")
-  }
+  guard result.source is Some(file) else { abort("expected source file") }
+  file
 }
 
 ///|
@@ -15,12 +13,8 @@ fn expect_resolved_body(source : String, name : String) -> ResolvedExpr {
   let file = expect_parse_ok(source)
   let resolved = resolve_source_file(file)
   for declaration in resolved.declarations {
-    match declaration {
-      Function(declaration) =>
-        if declaration.name == name {
-          return declaration.body
-        }
-      _ => ()
+    if declaration is Function(declaration) && declaration.name == name {
+      return declaration.body
     }
   }
   abort("expected function body")

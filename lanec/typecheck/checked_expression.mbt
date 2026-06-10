@@ -182,14 +182,11 @@ fn SemanticChecker::synthesize_checked_symbol_value(
   name : String,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
-  match scope.lookup(symbol) {
-    Some(type_) =>
-      checked_expression(Value(name~, symbol~, type_~, loc~), type_)
-    None => {
-      self.diagnostics.push({ kind: UnresolvedValue(name), loc })
-      checked_expression_none(Error)
-    }
+  guard scope.lookup(symbol) is Some(type_) else {
+    self.diagnostics.push({ kind: UnresolvedValue(name), loc })
+    return checked_expression_none(Error)
   }
+  checked_expression(Value(name~, symbol~, type_~, loc~), type_)
 }
 
 ///|

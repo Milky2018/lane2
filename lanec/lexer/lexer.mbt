@@ -109,14 +109,12 @@ fn lex_tokens(input : StringView, base~ : StringView, env~ : LexEnv) -> Unit {
     }
     ("[A-Za-z][A-Za-z0-9_]*|_[A-Za-z0-9_]+" as raw, rest) => {
       let name = raw.to_owned()
-      let token = match keyword_table.get(name) {
-        Some(token) => token
-        None =>
-          if reserved_word_table.contains(name) {
-            RESERVED(name)
-          } else {
-            IDENT(name)
-          }
+      let token = if keyword_table.get(name) is Some(token) {
+        token
+      } else if reserved_word_table.contains(name) {
+        RESERVED(name)
+      } else {
+        IDENT(name)
       }
       env.add_token(
         token,

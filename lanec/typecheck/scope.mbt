@@ -53,15 +53,14 @@ fn SemanticChecker::check_local_let(
   scope : TypeScope,
   declaration : @resolve.ResolvedLetDeclaration,
 ) -> Unit {
-  let type_ = match declaration.type_annotation {
-    Some(type_annotation) => {
-      let type_ = self.check_type(type_annotation)
-      discard_checked_expression(
-        self.check_checked_expr(scope, declaration.initializer, type_),
-      )
-      type_
-    }
-    None => self.synthesize_expr(scope, declaration.initializer)
+  let type_ = if declaration.type_annotation is Some(type_annotation) {
+    let type_ = self.check_type(type_annotation)
+    discard_checked_expression(
+      self.check_checked_expr(scope, declaration.initializer, type_),
+    )
+    type_
+  } else {
+    self.synthesize_expr(scope, declaration.initializer)
   }
   scope.bind(
     declaration.symbol,

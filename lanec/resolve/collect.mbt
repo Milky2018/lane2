@@ -91,13 +91,10 @@ fn Resolver::collect_nominal_members(
         let owner = self.type_symbol(declaration.name)
         let mut index = 0
         for item in declaration.members {
-          match item {
-            Field(field) => {
-              self.registry.define_field(owner, field.name, index, field.loc)
-              |> ignore
-              index += 1
-            }
-            Open(_) => ()
+          if item is Field(field) {
+            self.registry.define_field(owner, field.name, index, field.loc)
+            |> ignore
+            index += 1
           }
         }
       }
@@ -238,18 +235,18 @@ fn Resolver::resolve_struct_forwarding(
   owner : TypeSymbolId,
   open : @syntax.OpenDeclaration,
 ) -> Unit {
-  match self.registry.field_named(owner, open.name) {
-    Some(field) =>
-      match self.members.field_type(field) {
-        Some(Nominal(symbol~, ..)) =>
-          match self.registry.type_metadata(symbol) {
-            Some({ kind: Struct, .. }) =>
-              self.members.record_struct_forwarding(owner, field)
-            _ => self.report(CannotOpenValue(open.name), open.loc)
-          }
-        _ => self.report(CannotOpenValue(open.name), open.loc)
-      }
-    None => self.report(CannotOpenValue(open.name), open.loc)
+  guard self.registry.field_named(owner, open.name) is Some(field) else {
+    self.report(CannotOpenValue(open.name), open.loc)
+    return
+  }
+  guard self.members.field_type(field) is Some(Nominal(symbol~, ..)) else {
+    self.report(CannotOpenValue(open.name), open.loc)
+    return
+  }
+  if self.registry.type_metadata(symbol) is Some({ kind: Struct, .. }) {
+    self.members.record_struct_forwarding(owner, field)
+  } else {
+    self.report(CannotOpenValue(open.name), open.loc)
   }
 }
 
@@ -395,9 +392,8 @@ fn @syntax.LetDeclaration::resolve_let(
     type_.resolve_type(resolver, scope)
   })
   let symbol = resolver.registry.define_value(display_name, kind, self.loc)
-  match self.name {
-    Some(name) => scope.define_value(name, symbol, type_annotation)
-    None => ()
+  if self.name is Some(name) {
+    scope.define_value(name, symbol, type_annotation)
   }
   { symbol, name: self.name, type_annotation, initializer, loc: self.loc }
 }
@@ -953,9 +949,8 @@ fn Resolver::type_symbol(self : Resolver, name : String) -> TypeSymbolId {
 fn Resolver::value_symbol(self : Resolver, name : String) -> ValueSymbolId {
   for binding in self.top_values {
     if binding.name == name {
-      match binding.reference {
-        Symbol(symbol) => return symbol
-        _ => ()
+      if binding.reference is Symbol(symbol) {
+        return symbol
       }
     }
   }
@@ -1003,12 +998,10 @@ fn Resolver::open_top_level_binding(
   binding : ValueBinding,
   loc : SourceSpan,
 ) -> Unit {
-  match self.opened_fields(binding, 0, loc) {
-    Some(fields) =>
-      for field in fields {
-        self.publish_top_level_binding(field, loc)
-      }
-    None => ()
+  if self.opened_fields(binding, 0, loc) is Some(fields) {
+    for field in fields {
+      self.publish_top_level_binding(field, loc)
+    }
   }
 }
 
@@ -1019,12 +1012,10 @@ fn Resolver::open_local_binding(
   scope : ResolveScope,
   loc : SourceSpan,
 ) -> Unit {
-  match self.opened_fields(binding, scope.depth, loc) {
-    Some(fields) =>
-      for field in fields {
-        scope.define_binding(field)
-      }
-    None => ()
+  if self.opened_fields(binding, scope.depth, loc) is Some(fields) {
+    for field in fields {
+      scope.define_binding(field)
+    }
   }
 }
 
@@ -1035,27 +1026,16 @@ fn Resolver::opened_fields(
   depth : Int,
   loc : SourceSpan,
 ) -> Array[ValueBinding]? {
-  match (binding.reference, binding.type_) {
-    (Symbol(base), Some(Nominal(symbol~, ..))) =>
-      match self.registry.type_metadata(symbol) {
-        Some({ kind: Struct, .. }) =>
-          Some(
-            self.members.opened_field_bindings(
-              self.registry,
-              base,
-              symbol,
-              depth,
-            ),
-          )
-        _ => {
-          self.report(CannotOpenValue(binding.name), loc)
-          None
-        }
-      }
-    _ => {
-      self.report(CannotOpenValue(binding.name), loc)
-      None
-    }
+  guard binding.reference is Symbol(base) &&
+    binding.type_ is Some(Nominal(symbol~, ..)) else {
+    self.report(CannotOpenValue(binding.name), loc)
+    return None
+  }
+  if self.registry.type_metadata(symbol) is Some({ kind: Struct, .. }) {
+    Some(self.members.opened_field_bindings(self.registry, base, symbol, depth))
+  } else {
+    self.report(CannotOpenValue(binding.name), loc)
+    None
   }
 }
 
@@ -1102,19 +1082,16 @@ fn Resolver::variant_reference(
   variant : String,
   loc : SourceSpan,
 ) -> ResolvedVariantReference {
-  match self.registry.type_named(type_name) {
-    Some(owner) =>
-      match self.registry.variant_named(owner, variant) {
-        Some(symbol) => Symbol(symbol)
-        None => {
-          resolver_report_qualified_variant(self, type_name, variant, loc)
-          Unresolved(type_name~, variant~)
-        }
-      }
-    None => {
+  if self.registry.type_named(type_name) is Some(owner) {
+    if self.registry.variant_named(owner, variant) is Some(symbol) {
+      Symbol(symbol)
+    } else {
       resolver_report_qualified_variant(self, type_name, variant, loc)
       Unresolved(type_name~, variant~)
     }
+  } else {
+    resolver_report_qualified_variant(self, type_name, variant, loc)
+    Unresolved(type_name~, variant~)
   }
 }
 
