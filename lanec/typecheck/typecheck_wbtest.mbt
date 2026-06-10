@@ -27,6 +27,45 @@ fn expect_typecheck_result(source : String) -> TypeCheckResult {
 }
 
 ///|
+fn expect_checked_let_initializer(
+  source : String,
+  name : String,
+  expected : @types.Type,
+) -> @checked.CheckedExpr {
+  let file = expect_parse_ok(source)
+  let resolved = @resolve.resolve_source_file(file)
+  let declaration_result = typecheck_declarations(resolved)
+  let checker = SemanticChecker::{
+    source: resolved,
+    declarations: declaration_result.declarations,
+    diagnostics: declaration_result.diagnostics.copy(),
+    values: [],
+    value_types: [],
+  }
+  checker.collect_top_level_function_types()
+  for declaration in resolved.declarations {
+    match declaration {
+      Let(declaration) =>
+        if declaration.name == Some(name) {
+          let checked = checker.check_checked_expr(
+            checker.root_scope(),
+            declaration.initializer,
+            expected,
+          )
+          match checked.expression {
+            Some(expression) => return expression
+            None => abort("expected checked expression")
+          }
+        } else {
+          checker.check_top_level_let(declaration)
+        }
+      _ => ()
+    }
+  }
+  abort("expected named let")
+}
+
+///|
 test "typecheck custom type declaration environment" {
   let result = expect_declaration_typecheck_result(
     (
@@ -72,6 +111,52 @@ test "typecheck custom type declaration environment" {
       #|    }
       #|  }
       #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck builds checked builtin from direct expected type" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|let host_value : Int = builtin("%host_value")
+    ),
+    "host_value",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression),
+    content="unsafe_builtin \"%host_value\" : Int",
+  )
+}
+
+///|
+test "typecheck builds checked opened field candidate by expected type" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct IntSource {
+      #|  value : Int
+      #|}
+      #|struct BoolSource {
+      #|  value : Bool
+      #|}
+      #|let int_source : IntSource = IntSource::{ value: 1 }
+      #|let bool_source : BoolSource = BoolSource::{ value: true }
+      #|open int_source
+      #|open bool_source
+      #|let selected : Int = value
+    ),
+    "selected",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|field : Int field#0 value {
+      #|  base {
+      #|    value : type#0 value#0 int_source
+      #|  }
       #|}
     ),
   )

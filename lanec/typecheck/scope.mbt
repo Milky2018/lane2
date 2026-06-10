@@ -56,7 +56,9 @@ fn SemanticChecker::check_local_let(
   let type_ = match declaration.type_annotation {
     Some(type_annotation) => {
       let type_ = self.check_type(type_annotation)
-      self.check_expr(scope, declaration.initializer, type_)
+      discard_checked_expression(
+        self.check_checked_expr(scope, declaration.initializer, type_),
+      )
       type_
     }
     None => self.synthesize_expr(scope, declaration.initializer)
@@ -88,9 +90,11 @@ fn SemanticChecker::check_local_function(
       self.check_type(parameter.type_),
     )
   }
-  self.check_expr(
-    body_scope,
-    declaration.body,
-    self.check_type(declaration.return_type),
+  discard_checked_expression(
+    self.check_checked_expr(
+      body_scope,
+      declaration.body,
+      self.check_type(declaration.return_type),
+    ),
   )
 }
