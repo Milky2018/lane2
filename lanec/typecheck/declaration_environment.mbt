@@ -50,24 +50,19 @@ fn CheckedDeclarationEnvironment::field_type(
   loc : SourceSpan,
 ) -> @types.Type {
   match base_type {
-    Nominal(owner, arguments) =>
-      match self.checked_struct(owner) {
-        Some(declaration) =>
-          match declaration.field(field) {
-            Some(field_declaration) =>
-              field_declaration.type_.substitute(
-                declaration.nominal_substitution(arguments),
-              )
-            None => {
-              diagnostics.push({ kind: UnknownField(name~), loc })
-              Error
-            }
-          }
-        None => {
-          diagnostics.push({ kind: NotAStruct(base_type), loc })
-          Error
-        }
+    Nominal(owner, arguments) => {
+      guard self.checked_struct(owner) is Some(declaration) else {
+        diagnostics.push({ kind: NotAStruct(base_type), loc })
+        return Error
       }
+      guard declaration.field(field) is Some(field_declaration) else {
+        diagnostics.push({ kind: UnknownField(name~), loc })
+        return Error
+      }
+      field_declaration.type_.substitute(
+        declaration.nominal_substitution(arguments),
+      )
+    }
     Error => Error
     _ => {
       diagnostics.push({ kind: NotAStruct(base_type), loc })
