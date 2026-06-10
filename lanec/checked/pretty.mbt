@@ -22,6 +22,72 @@ pub impl @prettyprinter.Pretty for CheckedTopLevelDeclaration with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for CheckedStructDeclaration with fn pretty(
+  declaration : CheckedStructDeclaration,
+) {
+  text("struct") +
+  space +
+  declaration.symbol.pretty() +
+  space +
+  text(declaration.name) +
+  type_parameters_doc(declaration.type_parameters) +
+  space +
+  @pretty.braced_block(declaration.fields.map(CheckedFieldDeclaration::pretty))
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedFieldDeclaration with fn pretty(
+  field : CheckedFieldDeclaration,
+) {
+  text("field") +
+  space +
+  field.symbol.pretty() +
+  space +
+  text(field.name) +
+  space +
+  text(":") +
+  space +
+  field.type_.pretty() +
+  space +
+  text("index=") +
+  text(field.index.to_string())
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedEnumDeclaration with fn pretty(
+  declaration : CheckedEnumDeclaration,
+) {
+  text("enum") +
+  space +
+  declaration.symbol.pretty() +
+  space +
+  text(declaration.name) +
+  type_parameters_doc(declaration.type_parameters) +
+  space +
+  @pretty.braced_block(
+    declaration.variants.map(CheckedVariantDeclaration::pretty),
+  )
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedVariantDeclaration with fn pretty(
+  variant : CheckedVariantDeclaration,
+) {
+  text("variant") +
+  space +
+  variant.symbol.pretty() +
+  space +
+  text(variant.name) +
+  space +
+  text("index=") +
+  text(variant.index.to_string()) +
+  space +
+  text("payloads=") +
+  text(variant.payload.length().to_string()) +
+  payload_doc(variant.payload)
+}
+
+///|
 pub impl @prettyprinter.Pretty for CheckedFunctionDeclaration with fn pretty(
   declaration : CheckedFunctionDeclaration,
 ) {
@@ -271,6 +337,15 @@ fn type_arguments_doc(arguments : Array[@types.Type]) -> Document {
     empty
   } else {
     @pretty.bracketed_inline(arguments.map(@types.Type::pretty))
+  }
+}
+
+///|
+fn payload_doc(payload : Array[@types.Type]) -> Document {
+  if payload.is_empty() {
+    empty
+  } else {
+    @pretty.parenthesized_inline(payload.map(@types.Type::pretty))
   }
 }
 

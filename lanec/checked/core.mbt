@@ -6,10 +6,46 @@ pub(all) struct CheckedSourceFile {
 
 ///|
 pub(all) enum CheckedTopLevelDeclaration {
-  Struct(@typecheck.CheckedStructDeclaration)
-  Enum(@typecheck.CheckedEnumDeclaration)
+  Struct(CheckedStructDeclaration)
+  Enum(CheckedEnumDeclaration)
   Function(CheckedFunctionDeclaration)
   Let(CheckedLetDeclaration)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedStructDeclaration {
+  symbol : TypeSymbolId
+  name : String
+  type_parameters : Array[@types.TypeParameter]
+  fields : Array[CheckedFieldDeclaration]
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedFieldDeclaration {
+  symbol : FieldSymbolId
+  name : String
+  index : Int
+  type_ : @types.Type
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedEnumDeclaration {
+  symbol : TypeSymbolId
+  name : String
+  type_parameters : Array[@types.TypeParameter]
+  variants : Array[CheckedVariantDeclaration]
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedVariantDeclaration {
+  symbol : VariantSymbolId
+  name : String
+  index : Int
+  payload : Array[@types.Type]
+  loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|

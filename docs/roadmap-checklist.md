@@ -105,12 +105,14 @@ Source elaboration consumes the type checker and produces the Checked Source
 AST. It preserves source-level structure while eliminating source-only syntax
 and unresolved or ambiguous states before typed core lowering.
 
-- [x] Create the `lanec/elaborate` package as the owner of the Checked Source
+- [x] Create the `lanec/checked` package as the owner of the Checked Source
   AST.
 - [x] Define checked expressions, checked local items, checked top-level bodies,
   checked match arms, and checked patterns with attached types and origin spans.
 - [x] Provide a Checked Source pretty printer and snapshot tests for the initial
   checked expression and pattern shapes.
+- [ ] Implement `lanec/elaborate` as the source-to-checked pipeline over
+  resolved source and type-checking judgments.
 - [ ] Elaborate pipeline expressions into ordinary checked calls.
 - [ ] Elaborate ordinary operator aliases into resolved checked calls.
 - [ ] Elaborate `&&` and `||` into checked thunked calls to `op_and` and
