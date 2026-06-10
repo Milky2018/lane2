@@ -20,6 +20,49 @@ git diff --check
 For generated files such as parser output, avoid manual style-only edits unless
 the generator or its input changes.
 
+## Typechecker Judgment Comments
+
+Core typechecker entry points must explain the judgment they implement. A reader
+should be able to tell which information flows into the function, which
+information is synthesized out of it, and which semantic boundary the function
+intentionally does not cross.
+
+For bidirectional typing, document checking and synthesis entry points in this
+style:
+
+```mbt
+// Synthesis judgment:
+//
+//   Gamma |- e => T
+//
+// This direction computes a type from the expression itself. If an expression
+// needs an adjacent expected type, it must be handled by `check_expr` instead
+// of inventing a non-local type.
+```
+
+For pattern analysis, document the pattern judgment and the matrix judgment near
+their entry points:
+
+```mbt
+// Pattern checking judgment:
+//
+//   Gamma |- p <= T ~~> checked_p, Gamma'
+//
+// Patterns are checked against an already known scrutinee type. They do not
+// synthesize the scrutinee type and do not create non-local type variables.
+```
+
+The comment should state the implementation boundary when a pass deliberately
+defers later work. For example, pattern analysis may produce checked patterns
+and use a pattern matrix for usefulness and exhaustiveness, but it must not
+build a decision tree; decision trees belong to later lowered execution IR or
+bytecode VM work.
+
+Use these comments on semantic pass entry points, not on every helper. Helpers
+only need comments when they encode a non-obvious invariant, a deliberately
+conservative approximation, or a boundary between source semantics and later
+lowering.
+
 ## MoonBit Control-Flow Style
 
 Use `if ... is ...` and `guard ... is ... else` when they make the code

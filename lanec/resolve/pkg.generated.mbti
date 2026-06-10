@@ -194,7 +194,7 @@ pub impl @prettyprinter.Pretty for ResolvedStructMember
 
 pub(all) struct ResolvedStructPatternField {
   name : String
-  pattern : ResolvedPattern?
+  pattern : ResolvedPattern
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructPatternField

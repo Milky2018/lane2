@@ -218,6 +218,21 @@ pub impl @prettyprinter.Pretty for TypeCheckDiagnosticKind with fn pretty(
     MissingField(name~) => text("missing_field") + space + text(name)
     DuplicateField(name~) => text("duplicate_field") + space + text(name)
     NotAStruct(type_) => text("not_a_struct") + space + type_.pretty()
+    NonExhaustiveMatch(type_) =>
+      text("non_exhaustive_match") + space + type_.pretty()
+    UnreachableMatchArm => text("unreachable_match_arm")
+    DuplicatePatternBinder(name~) =>
+      text("duplicate_pattern_binder") + space + text(name)
+    PatternArityMismatch(name~, expected~, actual~) =>
+      text("pattern_arity_mismatch") +
+      space +
+      text(name) +
+      space +
+      text("expected=") +
+      text(expected.to_string()) +
+      space +
+      text("actual=") +
+      text(actual.to_string())
     CannotInferExpression(label) => text("cannot_infer") + space + text(label)
   }
 }

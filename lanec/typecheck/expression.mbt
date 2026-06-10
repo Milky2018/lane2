@@ -28,6 +28,8 @@ fn SemanticChecker::check_expr(
       self.check_block(scope, items, result, expected)
     If(condition~, then_branch~, else_branch~, ..) =>
       self.check_if(scope, condition, then_branch, else_branch, expected)
+    Match(scrutinee~, arms~, loc~) =>
+      self.check_match(scope, scrutinee, arms, expected, loc)
     QualifiedVariant(
       type_name~,
       type_arguments~,
@@ -154,6 +156,8 @@ fn SemanticChecker::synthesize_expr(
     Block(items~, result~, ..) => self.synthesize_block(scope, items, result)
     If(condition~, then_branch~, else_branch~, loc~) =>
       self.synthesize_if(scope, condition, then_branch, else_branch, loc)
+    Match(scrutinee~, arms~, loc~) =>
+      self.synthesize_match(scope, scrutinee, arms, loc)
     QualifiedVariant(
       type_name~,
       type_arguments~,

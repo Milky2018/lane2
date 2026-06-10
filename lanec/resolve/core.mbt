@@ -205,7 +205,7 @@ pub(all) struct ResolvedMatchArm {
 ///|
 pub(all) struct ResolvedStructPatternField {
   name : String
-  pattern : ResolvedPattern?
+  pattern : ResolvedPattern
   loc : SourceSpan
 } derive(Debug, Eq)
 

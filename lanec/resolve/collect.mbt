@@ -923,13 +923,19 @@ fn @syntax.StructPatternField::resolve_struct_pattern_field(
   resolver : Resolver,
   scope : ResolveScope,
 ) -> ResolvedStructPatternField {
-  {
-    name: self.name,
-    pattern: self.pattern.map(fn(pattern) {
-      pattern.resolve_pattern(resolver, scope)
-    }),
-    loc: self.loc,
+  let pattern = match self.pattern {
+    Some(pattern) => pattern.resolve_pattern(resolver, scope)
+    None => {
+      let symbol = resolver.registry.define_value(
+        self.name,
+        PatternBinder,
+        self.loc,
+      )
+      scope.define_value(self.name, symbol, None)
+      Binding(name=self.name, symbol~, loc=self.loc)
+    }
   }
+  { name: self.name, pattern, loc: self.loc }
 }
 
 ///|

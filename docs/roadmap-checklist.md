@@ -90,13 +90,13 @@ typing judgments.
 - [x] Check enum variant construction and unqualified variant calls after type
   information is available.
 - Pattern analysis:
-  - [ ] Use a pattern matrix model for exhaustiveness and usefulness checking.
-  - [ ] Check primitive literal patterns, enum patterns, struct patterns,
+  - [x] Use a pattern matrix model for exhaustiveness and usefulness checking.
+  - [x] Check primitive literal patterns, enum patterns, struct patterns,
     binder uniqueness, binder scope, and unreachable arms.
-  - [ ] Produce checked patterns with resolved variants, resolved struct
+  - [x] Produce checked patterns with resolved variants, resolved struct
     fields, declaration-order struct fields, and typed binders.
-  - [ ] Keep checked patterns available for typed core.
-  - [ ] Defer decision tree generation to later lowered IR or VM work.
+  - [x] Keep checked patterns available for typed core.
+  - [x] Defer decision tree generation to later lowered IR or VM work.
 - [ ] Produce stable diagnostics with origin spans.
 
 ## 4. Source Elaboration

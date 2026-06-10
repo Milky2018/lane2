@@ -379,10 +379,7 @@ pub impl @prettyprinter.Pretty for ResolvedMatchArm with fn pretty(
 pub impl @prettyprinter.Pretty for ResolvedStructPatternField with fn pretty(
   field : ResolvedStructPatternField,
 ) {
-  match field.pattern {
-    Some(pattern) => text(field.name) + text(":") + space + pattern.pretty()
-    None => text(field.name)
-  }
+  text(field.name) + text(":") + space + field.pattern.pretty()
 }
 
 ///|

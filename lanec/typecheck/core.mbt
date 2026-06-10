@@ -105,5 +105,9 @@ pub(all) enum TypeCheckDiagnosticKind {
   MissingField(name~ : String)
   DuplicateField(name~ : String)
   NotAStruct(@types.Type)
+  NonExhaustiveMatch(@types.Type)
+  UnreachableMatchArm
+  DuplicatePatternBinder(name~ : String)
+  PatternArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
   CannotInferExpression(String)
 } derive(Debug, Eq)

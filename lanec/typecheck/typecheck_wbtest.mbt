@@ -62,6 +62,52 @@ fn expect_checked_let_initializer(
 }
 
 ///|
+fn expect_first_checked_match_pattern(
+  source : String,
+  name : String,
+) -> @checked.CheckedPattern {
+  let file = expect_parse_ok(source)
+  let resolved = @resolve.resolve_source_file(file)
+  let declaration_result = typecheck_declarations(resolved)
+  let checker = SemanticChecker::{
+    source: resolved,
+    declarations: declaration_result.declarations,
+    diagnostics: declaration_result.diagnostics.copy(),
+    values: [],
+    value_types: [],
+  }
+  checker.collect_top_level_function_types()
+  for declaration in resolved.declarations {
+    if declaration is Function(declaration) && declaration.name == name {
+      let scope = checker.root_scope()
+      for parameter in declaration.parameters {
+        scope.bind(
+          parameter.symbol,
+          parameter.name,
+          checker.check_type(parameter.type_),
+        )
+      }
+      let body = match declaration.body {
+        Block(items=[], result~, ..) => result
+        _ => declaration.body
+      }
+      guard body is Match(scrutinee~, arms~, ..) else {
+        abort("expected match body")
+      }
+      guard !arms.is_empty() else { abort("expected match arm") }
+      let scrutinee_type = checker.synthesize_expr(scope, scrutinee)
+      let arm_scope : TypeScope = { values: scope.values.copy() }
+      return checker.check_match_pattern(
+        arm_scope,
+        arms[0].pattern,
+        scrutinee_type,
+      )
+    }
+  }
+  abort("expected function")
+}
+
+///|
 test "typecheck custom type declaration environment" {
   let result = expect_declaration_typecheck_result(
     (
@@ -1541,6 +1587,155 @@ test "typecheck reports ambiguous unqualified enum variant" {
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
     content="cannot_infer ambiguous variant reference same",
+  )
+}
+
+///|
+test "typecheck exhaustive enum match" {
+  let result = expect_typecheck_result(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn unwrap(value : Option[Int], fallback : Int) -> Int {
+      #|  match value {
+      #|    Option::none => fallback
+      #|    Option::some(x) => x
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      enum type#0 Option[tparam#0 A : Type] {
+      #|        variant variant#0 none index=0 payloads=0
+      #|        variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      }
+      #|    }
+      #|    fields {}
+      #|    variants {
+      #|      variant variant#0 none index=0 payloads=0
+      #|      variant variant#1 some index=1 payloads=1(tparam#0)
+      #|    }
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 unwrap : (type#0[Int], Int) -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck reports non-exhaustive bool match" {
+  let result = expect_typecheck_result(
+    (
+      #|fn bad(value : Bool) -> Int {
+      #|  match value {
+      #|    true => 1
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="non_exhaustive_match Bool",
+  )
+}
+
+///|
+test "typecheck reports unreachable match arm" {
+  let result = expect_typecheck_result(
+    (
+      #|fn bad(value : Bool) -> Int {
+      #|  match value {
+      #|    _ => 1
+      #|    true => 2
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="unreachable_match_arm",
+  )
+}
+
+///|
+test "typecheck reports duplicate pattern binder" {
+  let result = expect_typecheck_result(
+    (
+      #|enum Pair {
+      #|  pair(Int, Int)
+      #|}
+      #|fn bad(value : Pair) -> Int {
+      #|  match value {
+      #|    Pair::pair(x, x) => x
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="duplicate_pattern_binder x",
+  )
+}
+
+///|
+test "typecheck reports missing struct pattern field" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|  y : Int
+      #|}
+      #|fn bad(point : Point) -> Int {
+      #|  match point {
+      #|    Point::{ x } => x
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="missing_field y",
+  )
+}
+
+///|
+test "typecheck produces checked struct pattern fields in declaration order" {
+  let pattern = expect_first_checked_match_pattern(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|  y : Int
+      #|}
+      #|fn use(point : Point) -> Int {
+      #|  match point {
+      #|    Point::{ y, x } => x
+      #|  }
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(pattern, width=100),
+    content=(
+      #|struct_pattern : type#0 type#0 {
+      #|  field_pattern field#0 x {
+      #|    binding : Int value#3 x
+      #|  }
+      #|  field_pattern field#1 y {
+      #|    binding : Int value#2 y
+      #|  }
+      #|}
+    ),
   )
 }
 
