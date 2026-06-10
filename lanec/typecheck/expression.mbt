@@ -63,6 +63,8 @@ fn SemanticChecker::check_expr(
     }
     Call(callee~, arguments~, loc~) =>
       self.check_call(scope, callee, arguments, expected, loc)
+    Pipeline(left~, right~, loc~) =>
+      self.check_pipeline(scope, left, right, expected, loc)
     Unary(operator~, reference~, operand~, loc~) =>
       self.check_unary_operator(
         scope, operator, reference, operand, expected, loc,
@@ -187,6 +189,8 @@ fn SemanticChecker::synthesize_expr(
       )
     Call(callee~, arguments~, loc~) =>
       self.synthesize_call(scope, callee, arguments, loc)
+    Pipeline(left~, right~, loc~) =>
+      self.synthesize_pipeline(scope, left, right, loc)
     Field(base~, name~, reference~, loc~) =>
       self.synthesize_field(scope, base, name, reference, loc)
     Unary(operator~, reference~, operand~, loc~) =>
@@ -201,13 +205,6 @@ fn SemanticChecker::synthesize_expr(
       )
     Builtin(_, loc~) => {
       self.diagnostics.push({ kind: CannotInferExpression("builtin"), loc })
-      Error
-    }
-    _ => {
-      self.diagnostics.push({
-        kind: CannotInferExpression("expression"),
-        loc: resolved_expr_loc(expr),
-      })
       Error
     }
   }

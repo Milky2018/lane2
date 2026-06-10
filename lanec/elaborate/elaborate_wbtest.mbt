@@ -127,3 +127,113 @@ test "elaborate skips top level open declarations" {
     ),
   )
 }
+
+///|
+test "elaborate pipeline expression into checked call" {
+  let result = elaborate_source(
+    (
+      #|fn first(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn use() -> Int {
+      #|  1 |> first(2)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    fn : (Int, Int) -> Int value#0 first {
+      #|      parameters {
+      #|        param : Int value#2 a
+      #|        param : Int value#3 b
+      #|      }
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            value : Int value#2 a
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    fn : () -> Int value#1 use {
+      #|      parameters {}
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            call : Int {
+      #|              callee {
+      #|                value : (Int, Int) -> Int value#0 first
+      #|              }
+      #|              arguments {
+      #|                int 1 : Int
+      #|                int 2 : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "elaborate pipeline into function literal call" {
+  let result = elaborate_source(
+    (
+      #|fn use() -> Int {
+      #|  1 |> fn(value : Int) {
+      #|    value
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    fn : () -> Int value#0 use {
+      #|      parameters {}
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            call : Int {
+      #|              callee {
+      #|                fn_literal : (Int) -> Int {
+      #|                  parameters {
+      #|                    param : Int value#1 value
+      #|                  }
+      #|                  return : Int
+      #|                  body {
+      #|                    block : Int {
+      #|                      result {
+      #|                        value : Int value#1 value
+      #|                      }
+      #|                    }
+      #|                  }
+      #|                }
+      #|              }
+      #|              arguments {
+      #|                int 1 : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}

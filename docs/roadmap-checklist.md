@@ -113,7 +113,7 @@ and unresolved or ambiguous states before typed core lowering.
   checked expression and pattern shapes.
 - [x] Implement `lanec/elaborate` as the source-to-checked pipeline over
   resolved source and type-checking judgments.
-- [ ] Elaborate pipeline expressions into ordinary checked calls.
+- [x] Elaborate pipeline expressions into ordinary checked calls.
 - [ ] Elaborate ordinary operator aliases into resolved checked calls.
 - [ ] Elaborate `&&` and `||` into checked thunked calls to `op_and` and
   `op_or`.

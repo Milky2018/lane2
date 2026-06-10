@@ -29,6 +29,48 @@ fn SemanticChecker::synthesize_call(
 }
 
 ///|
+fn SemanticChecker::synthesize_pipeline(
+  self : SemanticChecker,
+  scope : TypeScope,
+  left : @resolve.ResolvedExpr,
+  right : @resolve.ResolvedExpr,
+  loc : SourceSpan,
+) -> @types.Type {
+  match right {
+    Call(callee~, arguments~, ..) =>
+      self.synthesize_call(
+        scope,
+        callee,
+        pipeline_arguments(left, arguments),
+        loc,
+      )
+    _ => self.synthesize_call(scope, right, [left], loc)
+  }
+}
+
+///|
+fn SemanticChecker::check_pipeline(
+  self : SemanticChecker,
+  scope : TypeScope,
+  left : @resolve.ResolvedExpr,
+  right : @resolve.ResolvedExpr,
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  match right {
+    Call(callee~, arguments~, ..) =>
+      self.check_call(
+        scope,
+        callee,
+        pipeline_arguments(left, arguments),
+        expected,
+        loc,
+      )
+    _ => self.check_call(scope, right, [left], expected, loc)
+  }
+}
+
+///|
 fn SemanticChecker::synthesize_callable_call(
   self : SemanticChecker,
   scope : TypeScope,
@@ -269,6 +311,18 @@ fn SemanticChecker::result_matches_expected(
   } else {
     true
   }
+}
+
+///|
+fn pipeline_arguments(
+  left : @resolve.ResolvedExpr,
+  arguments : Array[@resolve.ResolvedExpr],
+) -> Array[@resolve.ResolvedExpr] {
+  let result = [left]
+  for argument in arguments {
+    result.push(argument)
+  }
+  result
 }
 
 ///|

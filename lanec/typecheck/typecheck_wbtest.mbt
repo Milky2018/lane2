@@ -1082,6 +1082,66 @@ test "typecheck function literal parameters from expected function type" {
 }
 
 ///|
+test "typecheck pipeline expression as first argument call" {
+  let result = expect_typecheck_result(
+    (
+      #|fn first(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn use() -> Int {
+      #|  1 |> first(2)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 first : (Int, Int) -> Int
+      #|    fn value#1 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck pipeline expression into function literal" {
+  let result = expect_typecheck_result(
+    (
+      #|fn use() -> Int {
+      #|  1 |> fn(value : Int) {
+      #|    value
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {}
+      #|    fields {}
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 use : () -> Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
 test "typecheck generic function literal parameters from expected forall type" {
   let result = expect_typecheck_result(
     (
