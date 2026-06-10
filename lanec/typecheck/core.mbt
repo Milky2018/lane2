@@ -115,5 +115,6 @@ pub(all) enum TypeCheckDiagnosticKind {
   UnreachableMatchArm
   DuplicatePatternBinder(name~ : String)
   PatternArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
+  InvalidIntLiteral(String)
   CannotInferExpression(String)
 } derive(Debug, Eq)

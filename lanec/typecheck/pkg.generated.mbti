@@ -129,6 +129,7 @@ pub(all) enum TypeCheckDiagnosticKind {
   UnreachableMatchArm
   DuplicatePatternBinder(name~ : String)
   PatternArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
+  InvalidIntLiteral(String)
   CannotInferExpression(String)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for TypeCheckDiagnosticKind

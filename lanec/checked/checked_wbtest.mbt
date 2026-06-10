@@ -90,9 +90,13 @@ test "pretty prints checked thunked short circuit call shape" {
     type_=op_and_type,
     loc=loc(),
   )
-  let left = CheckedExpr::BoolLiteral(value=true, type_=bool_type(), loc=loc())
-  let right = CheckedExpr::BoolLiteral(
-    value=false,
+  let left = CheckedExpr::Literal(
+    literal=Bool(true),
+    type_=bool_type(),
+    loc=loc(),
+  )
+  let right = CheckedExpr::Literal(
+    literal=Bool(false),
     type_=bool_type(),
     loc=loc(),
   )

@@ -84,11 +84,24 @@ pub(all) enum CheckedLocalItem {
 } derive(Debug, Eq)
 
 ///|
+/// A checked integer literal keeps the source spelling for diagnostics and
+/// pretty printing, while `value` is the compiler's semantic i64 value.
+pub(all) struct CheckedIntLiteral {
+  raw : String
+  value : Int64
+} derive(Debug, Eq)
+
+///|
+pub(all) enum CheckedLiteral {
+  Int(CheckedIntLiteral)
+  String(String)
+  Bool(Bool)
+  Unit
+} derive(Debug, Eq)
+
+///|
 pub(all) enum CheckedExpr {
-  IntLiteral(value~ : String, type_~ : @types.Type, loc~ : SourceSpan)
-  StringLiteral(value~ : String, type_~ : @types.Type, loc~ : SourceSpan)
-  BoolLiteral(value~ : Bool, type_~ : @types.Type, loc~ : SourceSpan)
-  UnitLiteral(type_~ : @types.Type, loc~ : SourceSpan)
+  Literal(literal~ : CheckedLiteral, type_~ : @types.Type, loc~ : SourceSpan)
   Value(
     name~ : String,
     symbol~ : ValueSymbolId,
@@ -181,10 +194,7 @@ pub(all) enum CheckedPattern {
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
-  IntLiteral(value~ : String, type_~ : @types.Type, loc~ : SourceSpan)
-  StringLiteral(value~ : String, type_~ : @types.Type, loc~ : SourceSpan)
-  BoolLiteral(value~ : Bool, type_~ : @types.Type, loc~ : SourceSpan)
-  UnitLiteral(type_~ : @types.Type, loc~ : SourceSpan)
+  Literal(literal~ : CheckedLiteral, type_~ : @types.Type, loc~ : SourceSpan)
   Variant(
     symbol~ : VariantSymbolId,
     arguments~ : Array[CheckedPattern],
@@ -211,10 +221,7 @@ pub(all) struct CheckedStructPatternField {
 /// Returns the type assigned to this checked expression.
 pub fn CheckedExpr::type_(self : CheckedExpr) -> @types.Type {
   match self {
-    IntLiteral(type_~, ..)
-    | StringLiteral(type_~, ..)
-    | BoolLiteral(type_~, ..)
-    | UnitLiteral(type_~, ..)
+    Literal(type_~, ..)
     | Value(type_~, ..)
     | UnsafeBuiltin(type_~, ..)
     | FunctionLiteral(type_~, ..)
@@ -233,10 +240,7 @@ pub fn CheckedExpr::type_(self : CheckedExpr) -> @types.Type {
 /// Returns the source span that produced this checked expression.
 pub fn CheckedExpr::loc(self : CheckedExpr) -> SourceSpan {
   match self {
-    IntLiteral(loc~, ..)
-    | StringLiteral(loc~, ..)
-    | BoolLiteral(loc~, ..)
-    | UnitLiteral(loc~, ..)
+    Literal(loc~, ..)
     | Value(loc~, ..)
     | UnsafeBuiltin(loc~, ..)
     | FunctionLiteral(loc~, ..)
@@ -257,10 +261,7 @@ pub fn CheckedPattern::type_(self : CheckedPattern) -> @types.Type {
   match self {
     Wildcard(type_~, ..)
     | Binding(type_~, ..)
-    | IntLiteral(type_~, ..)
-    | StringLiteral(type_~, ..)
-    | BoolLiteral(type_~, ..)
-    | UnitLiteral(type_~, ..)
+    | Literal(type_~, ..)
     | Variant(type_~, ..)
     | Struct(type_~, ..) => type_
   }
@@ -272,10 +273,7 @@ pub fn CheckedPattern::loc(self : CheckedPattern) -> SourceSpan {
   match self {
     Wildcard(loc~, ..)
     | Binding(loc~, ..)
-    | IntLiteral(loc~, ..)
-    | StringLiteral(loc~, ..)
-    | BoolLiteral(loc~, ..)
-    | UnitLiteral(loc~, ..)
+    | Literal(loc~, ..)
     | Variant(loc~, ..)
     | Struct(loc~, ..) => loc
   }

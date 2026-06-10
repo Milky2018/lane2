@@ -144,17 +144,21 @@ fn SemanticChecker::check_pattern(
       scope.bind(symbol, name, expected)
       Binding(name~, symbol~, type_=expected, loc~)
     }
-    IntLiteral(value, loc~) => {
+    IntLiteral(raw, loc~) => {
       self.expect_type(expected, Primitive(Int), loc)
-      IntLiteral(value~, type_=expected, loc~)
+      Literal(
+        literal=Int(self.check_int_literal(raw, loc)),
+        type_=expected,
+        loc~,
+      )
     }
     StringLiteral(value, loc~) => {
       self.expect_type(expected, Primitive(String), loc)
-      StringLiteral(value~, type_=expected, loc~)
+      Literal(literal=String(value), type_=expected, loc~)
     }
     BoolLiteral(value, loc~) => {
       self.expect_type(expected, Primitive(Bool), loc)
-      BoolLiteral(value~, type_=expected, loc~)
+      Literal(literal=Bool(value), type_=expected, loc~)
     }
     QualifiedVariant(type_name~, variant~, reference~, arguments~, loc~) =>
       self.check_variant_pattern(
@@ -420,13 +424,13 @@ fn PatternMatrix::is_useful(
   }
   match pattern {
     Wildcard(..) | Binding(..) => true
-    BoolLiteral(value~, ..) => !self.covers_bool_literal(value)
-    IntLiteral(value~, ..) => !self.covers_int_literal(value)
-    StringLiteral(value~, ..) => !self.covers_string_literal(value)
+    Literal(literal=Bool(value), ..) => !self.covers_bool_literal(value)
+    Literal(literal=Int(literal), ..) => !self.covers_int_literal(literal.value)
+    Literal(literal=String(value), ..) => !self.covers_string_literal(value)
+    Literal(literal=Unit, ..) => true
     Variant(symbol~, arguments~, ..) =>
       !self.covers_variant(declarations, symbol, arguments)
     Struct(..) => true
-    UnitLiteral(..) => true
   }
 }
 
@@ -479,7 +483,10 @@ fn PatternMatrix::covers_bool_literal(
   for row in self.rows {
     match row {
       Wildcard(..) | Binding(..) => return true
-      BoolLiteral(value=row_value, ..) => if row_value == value { return true }
+      Literal(literal=Bool(row_value), ..) =>
+        if row_value == value {
+          return true
+        }
       _ => ()
     }
   }
@@ -489,12 +496,15 @@ fn PatternMatrix::covers_bool_literal(
 ///|
 fn PatternMatrix::covers_int_literal(
   self : PatternMatrix,
-  value : String,
+  value : Int64,
 ) -> Bool {
   for row in self.rows {
     match row {
       Wildcard(..) | Binding(..) => return true
-      IntLiteral(value=row_value, ..) => if row_value == value { return true }
+      Literal(literal=Int(row_literal), ..) =>
+        if row_literal.value == value {
+          return true
+        }
       _ => ()
     }
   }
@@ -509,7 +519,7 @@ fn PatternMatrix::covers_string_literal(
   for row in self.rows {
     match row {
       Wildcard(..) | Binding(..) => return true
-      StringLiteral(value=row_value, ..) =>
+      Literal(literal=String(row_value), ..) =>
         if row_value == value {
           return true
         }
@@ -588,8 +598,7 @@ fn pattern_is_irrefutable(
       } else {
         false
       }
-    UnitLiteral(..) | BoolLiteral(..) | IntLiteral(..) | StringLiteral(..) =>
-      false
+    Literal(..) => false
   }
 }
 

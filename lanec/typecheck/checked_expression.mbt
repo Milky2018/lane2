@@ -77,24 +77,28 @@ fn SemanticChecker::synthesize_checked_expr(
   // recursive checked subtree. Compound expressions still return their
   // synthesized type through the existing checker and no checked node.
   match expression {
-    IntLiteral(value, loc~) =>
+    IntLiteral(raw, loc~) =>
       checked_expression(
-        IntLiteral(value~, type_=Primitive(Int), loc~),
+        Literal(
+          literal=Int(self.check_int_literal(raw, loc)),
+          type_=Primitive(Int),
+          loc~,
+        ),
         Primitive(Int),
       )
     StringLiteral(value, loc~) =>
       checked_expression(
-        StringLiteral(value~, type_=Primitive(String), loc~),
+        Literal(literal=String(value), type_=Primitive(String), loc~),
         Primitive(String),
       )
     BoolLiteral(value, loc~) =>
       checked_expression(
-        BoolLiteral(value~, type_=Primitive(Bool), loc~),
+        Literal(literal=Bool(value), type_=Primitive(Bool), loc~),
         Primitive(Bool),
       )
     UnitLiteral(loc~) =>
       checked_expression(
-        UnitLiteral(type_=Primitive(Unit), loc~),
+        Literal(literal=Unit, type_=Primitive(Unit), loc~),
         Primitive(Unit),
       )
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>

@@ -174,6 +174,35 @@ test "typecheck builds checked builtin from direct expected type" {
 }
 
 ///|
+test "typecheck parses checked int literal as i64 value" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|let answer : Int = 042
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  guard expression is Literal(literal=Int(literal), ..) else {
+    abort("expected checked int literal")
+  }
+  @test.assert_eq(literal.raw, "042")
+  @test.assert_eq(literal.value, 42L)
+}
+
+///|
+test "typecheck reports out of range int literal" {
+  let result = expect_typecheck_result(
+    (
+      #|let bad : Int = 9223372036854775808
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="invalid_int_literal 9223372036854775808 @ 1:17-1:36",
+  )
+}
+
+///|
 test "typecheck builds checked opened field candidate by expected type" {
   let expression = expect_checked_let_initializer(
     (
@@ -1724,6 +1753,25 @@ test "typecheck reports unreachable match arm" {
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
     content="unreachable_match_arm @ 4:13-4:14",
+  )
+}
+
+///|
+test "typecheck compares int patterns by checked value" {
+  let result = expect_typecheck_result(
+    (
+      #|fn bad(value : Int) -> Int {
+      #|  match value {
+      #|    1 => 1
+      #|    01 => 2
+      #|    _ => 0
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="unreachable_match_arm @ 4:11-4:12",
   )
 }
 

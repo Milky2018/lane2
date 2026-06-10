@@ -151,12 +151,8 @@ pub impl @prettyprinter.Pretty for CheckedExpr with fn pretty(
   expression : CheckedExpr,
 ) {
   match expression {
-    IntLiteral(value~, type_~, ..) => typed_named_doc("int " + value, type_)
-    StringLiteral(value~, type_~, ..) =>
-      typed_named_doc("string " + quoted(value), type_)
-    BoolLiteral(value~, type_~, ..) =>
-      typed_named_doc("bool " + value.to_string(), type_)
-    UnitLiteral(type_~, ..) => typed_named_doc("unit", type_)
+    Literal(literal~, type_~, ..) =>
+      typed_named_doc(literal.expression_label(), type_)
     Value(name~, symbol~, type_~, ..) =>
       typed_header("value", type_) +
       space +
@@ -277,13 +273,8 @@ pub impl @prettyprinter.Pretty for CheckedPattern with fn pretty(
       symbol.pretty() +
       space +
       text(name)
-    IntLiteral(value~, type_~, ..) =>
-      typed_named_doc("int_pattern " + value, type_)
-    StringLiteral(value~, type_~, ..) =>
-      typed_named_doc("string_pattern " + quoted(value), type_)
-    BoolLiteral(value~, type_~, ..) =>
-      typed_named_doc("bool_pattern " + value.to_string(), type_)
-    UnitLiteral(type_~, ..) => typed_named_doc("unit_pattern", type_)
+    Literal(literal~, type_~, ..) =>
+      typed_named_doc(literal.pattern_label(), type_)
     Variant(symbol~, arguments~, type_~, ..) =>
       typed_header("variant_pattern", type_) +
       space +
@@ -310,6 +301,26 @@ pub impl @prettyprinter.Pretty for CheckedStructPatternField with fn pretty(
   text(field.name) +
   space +
   @pretty.braced_block([field.pattern.pretty()])
+}
+
+///|
+fn CheckedLiteral::expression_label(self : CheckedLiteral) -> String {
+  match self {
+    Int(literal) => "int " + literal.raw
+    String(value) => "string " + quoted(value)
+    Bool(value) => "bool " + value.to_string()
+    Unit => "unit"
+  }
+}
+
+///|
+fn CheckedLiteral::pattern_label(self : CheckedLiteral) -> String {
+  match self {
+    Int(literal) => "int_pattern " + literal.raw
+    String(value) => "string_pattern " + quoted(value)
+    Bool(value) => "bool_pattern " + value.to_string()
+    Unit => "unit_pattern"
+  }
 }
 
 ///|
