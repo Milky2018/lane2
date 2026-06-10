@@ -247,53 +247,6 @@ pub impl @prettyprinter.Pretty for CheckedStructPatternField with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for SourceElaborationResult with fn pretty(
-  result : SourceElaborationResult,
-) {
-  let expression_docs = match result.expression {
-    Some(expression) => [expression.pretty()]
-    None => [text("<none>")]
-  }
-  text("source_elaboration") +
-  space +
-  @pretty.braced_block([
-    @pretty.section("expression", expression_docs),
-    @pretty.section(
-      "diagnostics",
-      result.diagnostics.map(SourceElaborationDiagnostic::pretty),
-    ),
-  ])
-}
-
-///|
-pub impl @prettyprinter.Pretty for SourceElaborationDiagnostic with fn pretty(
-  diagnostic : SourceElaborationDiagnostic,
-) {
-  diagnostic.kind.pretty()
-}
-
-///|
-pub impl @prettyprinter.Pretty for SourceElaborationDiagnosticKind with fn pretty(
-  kind : SourceElaborationDiagnosticKind,
-) {
-  match kind {
-    InvalidPipelineRhs => text("invalid_pipeline_rhs")
-    InvalidOperatorCallee(type_) =>
-      text("invalid_operator_callee") + space + type_.pretty()
-    OperatorArgumentArityMismatch(expected~, actual~) =>
-      text("operator_arity_mismatch") +
-      space +
-      text("expected=") +
-      text(expected.to_string()) +
-      space +
-      text("actual=") +
-      text(actual.to_string())
-    InvalidThunkedOperatorParameter(type_) =>
-      text("invalid_thunked_operator_parameter") + space + type_.pretty()
-  }
-}
-
-///|
 fn typed_header(label : String, type_ : @types.Type) -> Document {
   text(label) + space + text(":") + space + type_.pretty()
 }

@@ -11,11 +11,6 @@ import {
 }
 
 // Values
-pub fn elaborate_operator_alias_expression(CheckedExpr, Array[CheckedExpr], @basic.SourceSpan) -> SourceElaborationResult
-
-pub fn elaborate_pipeline_expression(CheckedExpr, CheckedExpr, @basic.SourceSpan) -> SourceElaborationResult
-
-pub fn elaborate_thunked_operator_alias_expression(CheckedExpr, CheckedExpr, CheckedExpr, @basic.SourceSpan) -> SourceElaborationResult
 
 // Errors
 
@@ -126,26 +121,6 @@ pub(all) struct CheckedValueParameter {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedValueParameter
-
-pub(all) struct SourceElaborationDiagnostic {
-  kind : SourceElaborationDiagnosticKind
-  loc : @basic.SourceSpan
-} derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for SourceElaborationDiagnostic
-
-pub(all) enum SourceElaborationDiagnosticKind {
-  InvalidPipelineRhs
-  InvalidOperatorCallee(@types.Type)
-  OperatorArgumentArityMismatch(expected~ : Int, actual~ : Int)
-  InvalidThunkedOperatorParameter(@types.Type)
-} derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for SourceElaborationDiagnosticKind
-
-pub(all) struct SourceElaborationResult {
-  expression : CheckedExpr?
-  diagnostics : Array[SourceElaborationDiagnostic]
-} derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for SourceElaborationResult
 
 // Type aliases
 
