@@ -1,4 +1,7 @@
 ///|
+using @basic {type SourceSpan}
+
+///|
 using @prettyprinter {
   type Document,
   char,

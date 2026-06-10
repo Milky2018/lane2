@@ -53,3 +53,15 @@ pub fn bracketed_inline(docs : Array[Document]) -> Document {
 pub fn parenthesized_inline(docs : Array[Document]) -> Document {
   surround(char('('), char(')'), join_comma(docs))
 }
+
+///|
+/// Renders a source span as a stable line-column range.
+pub fn source_span(span : SourceSpan) -> Document {
+  text(span.start_line.to_string()) +
+  text(":") +
+  text(span.start_column.to_string()) +
+  text("-") +
+  text(span.end_line.to_string()) +
+  text(":") +
+  text(span.end_column.to_string())
+}

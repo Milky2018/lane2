@@ -184,7 +184,11 @@ pub impl @prettyprinter.Pretty for CheckedVariantDeclaration with fn pretty(
 pub impl @prettyprinter.Pretty for TypeCheckDiagnostic with fn pretty(
   diagnostic : TypeCheckDiagnostic,
 ) {
-  diagnostic.kind.pretty()
+  diagnostic.kind.pretty() +
+  space +
+  text("@") +
+  space +
+  @pretty.source_span(diagnostic.loc)
 }
 
 ///|

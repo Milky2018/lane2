@@ -286,7 +286,7 @@ test "typecheck reports forward top level value use" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="unresolved_value second",
+    content="unresolved_value second @ 1:19-1:25",
   )
 }
 
@@ -414,7 +414,7 @@ test "typecheck reports local function forward reference" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="unresolved_value local",
+    content="unresolved_value local @ 3:18-3:23",
   )
 }
 
@@ -520,7 +520,7 @@ test "typecheck keeps same typed open candidates ambiguous" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference value",
+    content="cannot_infer ambiguous value reference value @ 12:3-12:8",
   )
 }
 
@@ -626,7 +626,7 @@ test "typecheck direct binary operator result mismatch" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="type_mismatch expected=Int actual=Bool",
+    content="type_mismatch expected=Int actual=Bool @ 5:7-5:8",
   )
 }
 
@@ -745,7 +745,7 @@ test "typecheck keeps same typed binary operator candidates ambiguous" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference op_add",
+    content="cannot_infer ambiguous value reference op_add @ 18:7-18:8",
   )
 }
 
@@ -1013,7 +1013,7 @@ test "typecheck reports ambiguous candidate without expected type" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference value",
+    content="cannot_infer ambiguous value reference value @ 13:17-13:22",
   )
 }
 
@@ -1044,7 +1044,7 @@ test "typecheck reports no callable candidate when arguments reject all candidat
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer no matching callable value reference apply",
+    content="cannot_infer no matching callable value reference apply @ 18:3-18:8",
   )
 }
 
@@ -1123,7 +1123,7 @@ test "typecheck reports generic function literal arity mismatch" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer generic function arity",
+    content="cannot_infer generic function arity @ 1:34-3:2",
   )
 }
 
@@ -1138,7 +1138,7 @@ test "typecheck reports generic literal against non-generic function type" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer generic function arity",
+    content="cannot_infer generic function arity @ 1:27-3:2",
   )
 }
 
@@ -1344,7 +1344,7 @@ test "typecheck keeps generic callable candidates ambiguous" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference id",
+    content="cannot_infer ambiguous value reference id @ 18:3-18:5",
   )
 }
 
@@ -1365,7 +1365,7 @@ test "typecheck reports unresolved generic type arguments" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer type arguments",
+    content="cannot_infer type arguments @ 6:22-6:23",
   )
 }
 
@@ -1419,7 +1419,7 @@ test "typecheck reports field access on non-struct value" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="not_a_struct Int",
+    content="not_a_struct Int @ 2:5-2:10",
   )
 }
 
@@ -1527,7 +1527,7 @@ test "typecheck reports unresolved variant type arguments" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer type arguments",
+    content="cannot_infer type arguments @ 7:22-7:23",
   )
 }
 
@@ -1546,7 +1546,7 @@ test "typecheck reports enum variant payload mismatch" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="type_mismatch expected=Int actual=Bool",
+    content="type_mismatch expected=Int actual=Bool @ 6:8-6:12",
   )
 }
 
@@ -1565,7 +1565,7 @@ test "typecheck reports enum variant arity mismatch" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer variant arity",
+    content="cannot_infer variant arity @ 6:8-6:9",
   )
 }
 
@@ -1586,7 +1586,7 @@ test "typecheck reports ambiguous unqualified enum variant" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous variant reference same",
+    content="cannot_infer ambiguous variant reference same @ 8:9-8:10",
   )
 }
 
@@ -1645,7 +1645,7 @@ test "typecheck reports non-exhaustive bool match" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="non_exhaustive_match Bool",
+    content="non_exhaustive_match Bool @ 2:15-4:4",
   )
 }
 
@@ -1663,7 +1663,7 @@ test "typecheck reports unreachable match arm" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="unreachable_match_arm",
+    content="unreachable_match_arm @ 4:13-4:14",
   )
 }
 
@@ -1683,7 +1683,7 @@ test "typecheck reports duplicate pattern binder" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="duplicate_pattern_binder x",
+    content="duplicate_pattern_binder x @ 6:19-6:20",
   )
 }
 
@@ -1704,7 +1704,7 @@ test "typecheck reports missing struct pattern field" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="missing_field y",
+    content="missing_field y @ 7:16-7:17",
   )
 }
 
@@ -1750,7 +1750,7 @@ test "typecheck reports type mismatch" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="type_mismatch expected=Int actual=Bool",
+    content="type_mismatch expected=Int actual=Bool @ 2:3-2:7",
   )
 }
 
@@ -1769,7 +1769,7 @@ test "typecheck struct literal punning and required fields" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="missing_field y",
+    content="missing_field y @ 6:14-6:15",
   )
 }
 
@@ -1787,7 +1787,7 @@ test "typecheck reports nominal type arity mismatch" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="type_arity_mismatch Box expected=1 actual=2",
+    content="type_arity_mismatch Box expected=1 actual=2 @ 5:16-5:26",
   )
 }
 
@@ -1816,7 +1816,7 @@ test "typecheck keeps unresolved type as error type" {
       #|    variants {}
       #|  }
       #|  diagnostics {
-      #|    unresolved_type Missing
+      #|    unresolved_type Missing @ 2:13-2:20
       #|  }
       #|}
     ),

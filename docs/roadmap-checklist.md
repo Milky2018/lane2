@@ -97,7 +97,7 @@ typing judgments.
     fields, declaration-order struct fields, and typed binders.
   - [x] Keep checked patterns available for typed core.
   - [x] Defer decision tree generation to later lowered IR or VM work.
-- [ ] Produce stable diagnostics with origin spans.
+- [x] Produce stable diagnostics with origin spans.
 
 ## 4. Source Elaboration
 

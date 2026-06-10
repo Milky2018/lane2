@@ -2,6 +2,7 @@
 package "Milky2018/lane2/pretty"
 
 import {
+  "Milky2018/lane2/basic",
   "moonbit-community/prettyprinter",
 }
 
@@ -21,6 +22,8 @@ pub fn join_comma_group(Array[@prettyprinter.Document]) -> @prettyprinter.Docume
 pub fn parenthesized_inline(Array[@prettyprinter.Document]) -> @prettyprinter.Document
 
 pub fn section(String, Array[@prettyprinter.Document]) -> @prettyprinter.Document
+
+pub fn source_span(@basic.SourceSpan) -> @prettyprinter.Document
 
 // Errors
 
