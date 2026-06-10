@@ -134,8 +134,6 @@ and unresolved or ambiguous states before typed core lowering.
   applications, checked patterns, and typed unsafe builtins.
 - [ ] Remove source-only constructs such as pipeline, open/preopen lookup,
   candidate sets, and ordinary operator aliases.
-- [ ] Lower `&&` and `||` into thunked operator calls according to the checked
-  operator selection.
 - [ ] Provide a typed core pretty printer and tests based on typed core output.
 
 ## 6. Reference Interpreter
