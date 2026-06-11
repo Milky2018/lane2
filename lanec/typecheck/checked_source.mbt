@@ -5,6 +5,7 @@ pub fn typecheck_checked_source_file(
   source : @resolve.ResolvedSourceFile,
 ) -> CheckedSourceTypeCheckResult {
   let declaration_result = typecheck_declarations(source)
+  let source = @desugar.desugar_source_file(source)
   let checker = SemanticChecker::{
     source,
     declarations: declaration_result.declarations,
@@ -39,7 +40,7 @@ pub fn typecheck_checked_source_file(
 ///|
 fn SemanticChecker::check_checked_top_level_declaration(
   self : SemanticChecker,
-  declaration : @resolve.ResolvedTopLevelDeclaration,
+  declaration : @desugar.DesugaredTopLevelDeclaration,
 ) -> @checked.CheckedTopLevelDeclaration? {
   match declaration {
     Struct(declaration) => self.checked_top_level_struct(declaration)
@@ -83,7 +84,7 @@ fn SemanticChecker::checked_top_level_enum(
 ///|
 fn SemanticChecker::checked_top_level_function(
   self : SemanticChecker,
-  declaration : @resolve.ResolvedFunctionDeclaration,
+  declaration : @desugar.DesugaredFunctionDeclaration,
 ) -> @checked.CheckedTopLevelDeclaration? {
   let body_scope = self.root_scope()
   let parameters = declaration.parameters.map(fn(parameter) {
@@ -100,7 +101,7 @@ fn SemanticChecker::checked_top_level_function(
   )
   guard self.require_checked_expression(
       checked_body,
-      resolved_expr_loc(declaration.body),
+      declaration.body.loc(),
       "function body",
     )
     is Some(body) else {
@@ -127,7 +128,7 @@ fn SemanticChecker::checked_top_level_function(
 ///|
 fn SemanticChecker::checked_top_level_let(
   self : SemanticChecker,
-  declaration : @resolve.ResolvedLetDeclaration,
+  declaration : @desugar.DesugaredLetDeclaration,
 ) -> @checked.CheckedTopLevelDeclaration? {
   let type_ = if declaration.type_annotation is Some(type_annotation) {
     self.check_type(type_annotation)
@@ -158,7 +159,7 @@ fn SemanticChecker::checked_top_level_let(
   )
   guard self.require_checked_expression(
       checked_initializer,
-      resolved_expr_loc(declaration.initializer),
+      declaration.initializer.loc(),
       "let initializer",
     )
     is Some(initializer) else {
@@ -179,7 +180,7 @@ fn SemanticChecker::checked_top_level_let(
 fn SemanticChecker::check_checked_local_let(
   self : SemanticChecker,
   scope : TypeScope,
-  declaration : @resolve.ResolvedLetDeclaration,
+  declaration : @desugar.DesugaredLetDeclaration,
 ) -> @checked.CheckedLetDeclaration? {
   let type_ = if declaration.type_annotation is Some(type_annotation) {
     self.check_type(type_annotation)
@@ -198,7 +199,7 @@ fn SemanticChecker::check_checked_local_let(
   )
   guard self.require_checked_expression(
       checked_initializer,
-      resolved_expr_loc(declaration.initializer),
+      declaration.initializer.loc(),
       "local let initializer",
     )
     is Some(initializer) else {
@@ -217,7 +218,7 @@ fn SemanticChecker::check_checked_local_let(
 fn SemanticChecker::check_checked_local_function(
   self : SemanticChecker,
   scope : TypeScope,
-  declaration : @resolve.ResolvedFunctionDeclaration,
+  declaration : @desugar.DesugaredFunctionDeclaration,
 ) -> @checked.CheckedFunctionDeclaration? {
   let type_ = self.function_type(
     declaration.type_parameters,
@@ -240,7 +241,7 @@ fn SemanticChecker::check_checked_local_function(
   )
   guard self.require_checked_expression(
       checked_body,
-      resolved_expr_loc(declaration.body),
+      declaration.body.loc(),
       "local function body",
     )
     is Some(body) else {

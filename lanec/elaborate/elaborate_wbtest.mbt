@@ -186,6 +186,190 @@ test "elaborate pipeline expression into checked call" {
 }
 
 ///|
+test "elaborate direct binary operator alias into checked call" {
+  let result = elaborate_source(
+    (
+      #|fn op_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|fn use() -> Int {
+      #|  1 + 2
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    fn : (Int, Int) -> Int value#0 op_add {
+      #|      parameters {
+      #|        param : Int value#2 a
+      #|        param : Int value#3 b
+      #|      }
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            value : Int value#2 a
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    fn : () -> Int value#1 use {
+      #|      parameters {}
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            call : Int {
+      #|              callee {
+      #|                value : (Int, Int) -> Int value#0 op_add
+      #|              }
+      #|              arguments {
+      #|                int 1 : Int
+      #|                int 2 : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "elaborate direct unary operator alias into checked call" {
+  let result = elaborate_source(
+    (
+      #|fn op_neg(value : Int) -> Int {
+      #|  value
+      #|}
+      #|fn use() -> Int {
+      #|  -1
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    fn : (Int) -> Int value#0 op_neg {
+      #|      parameters {
+      #|        param : Int value#2 value
+      #|      }
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            value : Int value#2 value
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    fn : () -> Int value#1 use {
+      #|      parameters {}
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            call : Int {
+      #|              callee {
+      #|                value : (Int) -> Int value#0 op_neg
+      #|              }
+      #|              arguments {
+      #|                int 1 : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "elaborate opened binary operator candidate into checked call" {
+  let result = elaborate_source(
+    (
+      #|struct Ops {
+      #|  op_add : (Int, Int) -> Int
+      #|}
+      #|fn int_add(a : Int, b : Int) -> Int {
+      #|  a
+      #|}
+      #|let ops : Ops = builtin("%ops")
+      #|open ops
+      #|fn use() -> Int {
+      #|  1 + 2
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    struct type#0 Ops {
+      #|      field field#0 op_add : (Int, Int) -> Int index=0
+      #|    }
+      #|    fn : (Int, Int) -> Int value#0 int_add {
+      #|      parameters {
+      #|        param : Int value#2 a
+      #|        param : Int value#3 b
+      #|      }
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            value : Int value#2 a
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    let : type#0 value#4 ops {
+      #|      unsafe_builtin "%ops" : type#0
+      #|    }
+      #|    fn : () -> Int value#1 use {
+      #|      parameters {}
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            call : Int {
+      #|              callee {
+      #|                field : (Int, Int) -> Int field#0 op_add {
+      #|                  base {
+      #|                    value : type#0 value#4 ops
+      #|                  }
+      #|                }
+      #|              }
+      #|              arguments {
+      #|                int 1 : Int
+      #|                int 2 : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
 test "elaborate pipeline into function literal call" {
   let result = elaborate_source(
     (
@@ -225,6 +409,72 @@ test "elaborate pipeline into function literal call" {
       #|              }
       #|              arguments {
       #|                int 1 : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "elaborate lazy bool operator into thunked checked call" {
+  let result = elaborate_source(
+    (
+      #|fn op_and(a : Bool, b : () -> Bool) -> Bool {
+      #|  a
+      #|}
+      #|fn use(a : Bool, b : Bool) -> Bool {
+      #|  a && b
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    fn : (Bool, () -> Bool) -> Bool value#0 op_and {
+      #|      parameters {
+      #|        param : Bool value#2 a
+      #|        param : () -> Bool value#3 b
+      #|      }
+      #|      return : Bool
+      #|      body {
+      #|        block : Bool {
+      #|          result {
+      #|            value : Bool value#2 a
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    fn : (Bool, Bool) -> Bool value#1 use {
+      #|      parameters {
+      #|        param : Bool value#4 a
+      #|        param : Bool value#5 b
+      #|      }
+      #|      return : Bool
+      #|      body {
+      #|        block : Bool {
+      #|          result {
+      #|            call : Bool {
+      #|              callee {
+      #|                value : (Bool, () -> Bool) -> Bool value#0 op_and
+      #|              }
+      #|              arguments {
+      #|                value : Bool value#4 a
+      #|                fn_literal : () -> Bool {
+      #|                  parameters {}
+      #|                  return : Bool
+      #|                  body {
+      #|                    value : Bool value#5 b
+      #|                  }
+      #|                }
       #|              }
       #|            }
       #|          }

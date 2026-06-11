@@ -51,7 +51,7 @@ fn TypeScope::lookup_name(self : TypeScope, name : String) -> @types.Type? {
 fn SemanticChecker::check_local_let(
   self : SemanticChecker,
   scope : TypeScope,
-  declaration : @resolve.ResolvedLetDeclaration,
+  declaration : @desugar.DesugaredLetDeclaration,
 ) -> Unit {
   let type_ = if declaration.type_annotation is Some(type_annotation) {
     let type_ = self.check_type(type_annotation)
@@ -71,7 +71,7 @@ fn SemanticChecker::check_local_let(
 fn SemanticChecker::check_local_function(
   self : SemanticChecker,
   scope : TypeScope,
-  declaration : @resolve.ResolvedFunctionDeclaration,
+  declaration : @desugar.DesugaredFunctionDeclaration,
 ) -> Unit {
   let type_ = self.function_type(
     declaration.type_parameters,

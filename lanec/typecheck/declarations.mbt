@@ -109,12 +109,12 @@ fn DeclarationChecker::check_type(
   self : DeclarationChecker,
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
-  check_resolved_type(self.source, self.diagnostics, type_)
+  check_resolved_type(self.source.symbols, self.diagnostics, type_)
 }
 
 ///|
 fn check_resolved_type(
-  source : @resolve.ResolvedSourceFile,
+  symbols : @symbol.SymbolRegistry,
   diagnostics : Array[TypeCheckDiagnostic],
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
@@ -122,10 +122,10 @@ fn check_resolved_type(
     Primitive(primitive, ..) => Primitive(primitive)
     Nominal(symbol~, name~, arguments~, loc~) => {
       let checked_arguments = arguments.map(fn(argument) {
-        check_resolved_type(source, diagnostics, argument)
+        check_resolved_type(symbols, diagnostics, argument)
       })
       check_type_arity(
-        source,
+        symbols,
         diagnostics,
         symbol,
         name,
@@ -137,9 +137,9 @@ fn check_resolved_type(
     Parameter(symbol~, ..) => Parameter(symbol)
     Function(type_parameters~, parameters~, result~, ..) => {
       let checked_parameters = parameters.map(fn(parameter) {
-        check_resolved_type(source, diagnostics, parameter)
+        check_resolved_type(symbols, diagnostics, parameter)
       })
-      let checked_result = check_resolved_type(source, diagnostics, result)
+      let checked_result = check_resolved_type(symbols, diagnostics, result)
       let function_type = @types.Type::Function(
         checked_parameters, checked_result,
       )
@@ -151,7 +151,7 @@ fn check_resolved_type(
     }
     Unresolved(name~, arguments~, loc~) => {
       for argument in arguments {
-        ignore(check_resolved_type(source, diagnostics, argument))
+        ignore(check_resolved_type(symbols, diagnostics, argument))
       }
       diagnostics.push({ kind: UnresolvedType(name), loc })
       Error
@@ -161,15 +161,14 @@ fn check_resolved_type(
 
 ///|
 fn check_type_arity(
-  source : @resolve.ResolvedSourceFile,
+  symbols : @symbol.SymbolRegistry,
   diagnostics : Array[TypeCheckDiagnostic],
   symbol : TypeSymbolId,
   name : String,
   actual : Int,
   loc : SourceSpan,
 ) -> Unit {
-  if source.symbols.type_metadata(symbol) is Some(metadata) &&
-    metadata.arity != actual {
+  if symbols.type_metadata(symbol) is Some(metadata) && metadata.arity != actual {
     diagnostics.push({
       kind: TypeArgumentArityMismatch(name~, expected=metadata.arity, actual~),
       loc,

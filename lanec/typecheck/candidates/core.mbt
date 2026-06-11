@@ -14,6 +14,7 @@ pub(all) enum Selection {
 ///|
 pub(all) struct CallableCandidate {
   reference : @resolve.ResolvedValueReference
+  type_arguments : Array[@types.Type]
   parameters : Array[@types.Type]
   result : @types.Type
 } derive(Debug, Eq)

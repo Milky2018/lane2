@@ -1,6 +1,6 @@
 ///|
 priv struct SemanticChecker {
-  source : @resolve.ResolvedSourceFile
+  source : @desugar.DesugaredSourceFile
   declarations : CheckedDeclarationEnvironment
   diagnostics : Array[TypeCheckDiagnostic]
   values : Array[CheckedValueDeclaration]
@@ -13,6 +13,7 @@ pub fn typecheck_source_file(
   source : @resolve.ResolvedSourceFile,
 ) -> TypeCheckResult {
   let declaration_result = typecheck_declarations(source)
+  let source = @desugar.desugar_source_file(source)
   let checker = SemanticChecker::{
     source,
     declarations: declaration_result.declarations,
@@ -66,7 +67,7 @@ fn SemanticChecker::collect_top_level_function_types(
 ///|
 fn SemanticChecker::check_top_level_function(
   self : SemanticChecker,
-  declaration : @resolve.ResolvedFunctionDeclaration,
+  declaration : @desugar.DesugaredFunctionDeclaration,
 ) -> Unit {
   let scope = self.root_scope()
   for parameter in declaration.parameters {
@@ -86,7 +87,7 @@ fn SemanticChecker::check_top_level_function(
 ///|
 fn SemanticChecker::check_top_level_let(
   self : SemanticChecker,
-  declaration : @resolve.ResolvedLetDeclaration,
+  declaration : @desugar.DesugaredLetDeclaration,
 ) -> Unit {
   let type_ = if declaration.type_annotation is Some(type_annotation) {
     let type_ = self.check_type(type_annotation)
@@ -138,5 +139,5 @@ fn SemanticChecker::check_type(
   self : SemanticChecker,
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
-  check_resolved_type(self.source, self.diagnostics, type_)
+  check_resolved_type(self.source.symbols, self.diagnostics, type_)
 }

@@ -6,7 +6,7 @@ fn SemanticChecker::synthesize_qualified_variant(
   type_arguments : Array[@resolve.ResolvedType],
   variant : String,
   reference : @resolve.ResolvedVariantReference,
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @types.Type {
@@ -53,7 +53,7 @@ fn SemanticChecker::synthesize_unqualified_variant(
   scope : TypeScope,
   variant : String,
   reference : @resolve.ResolvedVariantReference,
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @types.Type {
@@ -98,7 +98,7 @@ fn SemanticChecker::synthesize_variant_symbol(
   symbol : VariantSymbolId,
   display_name : String,
   explicit_type_arguments : Array[@types.Type],
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @types.Type {
@@ -138,7 +138,7 @@ fn SemanticChecker::synthesize_variant_symbol(
     type_arguments
   } else {
     check_type_arity(
-      self.source,
+      self.source.symbols,
       self.diagnostics,
       metadata.owner,
       display_name,
@@ -167,7 +167,7 @@ fn SemanticChecker::infer_variant_type_arguments(
   scope : TypeScope,
   declaration : CheckedEnumDeclaration,
   variant : CheckedVariantDeclaration,
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> Array[@types.Type]? {
@@ -221,7 +221,7 @@ fn SemanticChecker::synthesize_struct_literal(
   scope : TypeScope,
   type_name : String,
   type_arguments : Array[@resolve.ResolvedType],
-  fields : Array[@resolve.ResolvedStructLiteralField],
+  fields : Array[@desugar.DesugaredStructLiteralField],
   loc : SourceSpan,
 ) -> @types.Type {
   guard self.source.symbols.type_named(type_name) is Some(symbol) else {
@@ -230,7 +230,7 @@ fn SemanticChecker::synthesize_struct_literal(
   }
   let arguments = type_arguments.map(fn(type_) { self.check_type(type_) })
   check_type_arity(
-    self.source,
+    self.source.symbols,
     self.diagnostics,
     symbol,
     type_name,
@@ -289,7 +289,7 @@ fn SemanticChecker::synthesize_struct_literal(
 fn SemanticChecker::synthesize_field(
   self : SemanticChecker,
   scope : TypeScope,
-  base : @resolve.ResolvedExpr,
+  base : @desugar.DesugaredExpr,
   name : String,
   reference : @resolve.ResolvedFieldReference,
   loc : SourceSpan,

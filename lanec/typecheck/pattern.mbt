@@ -20,8 +20,8 @@ fn PatternMatrix::add(
 fn SemanticChecker::check_match(
   self : SemanticChecker,
   scope : TypeScope,
-  scrutinee : @resolve.ResolvedExpr,
-  arms : Array[@resolve.ResolvedMatchArm],
+  scrutinee : @desugar.DesugaredExpr,
+  arms : Array[@desugar.DesugaredMatchArm],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
@@ -60,8 +60,8 @@ fn SemanticChecker::check_match(
 fn SemanticChecker::synthesize_match(
   self : SemanticChecker,
   scope : TypeScope,
-  scrutinee : @resolve.ResolvedExpr,
-  arms : Array[@resolve.ResolvedMatchArm],
+  scrutinee : @desugar.DesugaredExpr,
+  arms : Array[@desugar.DesugaredMatchArm],
   loc : SourceSpan,
 ) -> @types.Type {
   // Match synthesis judgment:
@@ -448,30 +448,24 @@ fn PatternMatrix::is_exhaustive(
   // require an irrefutable fallback because their literal spaces are open in
   // v1. Nominal enums are exhaustive when every variant constructor is covered;
   // nominal structs need an irrefutable struct, wildcard, or binding pattern.
-  for row in self.rows {
-    if pattern_is_irrefutable(declarations, row, type_) {
-      return true
+  if self.rows.any(fn(row) { pattern_is_irrefutable(declarations, row, type_) }) {
+    true
+  } else {
+    match type_ {
+      Error => true
+      Primitive(Bool) =>
+        self.covers_bool_literal(true) && self.covers_bool_literal(false)
+      Primitive(Unit) | Primitive(Int) | Primitive(String) => false
+      Nominal(symbol, _) =>
+        match declarations.checked_enum(symbol) {
+          Some(declaration) =>
+            declaration.variants.all(fn(variant) {
+              self.covers_variant_constructor(declarations, variant)
+            })
+          None => false
+        }
+      Parameter(_) | Function(_, _) | Forall(_, _) => false
     }
-  }
-  match type_ {
-    Error => true
-    Primitive(Bool) =>
-      self.covers_bool_literal(true) && self.covers_bool_literal(false)
-    Primitive(Unit) => false
-    Primitive(Int) | Primitive(String) => false
-    Nominal(symbol, _) =>
-      match declarations.checked_enum(symbol) {
-        Some(declaration) =>
-          declaration.variants.all(fn(variant) {
-            self.covers_variant_constructor(declarations, variant)
-          })
-        None =>
-          match declarations.checked_struct(symbol) {
-            Some(_) => false
-            None => false
-          }
-      }
-    Parameter(_) | Function(_, _) | Forall(_, _) => false
   }
 }
 
@@ -480,17 +474,13 @@ fn PatternMatrix::covers_bool_literal(
   self : PatternMatrix,
   value : Bool,
 ) -> Bool {
-  for row in self.rows {
+  self.rows.any(fn(row) {
     match row {
-      Wildcard(..) | Binding(..) => return true
-      Literal(literal=Bool(row_value), ..) =>
-        if row_value == value {
-          return true
-        }
-      _ => ()
+      Wildcard(..) | Binding(..) => true
+      Literal(literal=Bool(row_value), ..) => row_value == value
+      _ => false
     }
-  }
-  false
+  })
 }
 
 ///|
@@ -498,17 +488,13 @@ fn PatternMatrix::covers_int_literal(
   self : PatternMatrix,
   value : Int64,
 ) -> Bool {
-  for row in self.rows {
+  self.rows.any(fn(row) {
     match row {
-      Wildcard(..) | Binding(..) => return true
-      Literal(literal=Int(row_literal), ..) =>
-        if row_literal.value == value {
-          return true
-        }
-      _ => ()
+      Wildcard(..) | Binding(..) => true
+      Literal(literal=Int(row_literal), ..) => row_literal.value == value
+      _ => false
     }
-  }
-  false
+  })
 }
 
 ///|
@@ -516,17 +502,13 @@ fn PatternMatrix::covers_string_literal(
   self : PatternMatrix,
   value : String,
 ) -> Bool {
-  for row in self.rows {
+  self.rows.any(fn(row) {
     match row {
-      Wildcard(..) | Binding(..) => return true
-      Literal(literal=String(row_value), ..) =>
-        if row_value == value {
-          return true
-        }
-      _ => ()
+      Wildcard(..) | Binding(..) => true
+      Literal(literal=String(row_value), ..) => row_value == value
+      _ => false
     }
-  }
-  false
+  })
 }
 
 ///|
@@ -536,18 +518,15 @@ fn PatternMatrix::covers_variant(
   symbol : VariantSymbolId,
   arguments : Array[@checked.CheckedPattern],
 ) -> Bool {
-  for row in self.rows {
+  self.rows.any(fn(row) {
     match row {
-      Wildcard(..) | Binding(..) => return true
+      Wildcard(..) | Binding(..) => true
       Variant(symbol=row_symbol, arguments=row_arguments, ..) =>
-        if row_symbol == symbol &&
-          variant_arguments_cover(declarations, row_arguments, arguments) {
-          return true
-        }
-      _ => ()
+        row_symbol == symbol &&
+        variant_arguments_cover(declarations, row_arguments, arguments)
+      _ => false
     }
-  }
-  false
+  })
 }
 
 ///|
@@ -556,18 +535,15 @@ fn PatternMatrix::covers_variant_constructor(
   declarations : CheckedDeclarationEnvironment,
   variant : CheckedVariantDeclaration,
 ) -> Bool {
-  for row in self.rows {
+  self.rows.any(fn(row) {
     match row {
-      Wildcard(..) | Binding(..) => return true
+      Wildcard(..) | Binding(..) => true
       Variant(symbol~, arguments~, ..) =>
-        if symbol == variant.symbol &&
-          variant_arguments_irrefutable(declarations, arguments) {
-          return true
-        }
-      _ => ()
+        symbol == variant.symbol &&
+        variant_arguments_irrefutable(declarations, arguments)
+      _ => false
     }
-  }
-  false
+  })
 }
 
 ///|
@@ -587,14 +563,11 @@ fn pattern_is_irrefutable(
         )
       })
     Variant(symbol~, arguments~, ..) =>
-      if type_ is Nominal(owner, _) {
-        match declarations.checked_enum(owner) {
-          Some(declaration) =>
-            declaration.variants.length() == 1 &&
-            declaration.variants[0].symbol == symbol &&
-            variant_arguments_irrefutable(declarations, arguments)
-          None => false
-        }
+      if type_ is Nominal(owner, _) &&
+        declarations.checked_enum(owner) is Some(declaration) {
+        declaration.variants.length() == 1 &&
+        declaration.variants[0].symbol == symbol &&
+        variant_arguments_irrefutable(declarations, arguments)
       } else {
         false
       }

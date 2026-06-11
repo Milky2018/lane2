@@ -12,6 +12,7 @@ priv struct TypeArgumentInference {
 
 ///|
 priv struct InstantiatedCallableType {
+  type_arguments : Array[@types.Type]
   parameters : Array[@types.Type]
   result : @types.Type
 }
@@ -28,12 +29,7 @@ fn TypeArgumentInference::tracks(
   self : TypeArgumentInference,
   parameter : TypeParameterId,
 ) -> Bool {
-  for tracked in self.parameters {
-    if tracked.id == parameter {
-      return true
-    }
-  }
-  false
+  self.parameters.any(fn(tracked) { tracked.id == parameter })
 }
 
 ///|
@@ -125,10 +121,22 @@ fn TypeArgumentInference::substitution(
 }
 
 ///|
+fn TypeArgumentInference::type_arguments(
+  self : TypeArgumentInference,
+) -> Array[@types.Type]? {
+  let arguments = []
+  for parameter in self.parameters {
+    guard self.lookup(parameter.id) is Some(type_) else { return None }
+    arguments.push(type_)
+  }
+  Some(arguments)
+}
+
+///|
 fn SemanticChecker::synthesize_argument_for_type_arguments(
   self : SemanticChecker,
   scope : TypeScope,
-  argument : @resolve.ResolvedExpr,
+  argument : @desugar.DesugaredExpr,
 ) -> @types.Type? {
   // During inference, an argument is allowed to fail synthesis without making
   // the whole call fail immediately. Once type arguments are known, the same
@@ -150,7 +158,7 @@ fn SemanticChecker::instantiate_generic_callable(
   scope : TypeScope,
   type_parameters : Array[@types.TypeParameter],
   body : @types.Type,
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
   report_failure : Bool,
@@ -195,7 +203,17 @@ fn SemanticChecker::instantiate_generic_callable(
     }
     return None
   }
+  guard inference.type_arguments() is Some(type_arguments) else {
+    if report_failure {
+      self.diagnostics.push({
+        kind: CannotInferExpression("type arguments"),
+        loc,
+      })
+    }
+    return None
+  }
   Some({
+    type_arguments,
     parameters: parameters.map(fn(parameter) {
       parameter.substitute(substitution)
     }),

@@ -5,7 +5,7 @@ fn SemanticChecker::synthesize_function_literal(
   type_parameters : Array[@resolve.ResolvedTypeParameter],
   parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
   return_type : @resolve.ResolvedType?,
-  body : @resolve.ResolvedExpr,
+  body : @desugar.DesugaredExpr,
   loc : SourceSpan,
 ) -> @types.Type {
   ignore(loc)
@@ -47,7 +47,7 @@ fn SemanticChecker::check_function_literal(
   type_parameters : Array[@resolve.ResolvedTypeParameter],
   parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
   return_type : @resolve.ResolvedType?,
-  body : @resolve.ResolvedExpr,
+  body : @desugar.DesugaredExpr,
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
@@ -119,7 +119,7 @@ fn SemanticChecker::check_generic_function_literal(
   expected_body : @types.Type,
   parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
   return_type : @resolve.ResolvedType?,
-  body : @resolve.ResolvedExpr,
+  body : @desugar.DesugaredExpr,
   loc : SourceSpan,
 ) -> Unit {
   // Forall introduction is local to the function literal. The literal must

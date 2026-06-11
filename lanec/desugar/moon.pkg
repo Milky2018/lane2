@@ -1,18 +1,13 @@
 import {
   "Milky2018/lane2/basic",
-  "Milky2018/lane2/checked",
-  "Milky2018/lane2/desugar",
-  "Milky2018/lane2/typecheck/candidates",
   "Milky2018/lane2/pretty",
   "Milky2018/lane2/resolve",
   "Milky2018/lane2/symbol",
+  "Milky2018/lane2/syntax",
   "Milky2018/lane2/types",
   "moonbit-community/prettyprinter",
-  "moonbitlang/core/string",
 }
 
 import {
   "Milky2018/lane2/parser",
-  "Milky2018/lane2/syntax",
-  "moonbitlang/core/test",
 } for "wbtest"

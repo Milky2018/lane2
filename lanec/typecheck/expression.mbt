@@ -2,7 +2,7 @@
 fn SemanticChecker::check_expr(
   self : SemanticChecker,
   scope : TypeScope,
-  expr : @resolve.ResolvedExpr,
+  expr : @desugar.DesugaredExpr,
   expected : @types.Type,
 ) -> Unit {
   // Checking judgment:
@@ -25,7 +25,7 @@ fn SemanticChecker::check_expr(
           self.check_candidate_reference(scope, name, candidates, expected, loc)
         _ => {
           let actual = self.synthesize_expr(scope, expr)
-          self.expect_type(expected, actual, resolved_expr_loc(expr))
+          self.expect_type(expected, actual, expr.loc())
         }
       }
     Block(items~, result~, ..) =>
@@ -67,23 +67,13 @@ fn SemanticChecker::check_expr(
     }
     Call(callee~, arguments~, loc~) =>
       self.check_call(scope, callee, arguments, expected, loc)
-    Pipeline(left~, right~, loc~) =>
-      self.check_pipeline(scope, left, right, expected, loc)
-    Unary(operator~, reference~, operand~, loc~) =>
-      self.check_unary_operator(
-        scope, operator, reference, operand, expected, loc,
-      )
-    Binary(operator~, reference~, left~, right~, loc~) =>
-      self.check_binary_operator(
-        scope, operator, reference, left, right, expected, loc,
-      )
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
       self.check_function_literal(
         scope, type_parameters, parameters, return_type, body, expected, loc,
       )
     _ => {
       let actual = self.synthesize_expr(scope, expr)
-      self.expect_type(expected, actual, resolved_expr_loc(expr))
+      self.expect_type(expected, actual, expr.loc())
     }
   }
 }
@@ -92,9 +82,9 @@ fn SemanticChecker::check_expr(
 fn SemanticChecker::check_if(
   self : SemanticChecker,
   scope : TypeScope,
-  condition : @resolve.ResolvedExpr,
-  then_branch : @resolve.ResolvedExpr,
-  else_branch : @resolve.ResolvedExpr,
+  condition : @desugar.DesugaredExpr,
+  then_branch : @desugar.DesugaredExpr,
+  else_branch : @desugar.DesugaredExpr,
   expected : @types.Type,
 ) -> Unit {
   // Gamma |- condition <= Bool
@@ -111,8 +101,8 @@ fn SemanticChecker::check_if(
 fn SemanticChecker::check_block(
   self : SemanticChecker,
   scope : TypeScope,
-  items : Array[@resolve.ResolvedLocalItem],
-  result : @resolve.ResolvedExpr,
+  items : Array[@desugar.DesugaredLocalItem],
+  result : @desugar.DesugaredExpr,
   expected : @types.Type,
 ) -> Unit {
   // Gamma |- item_1 => Gamma_1
@@ -139,7 +129,7 @@ fn SemanticChecker::check_block(
 fn SemanticChecker::synthesize_expr(
   self : SemanticChecker,
   scope : TypeScope,
-  expr : @resolve.ResolvedExpr,
+  expr : @desugar.DesugaredExpr,
 ) -> @types.Type {
   // Synthesis judgment:
   //
@@ -196,16 +186,8 @@ fn SemanticChecker::synthesize_expr(
       )
     Call(callee~, arguments~, loc~) =>
       self.synthesize_call(scope, callee, arguments, loc)
-    Pipeline(left~, right~, loc~) =>
-      self.synthesize_pipeline(scope, left, right, loc)
     Field(base~, name~, reference~, loc~) =>
       self.synthesize_field(scope, base, name, reference, loc)
-    Unary(operator~, reference~, operand~, loc~) =>
-      self.synthesize_unary_operator(scope, operator, reference, operand, loc)
-    Binary(operator~, reference~, left~, right~, loc~) =>
-      self.synthesize_binary_operator(
-        scope, operator, reference, left, right, loc,
-      )
     StructLiteral(type_name~, type_arguments~, fields~, loc~) =>
       self.synthesize_struct_literal(
         scope, type_name, type_arguments, fields, loc,
@@ -218,35 +200,11 @@ fn SemanticChecker::synthesize_expr(
 }
 
 ///|
-fn resolved_expr_loc(expr : @resolve.ResolvedExpr) -> SourceSpan {
-  match expr {
-    IntLiteral(_, loc~)
-    | StringLiteral(_, loc~)
-    | BoolLiteral(_, loc~)
-    | UnitLiteral(loc~)
-    | Var(loc~, ..)
-    | QualifiedVariant(loc~, ..)
-    | UnqualifiedVariant(loc~, ..)
-    | StructLiteral(loc~, ..)
-    | Builtin(_, loc~)
-    | FunctionLiteral(loc~, ..)
-    | Block(loc~, ..)
-    | If(loc~, ..)
-    | Match(loc~, ..)
-    | Call(loc~, ..)
-    | Field(loc~, ..)
-    | Unary(loc~, ..)
-    | Binary(loc~, ..)
-    | Pipeline(loc~, ..) => loc
-  }
-}
-
-///|
 fn SemanticChecker::synthesize_block(
   self : SemanticChecker,
   scope : TypeScope,
-  items : Array[@resolve.ResolvedLocalItem],
-  result : @resolve.ResolvedExpr,
+  items : Array[@desugar.DesugaredLocalItem],
+  result : @desugar.DesugaredExpr,
 ) -> @types.Type {
   let next_scope : TypeScope = { values: scope.values.copy() }
   for item in items {
@@ -264,9 +222,9 @@ fn SemanticChecker::synthesize_block(
 fn SemanticChecker::synthesize_if(
   self : SemanticChecker,
   scope : TypeScope,
-  condition : @resolve.ResolvedExpr,
-  then_branch : @resolve.ResolvedExpr,
-  else_branch : @resolve.ResolvedExpr,
+  condition : @desugar.DesugaredExpr,
+  then_branch : @desugar.DesugaredExpr,
+  else_branch : @desugar.DesugaredExpr,
   loc : SourceSpan,
 ) -> @types.Type {
   self.check_expr(scope, condition, Primitive(Bool))
@@ -290,8 +248,5 @@ fn SemanticChecker::expect_type(
 
 ///|
 fn type_matches(expected : @types.Type, actual : @types.Type) -> Bool {
-  match (expected, actual) {
-    (Error, _) | (_, Error) => true
-    _ => expected.equals(actual)
-  }
+  expected is Error || actual is Error || expected.equals(actual)
 }

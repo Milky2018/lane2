@@ -2,8 +2,8 @@
 fn SemanticChecker::synthesize_call(
   self : SemanticChecker,
   scope : TypeScope,
-  callee : @resolve.ResolvedExpr,
-  arguments : Array[@resolve.ResolvedExpr],
+  callee : @desugar.DesugaredExpr,
+  arguments : Array[@desugar.DesugaredExpr],
   loc : SourceSpan,
 ) -> @types.Type {
   // Gamma |- callee => (P_1, ..., P_n) -> R
@@ -29,53 +29,11 @@ fn SemanticChecker::synthesize_call(
 }
 
 ///|
-fn SemanticChecker::synthesize_pipeline(
-  self : SemanticChecker,
-  scope : TypeScope,
-  left : @resolve.ResolvedExpr,
-  right : @resolve.ResolvedExpr,
-  loc : SourceSpan,
-) -> @types.Type {
-  match right {
-    Call(callee~, arguments~, ..) =>
-      self.synthesize_call(
-        scope,
-        callee,
-        pipeline_arguments(left, arguments),
-        loc,
-      )
-    _ => self.synthesize_call(scope, right, [left], loc)
-  }
-}
-
-///|
-fn SemanticChecker::check_pipeline(
-  self : SemanticChecker,
-  scope : TypeScope,
-  left : @resolve.ResolvedExpr,
-  right : @resolve.ResolvedExpr,
-  expected : @types.Type,
-  loc : SourceSpan,
-) -> Unit {
-  match right {
-    Call(callee~, arguments~, ..) =>
-      self.check_call(
-        scope,
-        callee,
-        pipeline_arguments(left, arguments),
-        expected,
-        loc,
-      )
-    _ => self.check_call(scope, right, [left], expected, loc)
-  }
-}
-
-///|
 fn SemanticChecker::synthesize_callable_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee_type : @types.Type,
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @types.Type {
@@ -108,7 +66,7 @@ fn SemanticChecker::synthesize_candidate_call(
   scope : TypeScope,
   name : String,
   candidates : Array[@resolve.ResolvedValueReference],
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   loc : SourceSpan,
 ) -> @types.Type {
   let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
@@ -142,8 +100,8 @@ fn SemanticChecker::synthesize_candidate_call(
 fn SemanticChecker::check_call(
   self : SemanticChecker,
   scope : TypeScope,
-  callee : @resolve.ResolvedExpr,
-  arguments : Array[@resolve.ResolvedExpr],
+  callee : @desugar.DesugaredExpr,
+  arguments : Array[@desugar.DesugaredExpr],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
@@ -177,7 +135,7 @@ fn SemanticChecker::check_candidate_call(
   scope : TypeScope,
   name : String,
   candidates : Array[@resolve.ResolvedValueReference],
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
@@ -210,7 +168,7 @@ fn SemanticChecker::select_callable_by_local_typing(
   scope : TypeScope,
   name : String,
   candidates : Array[@candidates.TypedCandidate],
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @candidates.CallableSelection {
@@ -246,7 +204,7 @@ fn SemanticChecker::viable_callable_candidate(
   self : SemanticChecker,
   scope : TypeScope,
   candidate : @candidates.TypedCandidate,
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @candidates.CallableCandidate? {
@@ -266,7 +224,12 @@ fn SemanticChecker::viable_callable_candidate(
       let viable = self.diagnostics.length() == checkpoint.length
       self.rollback_diagnostics(checkpoint)
       if viable {
-        Some({ reference: candidate.reference, parameters, result })
+        Some({
+          reference: candidate.reference,
+          type_arguments: [],
+          parameters,
+          result,
+        })
       } else {
         None
       }
@@ -288,6 +251,7 @@ fn SemanticChecker::viable_callable_candidate(
       if viable {
         Some({
           reference: candidate.reference,
+          type_arguments: instantiated.type_arguments,
           parameters: instantiated.parameters,
           result: instantiated.result,
         })
@@ -314,23 +278,11 @@ fn SemanticChecker::result_matches_expected(
 }
 
 ///|
-fn pipeline_arguments(
-  left : @resolve.ResolvedExpr,
-  arguments : Array[@resolve.ResolvedExpr],
-) -> Array[@resolve.ResolvedExpr] {
-  let result = [left]
-  for argument in arguments {
-    result.push(argument)
-  }
-  result
-}
-
-///|
 fn SemanticChecker::check_call_arguments(
   self : SemanticChecker,
   scope : TypeScope,
   parameters : Array[@types.Type],
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   loc : SourceSpan,
 ) -> Unit {
   // Gamma |- f => (P_1, ..., P_n) -> R

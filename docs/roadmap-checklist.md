@@ -67,8 +67,8 @@ typing judgments.
   package for expected-type and call-argument disambiguation.
 - [x] Propagate expected types through function bodies, block results, `if`
   branches, and known call parameters to drive local candidate selection.
-- [x] Check unary and non-thunked binary operator aliases as calls to resolved
-  `op_*` values, including open candidate selection by operand types.
+- [x] Check desugared operator alias calls as ordinary calls to resolved `op_*`
+  values, including open candidate selection by argument types.
 - [x] Reframe the checker around explicit synthesis (`synthesize(expr) -> T`)
   and checking (`check(expr, expected)`) judgments.
 - [x] Implement non-generic bidirectional local checking for function literals,
@@ -107,15 +107,18 @@ and unresolved or ambiguous states before typed core lowering.
 
 - [x] Create the `lanec/checked` package as the owner of the Checked Source
   AST.
+- [x] Create the `lanec/desugar` package as the owner of the resolved-to-
+  desugared AST pass.
 - [x] Define checked expressions, checked local items, checked top-level bodies,
   checked match arms, and checked patterns with attached types and origin spans.
 - [x] Provide a Checked Source pretty printer and snapshot tests for the initial
   checked expression and pattern shapes.
 - [x] Implement `lanec/elaborate` as the source-to-checked pipeline over
   resolved source and type-checking judgments.
-- [x] Elaborate pipeline expressions into ordinary checked calls.
-- [ ] Elaborate ordinary operator aliases into resolved checked calls.
-- [ ] Elaborate `&&` and `||` into checked thunked calls to `op_and` and
+- [x] Desugar pipeline expressions into ordinary calls before type checking.
+- [x] Desugar ordinary operator aliases into resolved `op_*` calls before type
+  checking.
+- [x] Desugar `&&` and `||` into thunked calls to `op_and` and
   `op_or`.
 - [ ] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.

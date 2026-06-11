@@ -1,0 +1,262 @@
+///|
+/// Desugars surface-only expression forms after name resolution.
+pub fn desugar_source_file(
+  source : @resolve.ResolvedSourceFile,
+) -> DesugaredSourceFile {
+  {
+    symbols: source.symbols,
+    declarations: source.declarations.map(desugar_top_level_declaration),
+    loc: source.loc,
+  }
+}
+
+///|
+fn desugar_top_level_declaration(
+  declaration : @resolve.ResolvedTopLevelDeclaration,
+) -> DesugaredTopLevelDeclaration {
+  match declaration {
+    Struct(declaration) => Struct(declaration)
+    Enum(declaration) => Enum(declaration)
+    Function(declaration) => Function(desugar_function_declaration(declaration))
+    Let(declaration) => Let(desugar_let_declaration(declaration))
+    Open(declaration) => Open(declaration)
+  }
+}
+
+///|
+fn desugar_function_declaration(
+  declaration : @resolve.ResolvedFunctionDeclaration,
+) -> DesugaredFunctionDeclaration {
+  {
+    symbol: declaration.symbol,
+    name: declaration.name,
+    type_parameters: declaration.type_parameters,
+    parameters: declaration.parameters,
+    return_type: declaration.return_type,
+    body: desugar_expr(declaration.body),
+    loc: declaration.loc,
+  }
+}
+
+///|
+fn desugar_let_declaration(
+  declaration : @resolve.ResolvedLetDeclaration,
+) -> DesugaredLetDeclaration {
+  {
+    symbol: declaration.symbol,
+    name: declaration.name,
+    type_annotation: declaration.type_annotation,
+    initializer: desugar_expr(declaration.initializer),
+    loc: declaration.loc,
+  }
+}
+
+///|
+fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem {
+  match item {
+    Let(declaration) => Let(desugar_let_declaration(declaration))
+    Function(declaration) => Function(desugar_function_declaration(declaration))
+    Open(declaration) => Open(declaration)
+  }
+}
+
+///|
+fn desugar_struct_literal_field(
+  field : @resolve.ResolvedStructLiteralField,
+) -> DesugaredStructLiteralField {
+  { name: field.name, value: field.value.map(desugar_expr), loc: field.loc }
+}
+
+///|
+fn desugar_match_arm(arm : @resolve.ResolvedMatchArm) -> DesugaredMatchArm {
+  { pattern: arm.pattern, body: desugar_expr(arm.body), loc: arm.loc }
+}
+
+///|
+fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
+  match expr {
+    IntLiteral(value, loc~) => IntLiteral(value, loc~)
+    StringLiteral(value, loc~) => StringLiteral(value, loc~)
+    BoolLiteral(value, loc~) => BoolLiteral(value, loc~)
+    UnitLiteral(loc~) => UnitLiteral(loc~)
+    Var(name~, reference~, loc~) => Var(name~, reference~, loc~)
+    QualifiedVariant(
+      type_name~,
+      type_arguments~,
+      variant~,
+      reference~,
+      arguments~,
+      loc~
+    ) =>
+      QualifiedVariant(
+        type_name~,
+        type_arguments~,
+        variant~,
+        reference~,
+        arguments=arguments.map(desugar_expr),
+        loc~,
+      )
+    UnqualifiedVariant(variant~, reference~, arguments~, loc~) =>
+      UnqualifiedVariant(
+        variant~,
+        reference~,
+        arguments=arguments.map(desugar_expr),
+        loc~,
+      )
+    StructLiteral(type_name~, type_arguments~, fields~, loc~) =>
+      StructLiteral(
+        type_name~,
+        type_arguments~,
+        fields=fields.map(desugar_struct_literal_field),
+        loc~,
+      )
+    Builtin(name, loc~) => Builtin(name, loc~)
+    FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
+      FunctionLiteral(
+        type_parameters~,
+        parameters~,
+        return_type~,
+        body=desugar_expr(body),
+        loc~,
+      )
+    Block(items~, result~, loc~) =>
+      Block(
+        items=items.map(desugar_local_item),
+        result=desugar_expr(result),
+        loc~,
+      )
+    If(condition~, then_branch~, else_branch~, loc~) =>
+      If(
+        condition=desugar_expr(condition),
+        then_branch=desugar_expr(then_branch),
+        else_branch=desugar_expr(else_branch),
+        loc~,
+      )
+    Match(scrutinee~, arms~, loc~) =>
+      Match(
+        scrutinee=desugar_expr(scrutinee),
+        arms=arms.map(desugar_match_arm),
+        loc~,
+      )
+    Call(callee~, arguments~, loc~) =>
+      Call(
+        callee=desugar_expr(callee),
+        arguments=arguments.map(desugar_expr),
+        loc~,
+      )
+    Field(base~, name~, reference~, loc~) =>
+      Field(base=desugar_expr(base), name~, reference~, loc~)
+    Unary(operator~, reference~, operand~, loc~) =>
+      desugar_operator_call(
+        operator.operation_name(),
+        reference,
+        [desugar_expr(operand)],
+        loc,
+      )
+    Binary(operator~, reference~, left~, right~, loc~) =>
+      if operator.is_lazy_bool_operator() {
+        desugar_operator_call(
+          operator.operation_name(),
+          reference,
+          [desugar_expr(left), desugar_bool_thunk(right, loc)],
+          loc,
+        )
+      } else {
+        desugar_operator_call(
+          operator.operation_name(),
+          reference,
+          [desugar_expr(left), desugar_expr(right)],
+          loc,
+        )
+      }
+    Pipeline(left~, right~, loc~) =>
+      desugar_pipeline(desugar_expr(left), desugar_expr(right), loc)
+  }
+}
+
+///|
+fn desugar_operator_call(
+  name : String,
+  reference : @resolve.ResolvedValueReference,
+  arguments : Array[DesugaredExpr],
+  loc : SourceSpan,
+) -> DesugaredExpr {
+  Call(callee=Var(name~, reference~, loc~), arguments~, loc~)
+}
+
+///|
+fn desugar_pipeline(
+  left : DesugaredExpr,
+  right : DesugaredExpr,
+  loc : SourceSpan,
+) -> DesugaredExpr {
+  if right is Call(callee~, arguments~, ..) {
+    Call(callee~, arguments=prepend_argument(left, arguments), loc~)
+  } else {
+    Call(callee=right, arguments=[left], loc~)
+  }
+}
+
+///|
+fn prepend_argument(
+  first : DesugaredExpr,
+  rest : Array[DesugaredExpr],
+) -> Array[DesugaredExpr] {
+  let result = [first]
+  for argument in rest {
+    result.push(argument)
+  }
+  result
+}
+
+///|
+fn desugar_bool_thunk(
+  body : @resolve.ResolvedExpr,
+  loc : SourceSpan,
+) -> DesugaredExpr {
+  FunctionLiteral(
+    type_parameters=[],
+    parameters=[],
+    return_type=Some(Primitive(Bool, loc~)),
+    body=desugar_expr(body),
+    loc~,
+  )
+}
+
+///|
+fn @syntax.UnaryOperator::operation_name(
+  self : @syntax.UnaryOperator,
+) -> String {
+  match self {
+    Neg => "op_neg"
+    Not => "op_not"
+  }
+}
+
+///|
+fn @syntax.BinaryOperator::operation_name(
+  self : @syntax.BinaryOperator,
+) -> String {
+  match self {
+    Add => "op_add"
+    Sub => "op_sub"
+    Mul => "op_mul"
+    Div => "op_div"
+    Rem => "op_rem"
+    Equal => "op_equal"
+    NotEqual => "op_not_equal"
+    Less => "op_less"
+    LessEqual => "op_less_eq"
+    Greater => "op_greater"
+    GreaterEqual => "op_greater_eq"
+    And => "op_and"
+    Or => "op_or"
+  }
+}
+
+///|
+fn @syntax.BinaryOperator::is_lazy_bool_operator(
+  self : @syntax.BinaryOperator,
+) -> Bool {
+  self is (And | Or)
+}

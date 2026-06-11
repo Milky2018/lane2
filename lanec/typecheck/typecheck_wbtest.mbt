@@ -33,15 +33,16 @@ fn expect_checked_let_initializer(
   let file = expect_parse_ok(source)
   let resolved = @resolve.resolve_source_file(file)
   let declaration_result = typecheck_declarations(resolved)
+  let source = @desugar.desugar_source_file(resolved)
   let checker = SemanticChecker::{
-    source: resolved,
+    source,
     declarations: declaration_result.declarations,
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
   }
   checker.collect_top_level_function_types()
-  for declaration in resolved.declarations {
+  for declaration in source.declarations {
     if declaration is Let(declaration) {
       if declaration.name == Some(name) {
         let checked = checker.check_checked_expr(
@@ -69,15 +70,16 @@ fn expect_first_checked_match_pattern(
   let file = expect_parse_ok(source)
   let resolved = @resolve.resolve_source_file(file)
   let declaration_result = typecheck_declarations(resolved)
+  let source = @desugar.desugar_source_file(resolved)
   let checker = SemanticChecker::{
-    source: resolved,
+    source,
     declarations: declaration_result.declarations,
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
   }
   checker.collect_top_level_function_types()
-  for declaration in resolved.declarations {
+  for declaration in source.declarations {
     if declaration is Function(declaration) && declaration.name == name {
       let scope = checker.root_scope()
       for parameter in declaration.parameters {

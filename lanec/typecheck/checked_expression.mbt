@@ -9,16 +9,16 @@ priv struct CheckedExpressionSynthesis {
 fn SemanticChecker::check_checked_expr(
   self : SemanticChecker,
   scope : TypeScope,
-  expression : @resolve.ResolvedExpr,
+  expression : @desugar.DesugaredExpr,
   expected : @types.Type,
 ) -> CheckedExpressionSynthesis {
   // Checked expression construction follows the checking judgment:
   //
   //   Gamma |- e <= Expected ~~> checked_e
   //
-  // Only syntax that can use direct expected context is constructed here. The
-  // remaining source forms continue to use the existing type-only checker until
-  // their checked-node rules are moved over one by one.
+  // Only desugared forms that can use direct expected context are constructed
+  // here. The remaining forms continue to use the existing type-only checker
+  // until their checked-node rules are moved over one by one.
   match expression {
     Builtin(name, loc~) =>
       checked_expression(UnsafeBuiltin(name~, type_=expected, loc~), expected)
@@ -27,13 +27,11 @@ fn SemanticChecker::check_checked_expr(
     | BoolLiteral(_, ..)
     | UnitLiteral(..) => {
       let checked = self.synthesize_checked_expr(scope, expression)
-      self.expect_type(expected, checked.type_, resolved_expr_loc(expression))
+      self.expect_type(expected, checked.type_, expression.loc())
       checked
     }
     Block(items~, result~, loc~) =>
       self.check_checked_block(scope, items, result, expected, loc)
-    Pipeline(left~, right~, loc~) =>
-      self.check_checked_pipeline(scope, left, right, expected, loc)
     Call(callee~, arguments~, loc~) =>
       self.check_checked_call(scope, callee, arguments, expected, loc)
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
@@ -48,11 +46,7 @@ fn SemanticChecker::check_checked_expr(
           )
         _ => {
           let checked = self.synthesize_checked_expr(scope, expression)
-          self.expect_type(
-            expected,
-            checked.type_,
-            resolved_expr_loc(expression),
-          )
+          self.expect_type(expected, checked.type_, expression.loc())
           checked
         }
       }
@@ -67,7 +61,7 @@ fn SemanticChecker::check_checked_expr(
 fn SemanticChecker::synthesize_checked_expr(
   self : SemanticChecker,
   scope : TypeScope,
-  expression : @resolve.ResolvedExpr,
+  expression : @desugar.DesugaredExpr,
 ) -> CheckedExpressionSynthesis {
   // Checked expression construction follows the synthesis judgment:
   //
@@ -109,8 +103,6 @@ fn SemanticChecker::synthesize_checked_expr(
       self.synthesize_checked_value_reference(scope, reference, name, loc)
     Call(callee~, arguments~, loc~) =>
       self.synthesize_checked_call(scope, callee, arguments, loc)
-    Pipeline(left~, right~, loc~) =>
-      self.synthesize_checked_pipeline(scope, left, right, loc)
     Builtin(_, loc~) => {
       self.diagnostics.push({ kind: CannotInferExpression("builtin"), loc })
       checked_expression_none_reported(Error)
@@ -123,8 +115,8 @@ fn SemanticChecker::synthesize_checked_expr(
 fn SemanticChecker::check_checked_block(
   self : SemanticChecker,
   scope : TypeScope,
-  items : Array[@resolve.ResolvedLocalItem],
-  result : @resolve.ResolvedExpr,
+  items : Array[@desugar.DesugaredLocalItem],
+  result : @desugar.DesugaredExpr,
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
@@ -149,7 +141,7 @@ fn SemanticChecker::check_checked_block(
   let checked_result = self.check_checked_expr(next_scope, result, expected)
   guard self.require_checked_expression(
       checked_result,
-      resolved_expr_loc(result),
+      result.loc(),
       "block result",
     )
     is Some(result) else {
@@ -166,59 +158,41 @@ fn SemanticChecker::check_checked_block(
 }
 
 ///|
-fn SemanticChecker::synthesize_checked_pipeline(
-  self : SemanticChecker,
-  scope : TypeScope,
-  left : @resolve.ResolvedExpr,
-  right : @resolve.ResolvedExpr,
-  loc : SourceSpan,
-) -> CheckedExpressionSynthesis {
-  match right {
-    Call(callee~, arguments~, ..) =>
-      self.synthesize_checked_call(
-        scope,
-        callee,
-        pipeline_arguments(left, arguments),
-        loc,
-      )
-    _ => self.synthesize_checked_call(scope, right, [left], loc)
-  }
-}
-
-///|
-fn SemanticChecker::check_checked_pipeline(
-  self : SemanticChecker,
-  scope : TypeScope,
-  left : @resolve.ResolvedExpr,
-  right : @resolve.ResolvedExpr,
-  expected : @types.Type,
-  loc : SourceSpan,
-) -> CheckedExpressionSynthesis {
-  match right {
-    Call(callee~, arguments~, ..) =>
-      self.check_checked_call(
-        scope,
-        callee,
-        pipeline_arguments(left, arguments),
-        expected,
-        loc,
-      )
-    _ => self.check_checked_call(scope, right, [left], expected, loc)
-  }
-}
-
-///|
 fn SemanticChecker::synthesize_checked_call(
   self : SemanticChecker,
   scope : TypeScope,
-  callee : @resolve.ResolvedExpr,
-  arguments : Array[@resolve.ResolvedExpr],
+  callee : @desugar.DesugaredExpr,
+  arguments : Array[@desugar.DesugaredExpr],
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
+  self.synthesize_checked_call_with_expected(
+    scope,
+    callee,
+    arguments,
+    None,
+    loc,
+  )
+}
+
+///|
+fn SemanticChecker::synthesize_checked_call_with_expected(
+  self : SemanticChecker,
+  scope : TypeScope,
+  callee : @desugar.DesugaredExpr,
+  arguments : Array[@desugar.DesugaredExpr],
+  expected_result : @types.Type?,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  if callee is Var(name~, reference~, loc=callee_loc) &&
+    reference is Candidates(..) {
+    return self.synthesize_checked_resolved_callable_call(
+      scope, reference, name, arguments, expected_result, callee_loc,
+    )
+  }
   let checked_callee = self.synthesize_checked_expr(scope, callee)
   guard self.require_checked_expression(
       checked_callee,
-      resolved_expr_loc(callee),
+      callee.loc(),
       "call callee",
     )
     is Some(callee) else {
@@ -232,6 +206,33 @@ fn SemanticChecker::synthesize_checked_call(
       }
       checked_expression(Call(callee~, arguments~, type_=result, loc~), result)
     }
+    Forall(type_parameters, body) => {
+      guard self.instantiate_generic_callable(
+          scope, type_parameters, body, arguments, expected_result, loc, true,
+        )
+        is Some(instantiated) else {
+        return checked_expression_none_reported(Error)
+      }
+      guard self.check_checked_call_arguments(
+          scope,
+          instantiated.parameters,
+          arguments,
+          loc,
+        )
+        is Some(arguments) else {
+        return checked_expression_none_reported(instantiated.result)
+      }
+      let callee = type_applied_callee(
+        callee,
+        instantiated.type_arguments,
+        Function(instantiated.parameters, instantiated.result),
+        loc,
+      )
+      checked_expression(
+        Call(callee~, arguments~, type_=instantiated.result, loc~),
+        instantiated.result,
+      )
+    }
     Error => checked_expression_none_reported(Error)
     type_ => {
       self.diagnostics.push({ kind: NotCallable(type_), loc })
@@ -244,14 +245,121 @@ fn SemanticChecker::synthesize_checked_call(
 fn SemanticChecker::check_checked_call(
   self : SemanticChecker,
   scope : TypeScope,
-  callee : @resolve.ResolvedExpr,
-  arguments : Array[@resolve.ResolvedExpr],
+  callee : @desugar.DesugaredExpr,
+  arguments : Array[@desugar.DesugaredExpr],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
-  let checked = self.synthesize_checked_call(scope, callee, arguments, loc)
+  let checked = self.synthesize_checked_call_with_expected(
+    scope,
+    callee,
+    arguments,
+    Some(expected),
+    loc,
+  )
   self.expect_type(expected, checked.type_, loc)
   checked
+}
+
+///|
+fn SemanticChecker::synthesize_checked_resolved_callable_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  reference : @resolve.ResolvedValueReference,
+  name : String,
+  arguments : Array[@desugar.DesugaredExpr],
+  expected_result : @types.Type?,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  // Candidate selection is still type-directed at the desugared-call boundary.
+  // Once a callable candidate is selected, this function constructs the
+  // concrete checked callee and checked arguments so no candidate set reaches
+  // Checked Source.
+  let typed_candidates = if reference is Candidates(candidates~, ..) {
+    self.typed_candidates(scope, candidates, name, loc)
+  } else if self.typed_candidate(scope, reference, name, loc) is Some(candidate) {
+    [candidate]
+  } else {
+    []
+  }
+  match
+    self.select_callable_by_local_typing(
+      scope, name, typed_candidates, arguments, expected_result, loc,
+    ) {
+    Selected(candidate) =>
+      self.synthesize_checked_callable_candidate(
+        scope, name, candidate, arguments, loc,
+      )
+    Ambiguous(name~, ..) => {
+      self.report_ambiguous_value_reference(name, loc)
+      checked_expression_none_reported(Error)
+    }
+    NoMatch(name~) => {
+      self.diagnostics.push({
+        kind: CannotInferExpression(
+          "no matching callable value reference " + name,
+        ),
+        loc,
+      })
+      checked_expression_none_reported(Error)
+    }
+  }
+}
+
+///|
+fn SemanticChecker::synthesize_checked_callable_candidate(
+  self : SemanticChecker,
+  scope : TypeScope,
+  name : String,
+  candidate : @candidates.CallableCandidate,
+  arguments : Array[@desugar.DesugaredExpr],
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let checked_callee = self.synthesize_checked_value_reference(
+    scope,
+    candidate.reference,
+    name,
+    loc,
+  )
+  guard self.require_checked_expression(checked_callee, loc, "call callee")
+    is Some(callee) else {
+    return checked_expression_none_reported(candidate.result)
+  }
+  guard self.check_checked_call_arguments(
+      scope,
+      candidate.parameters,
+      arguments,
+      loc,
+    )
+    is Some(arguments) else {
+    return checked_expression_none_reported(candidate.result)
+  }
+  let callee = type_applied_callee(
+    callee,
+    candidate.type_arguments,
+    Function(candidate.parameters, candidate.result),
+    loc,
+  )
+  checked_expression(
+    Call(callee~, arguments~, type_=candidate.result, loc~),
+    candidate.result,
+  )
+}
+
+///|
+fn type_applied_callee(
+  callee : @checked.CheckedExpr,
+  type_arguments : Array[@types.Type],
+  type_ : @types.Type,
+  loc : SourceSpan,
+) -> @checked.CheckedExpr {
+  // Non-generic calls keep the value callee directly. Generic calls insert the
+  // explicit checked type application inferred by local call checking.
+  if type_arguments.is_empty() {
+    callee
+  } else {
+    TypeApplication(callee~, arguments=type_arguments, type_~, loc~)
+  }
 }
 
 ///|
@@ -259,7 +367,7 @@ fn SemanticChecker::check_checked_call_arguments(
   self : SemanticChecker,
   scope : TypeScope,
   parameters : Array[@types.Type],
-  arguments : Array[@resolve.ResolvedExpr],
+  arguments : Array[@desugar.DesugaredExpr],
   loc : SourceSpan,
 ) -> Array[@checked.CheckedExpr]? {
   if parameters.length() != arguments.length() {
@@ -277,7 +385,7 @@ fn SemanticChecker::check_checked_call_arguments(
     match
       self.require_checked_expression(
         checked,
-        resolved_expr_loc(arguments[index]),
+        arguments[index].loc(),
         "call argument",
       ) {
       Some(argument) => checked_arguments.push(argument)
@@ -298,7 +406,7 @@ fn SemanticChecker::synthesize_checked_function_literal(
   type_parameters : Array[@resolve.ResolvedTypeParameter],
   parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
   return_type : @resolve.ResolvedType?,
-  body : @resolve.ResolvedExpr,
+  body : @desugar.DesugaredExpr,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
   let parameter_types = []
@@ -339,7 +447,7 @@ fn SemanticChecker::synthesize_checked_function_literal(
   let checked_body = self.check_checked_expr(body_scope, body, result_type)
   guard self.require_checked_expression(
       checked_body,
-      resolved_expr_loc(body),
+      body.loc(),
       "function body",
     )
     is Some(body) else {
@@ -373,7 +481,7 @@ fn SemanticChecker::check_checked_function_literal(
   type_parameters : Array[@resolve.ResolvedTypeParameter],
   parameters : Array[@resolve.ResolvedFunctionLiteralParameter],
   return_type : @resolve.ResolvedType?,
-  body : @resolve.ResolvedExpr,
+  body : @desugar.DesugaredExpr,
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
