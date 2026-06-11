@@ -36,3 +36,42 @@ fn is_decimal_int_literal(raw : String) -> Bool {
     }
   }
 }
+
+///|
+fn @desugar.DesugaredLiteral::type_(
+  self : @desugar.DesugaredLiteral,
+) -> @types.Type {
+  match self {
+    Int(_) => Primitive(Int)
+    String(_) => Primitive(String)
+    Bool(_) => Primitive(Bool)
+    Unit => Primitive(Unit)
+  }
+}
+
+///|
+fn SemanticChecker::checked_literal(
+  self : SemanticChecker,
+  literal : @desugar.DesugaredLiteral,
+  loc : SourceSpan,
+) -> @checked.CheckedLiteral {
+  match literal {
+    Int(raw) => Int(self.check_int_literal(raw, loc))
+    String(value) => String(value)
+    Bool(value) => Bool(value)
+    Unit => Unit
+  }
+}
+
+///|
+fn SemanticChecker::check_literal(
+  self : SemanticChecker,
+  literal : @desugar.DesugaredLiteral,
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  if literal is Int(raw) {
+    ignore(self.check_int_literal(raw, loc))
+  }
+  self.expect_type(expected, literal.type_(), loc)
+}

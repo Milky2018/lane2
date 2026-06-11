@@ -76,14 +76,23 @@ pub impl @prettyprinter.Pretty for DesugaredMatchArm with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for DesugaredLiteral with fn pretty(
+  literal : DesugaredLiteral,
+) {
+  match literal {
+    Int(value) => text(value)
+    String(value) => text("\"") + text(value) + text("\"")
+    Bool(value) => text(value.to_string())
+    Unit => text("()")
+  }
+}
+
+///|
 pub impl @prettyprinter.Pretty for DesugaredExpr with fn pretty(
   expr : DesugaredExpr,
 ) {
   match expr {
-    IntLiteral(value, ..) => text(value)
-    StringLiteral(value, ..) => text("\"") + text(value) + text("\"")
-    BoolLiteral(value, ..) => text(value.to_string())
-    UnitLiteral(..) => text("()")
+    Literal(literal~, ..) => literal.pretty()
     Var(name~, reference~, ..) =>
       text("var") + space + reference.pretty() + space + text(name)
     VariantCall(

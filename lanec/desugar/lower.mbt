@@ -88,10 +88,10 @@ fn desugar_match_arm(arm : @resolve.ResolvedMatchArm) -> DesugaredMatchArm {
 ///|
 fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
   match expr {
-    IntLiteral(value, loc~) => IntLiteral(value, loc~)
-    StringLiteral(value, loc~) => StringLiteral(value, loc~)
-    BoolLiteral(value, loc~) => BoolLiteral(value, loc~)
-    UnitLiteral(loc~) => UnitLiteral(loc~)
+    IntLiteral(value, loc~) => Literal(literal=Int(value), loc~)
+    StringLiteral(value, loc~) => Literal(literal=String(value), loc~)
+    BoolLiteral(value, loc~) => Literal(literal=Bool(value), loc~)
+    UnitLiteral(loc~) => Literal(literal=Unit, loc~)
     Var(name~, reference~, loc~) => Var(name~, reference~, loc~)
     QualifiedVariant(
       type_name~,

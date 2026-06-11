@@ -54,11 +54,16 @@ pub(all) struct DesugaredMatchArm {
 } derive(Debug, Eq)
 
 ///|
+pub(all) enum DesugaredLiteral {
+  Int(String)
+  String(String)
+  Bool(Bool)
+  Unit
+} derive(Debug, Eq)
+
+///|
 pub(all) enum DesugaredExpr {
-  IntLiteral(String, loc~ : SourceSpan)
-  StringLiteral(String, loc~ : SourceSpan)
-  BoolLiteral(Bool, loc~ : SourceSpan)
-  UnitLiteral(loc~ : SourceSpan)
+  Literal(literal~ : DesugaredLiteral, loc~ : SourceSpan)
   Var(
     name~ : String,
     reference~ : @resolve.ResolvedValueReference,
@@ -119,10 +124,7 @@ pub(all) enum DesugaredExpr {
 /// Returns the original source span represented by a desugared expression.
 pub fn DesugaredExpr::loc(self : DesugaredExpr) -> SourceSpan {
   match self {
-    IntLiteral(_, loc~)
-    | StringLiteral(_, loc~)
-    | BoolLiteral(_, loc~)
-    | UnitLiteral(loc~)
+    Literal(loc~, ..)
     | Var(loc~, ..)
     | VariantCall(loc~, ..)
     | StructLiteral(loc~, ..)

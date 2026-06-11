@@ -14,10 +14,7 @@ fn SemanticChecker::check_expr(
   // literals, calls, and operators. This is the local part of LTI; it never
   // creates global inference variables to be solved elsewhere.
   match expr {
-    IntLiteral(raw, loc~) => {
-      ignore(self.check_int_literal(raw, loc))
-      self.expect_type(expected, Primitive(Int), loc)
-    }
+    Literal(literal~, loc~) => self.check_literal(literal, expected, loc)
     Builtin(_, ..) => ()
     Var(name~, reference~, loc~) =>
       match reference {
@@ -127,13 +124,12 @@ fn SemanticChecker::synthesize_expr(
   // needs an adjacent expected type, it must be handled by `check_expr` instead
   // of inventing a non-local type.
   match expr {
-    IntLiteral(raw, loc~) => {
-      ignore(self.check_int_literal(raw, loc))
-      Primitive(Int)
+    Literal(literal~, loc~) => {
+      if literal is Int(raw) {
+        ignore(self.check_int_literal(raw, loc))
+      }
+      literal.type_()
     }
-    StringLiteral(_, ..) => Primitive(String)
-    BoolLiteral(_, ..) => Primitive(Bool)
-    UnitLiteral(..) => Primitive(Unit)
     Var(name~, reference~, loc~) =>
       self.synthesize_value_reference(scope, reference, name, loc)
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>

@@ -22,10 +22,7 @@ fn SemanticChecker::check_checked_expr(
   match expression {
     Builtin(name, loc~) =>
       checked_expression(UnsafeBuiltin(name~, type_=expected, loc~), expected)
-    IntLiteral(_, ..)
-    | StringLiteral(_, ..)
-    | BoolLiteral(_, ..)
-    | UnitLiteral(..) => {
+    Literal(..) => {
       let checked = self.synthesize_checked_expr(scope, expression)
       self.expect_type(expected, checked.type_, expression.loc())
       checked
@@ -71,30 +68,13 @@ fn SemanticChecker::synthesize_checked_expr(
   // recursive checked subtree. Compound expressions still return their
   // synthesized type through the existing checker and no checked node.
   match expression {
-    IntLiteral(raw, loc~) =>
+    Literal(literal~, loc~) => {
+      let type_ = literal.type_()
       checked_expression(
-        Literal(
-          literal=Int(self.check_int_literal(raw, loc)),
-          type_=Primitive(Int),
-          loc~,
-        ),
-        Primitive(Int),
+        Literal(literal=self.checked_literal(literal, loc), type_~, loc~),
+        type_,
       )
-    StringLiteral(value, loc~) =>
-      checked_expression(
-        Literal(literal=String(value), type_=Primitive(String), loc~),
-        Primitive(String),
-      )
-    BoolLiteral(value, loc~) =>
-      checked_expression(
-        Literal(literal=Bool(value), type_=Primitive(Bool), loc~),
-        Primitive(Bool),
-      )
-    UnitLiteral(loc~) =>
-      checked_expression(
-        Literal(literal=Unit, type_=Primitive(Unit), loc~),
-        Primitive(Unit),
-      )
+    }
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
       self.synthesize_checked_function_literal(
         scope, type_parameters, parameters, return_type, body, loc,
