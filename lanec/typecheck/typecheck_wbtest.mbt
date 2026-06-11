@@ -83,11 +83,7 @@ fn expect_first_checked_match_pattern(
     if declaration is Function(declaration) && declaration.name == name {
       let scope = checker.root_scope()
       for parameter in declaration.parameters {
-        scope.bind(
-          parameter.symbol,
-          parameter.name,
-          checker.check_type(parameter.type_),
-        )
+        scope.bind(parameter.symbol, checker.check_type(parameter.type_))
       }
       let body = match declaration.body {
         Block(items=[], result~, ..) => result

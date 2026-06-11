@@ -182,6 +182,7 @@ pub impl @prettyprinter.Pretty for ResolvedStructDeclaration
 pub(all) struct ResolvedStructLiteralField {
   name : String
   value : ResolvedExpr?
+  punned_reference : ResolvedValueReference?
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructLiteralField

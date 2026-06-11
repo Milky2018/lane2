@@ -3,23 +3,26 @@
 pub fn desugar_source_file(
   source : @resolve.ResolvedSourceFile,
 ) -> DesugaredSourceFile {
-  {
-    symbols: source.symbols,
-    declarations: source.declarations.map(desugar_top_level_declaration),
-    loc: source.loc,
+  let declarations = []
+  for declaration in source.declarations {
+    if desugar_top_level_declaration(declaration) is Some(declaration) {
+      declarations.push(declaration)
+    }
   }
+  { symbols: source.symbols, declarations, loc: source.loc }
 }
 
 ///|
 fn desugar_top_level_declaration(
   declaration : @resolve.ResolvedTopLevelDeclaration,
-) -> DesugaredTopLevelDeclaration {
+) -> DesugaredTopLevelDeclaration? {
   match declaration {
-    Struct(declaration) => Struct(declaration)
-    Enum(declaration) => Enum(declaration)
-    Function(declaration) => Function(desugar_function_declaration(declaration))
-    Let(declaration) => Let(desugar_let_declaration(declaration))
-    Open(declaration) => Open(declaration)
+    Struct(declaration) => Some(Struct(declaration))
+    Enum(declaration) => Some(Enum(declaration))
+    Function(declaration) =>
+      Some(Function(desugar_function_declaration(declaration)))
+    Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
+    Open(_) => None
   }
 }
 
@@ -52,11 +55,12 @@ fn desugar_let_declaration(
 }
 
 ///|
-fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem {
+fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem? {
   match item {
-    Let(declaration) => Let(desugar_let_declaration(declaration))
-    Function(declaration) => Function(desugar_function_declaration(declaration))
-    Open(declaration) => Open(declaration)
+    Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
+    Function(declaration) =>
+      Some(Function(desugar_function_declaration(declaration)))
+    Open(_) => None
   }
 }
 
@@ -64,7 +68,16 @@ fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem {
 fn desugar_struct_literal_field(
   field : @resolve.ResolvedStructLiteralField,
 ) -> DesugaredStructLiteralField {
-  { name: field.name, value: field.value.map(desugar_expr), loc: field.loc }
+  let value = match field.value {
+    Some(value) => desugar_expr(value)
+    None =>
+      match field.punned_reference {
+        Some(reference) => Var(name=field.name, reference~, loc=field.loc)
+        None =>
+          Var(name=field.name, reference=Unresolved(field.name), loc=field.loc)
+      }
+  }
+  { name: field.name, value, loc: field.loc }
 }
 
 ///|
@@ -88,8 +101,8 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
       arguments~,
       loc~
     ) =>
-      QualifiedVariant(
-        type_name~,
+      VariantCall(
+        type_name=Some(type_name),
         type_arguments~,
         variant~,
         reference~,
@@ -97,7 +110,9 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
         loc~,
       )
     UnqualifiedVariant(variant~, reference~, arguments~, loc~) =>
-      UnqualifiedVariant(
+      VariantCall(
+        type_name=None,
+        type_arguments=[],
         variant~,
         reference~,
         arguments=arguments.map(desugar_expr),
@@ -120,11 +135,7 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
         loc~,
       )
     Block(items~, result~, loc~) =>
-      Block(
-        items=items.map(desugar_local_item),
-        result=desugar_expr(result),
-        loc~,
-      )
+      Block(items=desugar_local_items(items), result=desugar_expr(result), loc~)
     If(condition~, then_branch~, else_branch~, loc~) =>
       If(
         condition=desugar_expr(condition),
@@ -172,6 +183,19 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
     Pipeline(left~, right~, loc~) =>
       desugar_pipeline(desugar_expr(left), desugar_expr(right), loc)
   }
+}
+
+///|
+fn desugar_local_items(
+  items : Array[@resolve.ResolvedLocalItem],
+) -> Array[DesugaredLocalItem] {
+  let result = []
+  for item in items {
+    if desugar_local_item(item) is Some(item) {
+      result.push(item)
+    }
+  }
+  result
 }
 
 ///|

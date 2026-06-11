@@ -18,7 +18,6 @@ pub impl @prettyprinter.Pretty for DesugaredTopLevelDeclaration with fn pretty(
     Enum(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
     Let(declaration) => declaration.pretty()
-    Open(declaration) => declaration.pretty()
   }
 }
 
@@ -59,7 +58,6 @@ pub impl @prettyprinter.Pretty for DesugaredLocalItem with fn pretty(
   match item {
     Let(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
-    Open(declaration) => declaration.pretty()
   }
 }
 
@@ -67,10 +65,7 @@ pub impl @prettyprinter.Pretty for DesugaredLocalItem with fn pretty(
 pub impl @prettyprinter.Pretty for DesugaredStructLiteralField with fn pretty(
   field : DesugaredStructLiteralField,
 ) {
-  match field.value {
-    Some(value) => text(field.name) + text(":") + space + value.pretty()
-    None => text(field.name)
-  }
+  text(field.name) + text(":") + space + field.value.pretty()
 }
 
 ///|
@@ -91,26 +86,25 @@ pub impl @prettyprinter.Pretty for DesugaredExpr with fn pretty(
     UnitLiteral(..) => text("()")
     Var(name~, reference~, ..) =>
       text("var") + space + reference.pretty() + space + text(name)
-    QualifiedVariant(
+    VariantCall(
       type_name~,
       type_arguments~,
       variant~,
       reference~,
       arguments~,
       ..
-    ) =>
+    ) => {
+      let owner = match type_name {
+        Some(type_name) =>
+          text(type_name) + type_arguments_doc(type_arguments) + text("::")
+        None => empty
+      }
       reference.pretty() +
       space +
-      text(type_name) +
-      type_arguments_doc(type_arguments) +
-      text("::") +
+      owner +
       text(variant) +
       @pretty.parenthesized_inline(arguments.map(DesugaredExpr::pretty))
-    UnqualifiedVariant(variant~, reference~, arguments~, ..) =>
-      reference.pretty() +
-      space +
-      text(variant) +
-      @pretty.parenthesized_inline(arguments.map(DesugaredExpr::pretty))
+    }
     StructLiteral(type_name~, type_arguments~, fields~, ..) =>
       text(type_name) +
       type_arguments_doc(type_arguments) +

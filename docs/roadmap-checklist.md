@@ -120,6 +120,11 @@ and unresolved or ambiguous states before typed core lowering.
   checking.
 - [x] Desugar `&&` and `||` into thunked calls to `op_and` and
   `op_or`.
+- [x] Desugar open declarations away after their name-resolution effects have
+  been applied.
+- [x] Desugar struct field punning into explicit field values.
+- [x] Desugar qualified and unqualified enum variant expressions into one
+  variant-call expression shape.
 - [ ] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.
 - [ ] Integrate checked-source lowering with the resolved-to-checked source

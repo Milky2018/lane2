@@ -775,16 +775,25 @@ fn @syntax.Expr::resolve_call(
 ///|
 /// Resolves one struct literal field value or field pun.
 ///
-/// Example: `Point::{ x }` keeps the field name `x` and leaves the pun lookup
-/// to semantic checking, while `Point::{ x: value }` resolves `value` now.
+/// Example: `Point::{ x }` records the visible value reference for `x`, while
+/// `Point::{ x: value }` resolves `value` now.
 fn @syntax.StructLiteralField::resolve_struct_literal_field(
   self : @syntax.StructLiteralField,
   resolver : Resolver,
   scope : ResolveScope,
 ) -> ResolvedStructLiteralField {
+  let punned_reference = match self.value {
+    Some(_) => None
+    None => {
+      let reference = scope.value_reference(self.name)
+      resolver.report_unresolved_value(reference, self.loc)
+      Some(reference)
+    }
+  }
   {
     name: self.name,
     value: self.value.map(fn(value) { value.resolve_expr(resolver, scope) }),
+    punned_reference,
     loc: self.loc,
   }
 }

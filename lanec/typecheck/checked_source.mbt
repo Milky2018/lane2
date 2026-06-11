@@ -17,13 +17,9 @@ pub fn typecheck_checked_source_file(
   let checked_declarations : Array[@checked.CheckedTopLevelDeclaration] = []
   let mut complete = true
   for declaration in source.declarations {
-    if declaration is Open(_) {
-      continue
-    } else {
-      match checker.check_checked_top_level_declaration(declaration) {
-        Some(declaration) => checked_declarations.push(declaration)
-        None => complete = false
-      }
+    match checker.check_checked_top_level_declaration(declaration) {
+      Some(declaration) => checked_declarations.push(declaration)
+      None => complete = false
     }
   }
   let checked_source = if complete && checker.diagnostics.is_empty() {
@@ -47,7 +43,6 @@ fn SemanticChecker::check_checked_top_level_declaration(
     Enum(declaration) => self.checked_top_level_enum(declaration)
     Function(declaration) => self.checked_top_level_function(declaration)
     Let(declaration) => self.checked_top_level_let(declaration)
-    Open(_) => abort("top-level open should be skipped before elaboration")
   }
 }
 
@@ -91,7 +86,7 @@ fn SemanticChecker::checked_top_level_function(
     self.checked_value_parameter(parameter)
   })
   for parameter in parameters {
-    body_scope.bind(parameter.symbol, parameter.name, parameter.type_)
+    body_scope.bind(parameter.symbol, parameter.type_)
   }
   let return_type = self.check_type(declaration.return_type)
   let checked_body = self.check_checked_expr(
@@ -144,11 +139,7 @@ fn SemanticChecker::checked_top_level_let(
     declaration.initializer,
     type_,
   )
-  self.value_types.push({
-    symbol: declaration.symbol,
-    name: declaration.name.unwrap_or("<anonymous>"),
-    type_,
-  })
+  self.value_types.push({ symbol: declaration.symbol, type_ })
   self.values.push(
     Let({
       symbol: declaration.symbol,
@@ -192,11 +183,7 @@ fn SemanticChecker::check_checked_local_let(
     declaration.initializer,
     type_,
   )
-  scope.bind(
-    declaration.symbol,
-    declaration.name.unwrap_or("<anonymous>"),
-    type_,
-  )
+  scope.bind(declaration.symbol, type_)
   guard self.require_checked_expression(
       checked_initializer,
       declaration.initializer.loc(),
@@ -225,13 +212,13 @@ fn SemanticChecker::check_checked_local_function(
     declaration.parameters,
     declaration.return_type,
   )
-  scope.bind(declaration.symbol, declaration.name, type_)
+  scope.bind(declaration.symbol, type_)
   let body_scope : TypeScope = { values: scope.values.copy() }
   let parameters = declaration.parameters.map(fn(parameter) {
     self.checked_value_parameter(parameter)
   })
   for parameter in parameters {
-    body_scope.bind(parameter.symbol, parameter.name, parameter.type_)
+    body_scope.bind(parameter.symbol, parameter.type_)
   }
   let return_type = self.check_type(declaration.return_type)
   let checked_body = self.check_checked_expr(

@@ -94,3 +94,86 @@ test "desugar lazy bool operators into thunked ordinary calls" {
     ),
   )
 }
+
+///|
+test "desugar opens away and expands struct field punning" {
+  let source = desugar_source(
+    (
+      #|struct Box {
+      #|  value : Int
+      #|}
+      #|let box : Box = Box::{ value: 1 }
+      #|open box
+      #|fn make(value : Int) -> Box {
+      #|  Box::{ value }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(source, width=100),
+    content=(
+      #|desugared_source {
+      #|  struct type#0 Box {
+      #|    field field#0 value : Int index=0
+      #|  }
+      #|  let value#1 box {
+      #|    Box::{
+      #|      value: 1
+      #|    }
+      #|  }
+      #|  fn value#0 make {
+      #|    body {
+      #|      {
+      #|        Box::{
+      #|          value: var ?candidates value [value#2, field#0 of value#1] value
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "desugar qualified and unqualified variant calls into one expression shape" {
+  let source = desugar_source(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn qualified(value : Int) -> Option[Int] {
+      #|  Option::some(value)
+      #|}
+      #|fn unqualified(value : Int) -> Option[Int] {
+      #|  some(value)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(source, width=100),
+    content=(
+      #|desugared_source {
+      #|  enum type#0 Option[tparam#0 A] {
+      #|    variant variant#0 none index=0 payloads=0
+      #|    variant variant#1 some index=1 payloads=1(tparam#0 A)
+      #|  }
+      #|  fn value#0 qualified {
+      #|    body {
+      #|      {
+      #|        variant#1 Option::some(var value#2 value)
+      #|      }
+      #|    }
+      #|  }
+      #|  fn value#1 unqualified {
+      #|    body {
+      #|      {
+      #|        variant#1 some(var value#3 value)
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}

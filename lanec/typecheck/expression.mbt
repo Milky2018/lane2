@@ -34,7 +34,7 @@ fn SemanticChecker::check_expr(
       self.check_if(scope, condition, then_branch, else_branch, expected)
     Match(scrutinee~, arms~, loc~) =>
       self.check_match(scope, scrutinee, arms, expected, loc)
-    QualifiedVariant(
+    VariantCall(
       type_name~,
       type_arguments~,
       variant~,
@@ -42,21 +42,10 @@ fn SemanticChecker::check_expr(
       arguments~,
       loc~
     ) => {
-      let actual = self.synthesize_qualified_variant(
+      let actual = self.synthesize_variant_call(
         scope,
         type_name,
         type_arguments,
-        variant,
-        reference,
-        arguments,
-        Some(expected),
-        loc,
-      )
-      self.expect_type(expected, actual, loc)
-    }
-    UnqualifiedVariant(variant~, reference~, arguments~, loc~) => {
-      let actual = self.synthesize_unqualified_variant(
-        scope,
         variant,
         reference,
         arguments,
@@ -119,7 +108,6 @@ fn SemanticChecker::check_block(
       Let(declaration) => self.check_local_let(next_scope, declaration)
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
-      Open(_) => ()
     }
   }
   self.check_expr(next_scope, result, expected)
@@ -157,7 +145,7 @@ fn SemanticChecker::synthesize_expr(
       self.synthesize_if(scope, condition, then_branch, else_branch, loc)
     Match(scrutinee~, arms~, loc~) =>
       self.synthesize_match(scope, scrutinee, arms, loc)
-    QualifiedVariant(
+    VariantCall(
       type_name~,
       type_arguments~,
       variant~,
@@ -165,19 +153,10 @@ fn SemanticChecker::synthesize_expr(
       arguments~,
       loc~
     ) =>
-      self.synthesize_qualified_variant(
+      self.synthesize_variant_call(
         scope,
         type_name,
         type_arguments,
-        variant,
-        reference,
-        arguments,
-        None,
-        loc,
-      )
-    UnqualifiedVariant(variant~, reference~, arguments~, loc~) =>
-      self.synthesize_unqualified_variant(
-        scope,
         variant,
         reference,
         arguments,
@@ -212,7 +191,6 @@ fn SemanticChecker::synthesize_block(
       Let(declaration) => self.check_local_let(next_scope, declaration)
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
-      Open(_) => ()
     }
   }
   self.synthesize_expr(next_scope, result)

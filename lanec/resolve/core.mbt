@@ -192,6 +192,7 @@ pub(all) struct ResolvedFunctionLiteralParameter {
 pub(all) struct ResolvedStructLiteralField {
   name : String
   value : ResolvedExpr?
+  punned_reference : ResolvedValueReference?
   loc : SourceSpan
 } derive(Debug, Eq)
 

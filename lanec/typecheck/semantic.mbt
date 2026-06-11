@@ -47,11 +47,7 @@ fn SemanticChecker::collect_top_level_function_types(
         declaration.parameters,
         declaration.return_type,
       )
-      self.value_types.push({
-        symbol: declaration.symbol,
-        name: declaration.name,
-        type_,
-      })
+      self.value_types.push({ symbol: declaration.symbol, type_ })
       self.values.push(
         Function({
           symbol: declaration.symbol,
@@ -71,11 +67,7 @@ fn SemanticChecker::check_top_level_function(
 ) -> Unit {
   let scope = self.root_scope()
   for parameter in declaration.parameters {
-    scope.bind(
-      parameter.symbol,
-      parameter.name,
-      self.check_type(parameter.type_),
-    )
+    scope.bind(parameter.symbol, self.check_type(parameter.type_))
   }
   self.check_expr(
     scope,
@@ -100,11 +92,7 @@ fn SemanticChecker::check_top_level_let(
     })
     self.synthesize_expr(self.root_scope(), declaration.initializer)
   }
-  self.value_types.push({
-    symbol: declaration.symbol,
-    name: declaration.name.unwrap_or("<anonymous>"),
-    type_,
-  })
+  self.value_types.push({ symbol: declaration.symbol, type_ })
   self.values.push(
     Let({
       symbol: declaration.symbol,

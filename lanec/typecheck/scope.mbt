@@ -1,7 +1,6 @@
 ///|
 priv struct ValueTypeBinding {
   symbol : ValueSymbolId
-  name : String
   type_ : @types.Type
 }
 
@@ -19,10 +18,9 @@ fn SemanticChecker::root_scope(self : SemanticChecker) -> TypeScope {
 fn TypeScope::bind(
   self : TypeScope,
   symbol : ValueSymbolId,
-  name : String,
   type_ : @types.Type,
 ) -> Unit {
-  self.values.push({ symbol, name, type_ })
+  self.values.push({ symbol, type_ })
 }
 
 ///|
@@ -30,17 +28,6 @@ fn TypeScope::lookup(self : TypeScope, symbol : ValueSymbolId) -> @types.Type? {
   for index = self.values.length() - 1; index >= 0; index = index - 1 {
     let binding = self.values[index]
     if binding.symbol == symbol {
-      return Some(binding.type_)
-    }
-  }
-  None
-}
-
-///|
-fn TypeScope::lookup_name(self : TypeScope, name : String) -> @types.Type? {
-  for index = self.values.length() - 1; index >= 0; index = index - 1 {
-    let binding = self.values[index]
-    if binding.name == name {
       return Some(binding.type_)
     }
   }
@@ -60,11 +47,7 @@ fn SemanticChecker::check_local_let(
   } else {
     self.synthesize_expr(scope, declaration.initializer)
   }
-  scope.bind(
-    declaration.symbol,
-    declaration.name.unwrap_or("<anonymous>"),
-    type_,
-  )
+  scope.bind(declaration.symbol, type_)
 }
 
 ///|
@@ -78,14 +61,10 @@ fn SemanticChecker::check_local_function(
     declaration.parameters,
     declaration.return_type,
   )
-  scope.bind(declaration.symbol, declaration.name, type_)
+  scope.bind(declaration.symbol, type_)
   let body_scope : TypeScope = { values: scope.values.copy() }
   for parameter in declaration.parameters {
-    body_scope.bind(
-      parameter.symbol,
-      parameter.name,
-      self.check_type(parameter.type_),
-    )
+    body_scope.bind(parameter.symbol, self.check_type(parameter.type_))
   }
   self.check_expr(
     body_scope,

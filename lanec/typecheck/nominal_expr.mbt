@@ -1,4 +1,31 @@
 ///|
+
+///|
+fn SemanticChecker::synthesize_variant_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  type_name : String?,
+  type_arguments : Array[@resolve.ResolvedType],
+  variant : String,
+  reference : @resolve.ResolvedVariantReference,
+  arguments : Array[@desugar.DesugaredExpr],
+  expected_result : @types.Type?,
+  loc : SourceSpan,
+) -> @types.Type {
+  match type_name {
+    Some(type_name) =>
+      self.synthesize_qualified_variant(
+        scope, type_name, type_arguments, variant, reference, arguments, expected_result,
+        loc,
+      )
+    None =>
+      self.synthesize_unqualified_variant(
+        scope, variant, reference, arguments, expected_result, loc,
+      )
+  }
+}
+
+///|
 fn SemanticChecker::synthesize_qualified_variant(
   self : SemanticChecker,
   scope : TypeScope,
@@ -260,16 +287,7 @@ fn SemanticChecker::synthesize_struct_literal(
         field.name,
         field.loc,
       )
-      if field.value is Some(value) {
-        self.check_expr(scope, value, expected)
-      } else if scope.lookup_name(field.name) is Some(actual) {
-        self.expect_type(expected, actual, field.loc)
-      } else {
-        self.diagnostics.push({
-          kind: UnresolvedValue(field.name),
-          loc: field.loc,
-        })
-      }
+      self.check_expr(scope, field.value, expected)
     } else {
       self.diagnostics.push({
         kind: UnknownField(name=field.name),

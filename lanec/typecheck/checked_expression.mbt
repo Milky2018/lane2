@@ -135,7 +135,6 @@ fn SemanticChecker::check_checked_block(
           Some(declaration) => checked_items.push(Function(declaration))
           None => complete = false
         }
-      Open(_) => ()
     }
   }
   let checked_result = self.check_checked_expr(next_scope, result, expected)
@@ -415,7 +414,7 @@ fn SemanticChecker::synthesize_checked_function_literal(
   for parameter in parameters {
     if parameter.type_annotation is Some(type_annotation) {
       let type_ = self.check_type(type_annotation)
-      body_scope.bind(parameter.symbol, parameter.name, type_)
+      body_scope.bind(parameter.symbol, type_)
       parameter_types.push(type_)
       checked_parameters.push({
         symbol: parameter.symbol,
@@ -429,7 +428,7 @@ fn SemanticChecker::synthesize_checked_function_literal(
         kind: CannotInferExpression("function literal parameter"),
         loc: parameter.loc,
       })
-      body_scope.bind(parameter.symbol, parameter.name, type_)
+      body_scope.bind(parameter.symbol, type_)
       parameter_types.push(type_)
       checked_parameters.push({
         symbol: parameter.symbol,

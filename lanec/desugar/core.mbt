@@ -11,7 +11,6 @@ pub(all) enum DesugaredTopLevelDeclaration {
   Enum(@resolve.ResolvedEnumDeclaration)
   Function(DesugaredFunctionDeclaration)
   Let(DesugaredLetDeclaration)
-  Open(@resolve.ResolvedOpenDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -38,13 +37,12 @@ pub(all) struct DesugaredLetDeclaration {
 pub(all) enum DesugaredLocalItem {
   Let(DesugaredLetDeclaration)
   Function(DesugaredFunctionDeclaration)
-  Open(@resolve.ResolvedOpenDeclaration)
 } derive(Debug, Eq)
 
 ///|
 pub(all) struct DesugaredStructLiteralField {
   name : String
-  value : DesugaredExpr?
+  value : DesugaredExpr
   loc : SourceSpan
 } derive(Debug, Eq)
 
@@ -66,15 +64,9 @@ pub(all) enum DesugaredExpr {
     reference~ : @resolve.ResolvedValueReference,
     loc~ : SourceSpan
   )
-  QualifiedVariant(
-    type_name~ : String,
+  VariantCall(
+    type_name~ : String?,
     type_arguments~ : Array[@resolve.ResolvedType],
-    variant~ : String,
-    reference~ : @resolve.ResolvedVariantReference,
-    arguments~ : Array[DesugaredExpr],
-    loc~ : SourceSpan
-  )
-  UnqualifiedVariant(
     variant~ : String,
     reference~ : @resolve.ResolvedVariantReference,
     arguments~ : Array[DesugaredExpr],
@@ -132,8 +124,7 @@ pub fn DesugaredExpr::loc(self : DesugaredExpr) -> SourceSpan {
     | BoolLiteral(_, loc~)
     | UnitLiteral(loc~)
     | Var(loc~, ..)
-    | QualifiedVariant(loc~, ..)
-    | UnqualifiedVariant(loc~, ..)
+    | VariantCall(loc~, ..)
     | StructLiteral(loc~, ..)
     | Builtin(_, loc~)
     | FunctionLiteral(loc~, ..)

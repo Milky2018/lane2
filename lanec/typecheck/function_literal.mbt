@@ -14,14 +14,14 @@ fn SemanticChecker::synthesize_function_literal(
   for parameter in parameters {
     if parameter.type_annotation is Some(type_annotation) {
       let type_ = self.check_type(type_annotation)
-      body_scope.bind(parameter.symbol, parameter.name, type_)
+      body_scope.bind(parameter.symbol, type_)
       parameter_types.push(type_)
     } else {
       self.diagnostics.push({
         kind: CannotInferExpression("function literal parameter"),
         loc: parameter.loc,
       })
-      body_scope.bind(parameter.symbol, parameter.name, Error)
+      body_scope.bind(parameter.symbol, Error)
       parameter_types.push(Error)
     }
   }
@@ -89,11 +89,7 @@ fn SemanticChecker::check_function_literal(
             parameter.loc,
           )
         }
-        body_scope.bind(
-          parameter.symbol,
-          parameter.name,
-          expected_parameters[index],
-        )
+        body_scope.bind(parameter.symbol, expected_parameters[index])
       }
       if return_type is Some(type_annotation) {
         self.expect_type(expected_result, self.check_type(type_annotation), loc)

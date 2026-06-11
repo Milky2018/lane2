@@ -21,8 +21,7 @@ pub(all) enum DesugaredExpr {
   BoolLiteral(Bool, loc~ : @basic.SourceSpan)
   UnitLiteral(loc~ : @basic.SourceSpan)
   Var(name~ : String, reference~ : @resolve.ResolvedValueReference, loc~ : @basic.SourceSpan)
-  QualifiedVariant(type_name~ : String, type_arguments~ : Array[@resolve.ResolvedType], variant~ : String, reference~ : @resolve.ResolvedVariantReference, arguments~ : Array[DesugaredExpr], loc~ : @basic.SourceSpan)
-  UnqualifiedVariant(variant~ : String, reference~ : @resolve.ResolvedVariantReference, arguments~ : Array[DesugaredExpr], loc~ : @basic.SourceSpan)
+  VariantCall(type_name~ : String?, type_arguments~ : Array[@resolve.ResolvedType], variant~ : String, reference~ : @resolve.ResolvedVariantReference, arguments~ : Array[DesugaredExpr], loc~ : @basic.SourceSpan)
   StructLiteral(type_name~ : String, type_arguments~ : Array[@resolve.ResolvedType], fields~ : Array[DesugaredStructLiteralField], loc~ : @basic.SourceSpan)
   Builtin(String, loc~ : @basic.SourceSpan)
   FunctionLiteral(type_parameters~ : Array[@resolve.ResolvedTypeParameter], parameters~ : Array[@resolve.ResolvedFunctionLiteralParameter], return_type~ : @resolve.ResolvedType?, body~ : DesugaredExpr, loc~ : @basic.SourceSpan)
@@ -58,7 +57,6 @@ pub impl @prettyprinter.Pretty for DesugaredLetDeclaration
 pub(all) enum DesugaredLocalItem {
   Let(DesugaredLetDeclaration)
   Function(DesugaredFunctionDeclaration)
-  Open(@resolve.ResolvedOpenDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for DesugaredLocalItem
 
@@ -78,7 +76,7 @@ pub impl @prettyprinter.Pretty for DesugaredSourceFile
 
 pub(all) struct DesugaredStructLiteralField {
   name : String
-  value : DesugaredExpr?
+  value : DesugaredExpr
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for DesugaredStructLiteralField
@@ -88,7 +86,6 @@ pub(all) enum DesugaredTopLevelDeclaration {
   Enum(@resolve.ResolvedEnumDeclaration)
   Function(DesugaredFunctionDeclaration)
   Let(DesugaredLetDeclaration)
-  Open(@resolve.ResolvedOpenDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for DesugaredTopLevelDeclaration
 

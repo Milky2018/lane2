@@ -141,7 +141,7 @@ fn SemanticChecker::check_pattern(
       } else {
         binders.push(name)
       }
-      scope.bind(symbol, name, expected)
+      scope.bind(symbol, expected)
       Binding(name~, symbol~, type_=expected, loc~)
     }
     IntLiteral(raw, loc~) => {
