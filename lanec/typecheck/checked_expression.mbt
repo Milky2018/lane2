@@ -21,6 +21,8 @@ fn SemanticChecker::check_checked_expr(
   // until their checked-node rules are moved over one by one.
   match expression {
     Builtin(name, loc~) =>
+      // `builtin` is unsafe and opaque to the checker. The adjacent expected
+      // type is the whole type of the resulting checked node.
       checked_expression(UnsafeBuiltin(name~, type_=expected, loc~), expected)
     Literal(..) => {
       let checked = self.synthesize_checked_expr(scope, expression)

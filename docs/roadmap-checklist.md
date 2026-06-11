@@ -125,7 +125,7 @@ and unresolved or ambiguous states before typed core lowering.
 - [x] Desugar struct field punning into explicit field values.
 - [x] Desugar qualified and unqualified enum variant expressions into one
   variant-call expression shape.
-- [ ] Elaborate builtin expressions into typed unsafe builtins without
+- [x] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.
 - [ ] Integrate checked-source lowering with the resolved-to-checked source
   elaboration pipeline.

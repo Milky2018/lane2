@@ -60,6 +60,83 @@ test "elaborate resolved source into checked source" {
 }
 
 ///|
+test "elaborate builtins through contextual expected types" {
+  let result = elaborate_source(
+    (
+      #|fn identity(value : Int) -> Int {
+      #|  value
+      #|}
+      #|let top : Int = builtin("%top")
+      #|fn direct() -> Int {
+      #|  builtin("%direct")
+      #|}
+      #|fn use() -> Int {
+      #|  let local : Int = builtin("%local")
+      #|  identity(builtin("%argument"))
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    fn : (Int) -> Int value#0 identity {
+      #|      parameters {
+      #|        param : Int value#3 value
+      #|      }
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            value : Int value#3 value
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    let : Int value#4 top {
+      #|      unsafe_builtin "%top" : Int
+      #|    }
+      #|    fn : () -> Int value#1 direct {
+      #|      parameters {}
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          result {
+      #|            unsafe_builtin "%direct" : Int
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    fn : () -> Int value#2 use {
+      #|      parameters {}
+      #|      return : Int
+      #|      body {
+      #|        block : Int {
+      #|          let : Int value#5 local {
+      #|            unsafe_builtin "%local" : Int
+      #|          }
+      #|          result {
+      #|            call : Int {
+      #|              callee {
+      #|                value : (Int) -> Int value#0 identity
+      #|              }
+      #|              arguments {
+      #|                unsafe_builtin "%argument" : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
 test "elaborate reports unimplemented checked expression shape" {
   let result = elaborate_source(
     (
