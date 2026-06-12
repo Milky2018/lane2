@@ -159,7 +159,7 @@ and unresolved or ambiguous states before typed core lowering.
   elaboration pipeline.
 - [ ] Produce a typed source-level result that contains no unresolved names,
   omitted contextual arguments, or source-only ambiguity states.
-- [ ] Existential: preserve witness and opened-type information in Checked
+- [x] Existential: preserve witness and opened-type information in Checked
   Source so later typed core lowering does not need source syntax.
 
 ## 5. Typed Core ANF

@@ -31,6 +31,8 @@ fn SemanticChecker::check_checked_expr(
     }
     Block(items~, result~, loc~) =>
       self.check_checked_block(scope, items, result, expected, loc)
+    Match(scrutinee~, arms~, loc~) =>
+      self.check_checked_match(scope, scrutinee, arms, expected, loc)
     Call(callee~, arguments~, loc~) =>
       self.check_checked_call(scope, callee, arguments, expected, loc)
     StructLiteral(type_name~, type_arguments~, fields~, loc~) => {
@@ -115,6 +117,8 @@ fn SemanticChecker::synthesize_checked_expr(
       self.synthesize_checked_value_reference(scope, reference, name, loc)
     Field(base~, name~, reference~, loc~) =>
       self.synthesize_checked_field(scope, base, name, reference, loc)
+    Match(scrutinee~, arms~, loc~) =>
+      self.synthesize_checked_match(scope, scrutinee, arms, loc)
     Call(callee~, arguments~, loc~) =>
       self.synthesize_checked_call(scope, callee, arguments, loc)
     StructLiteral(type_name~, type_arguments~, fields~, loc~) =>
@@ -179,7 +183,10 @@ fn SemanticChecker::check_checked_block(
           None => complete = false
         }
       PatternLet(declaration) =>
-        ignore(self.check_local_pattern_let(next_scope, declaration))
+        match self.check_checked_local_pattern_let(next_scope, declaration) {
+          Some(declaration) => checked_items.push(PatternLet(declaration))
+          None => complete = false
+        }
     }
   }
   let checked_result = self.check_checked_expr(next_scope, result, expected)
@@ -198,6 +205,131 @@ fn SemanticChecker::check_checked_block(
     )
   } else {
     checked_expression_none_reported(expected)
+  }
+}
+
+///|
+fn SemanticChecker::check_checked_match(
+  self : SemanticChecker,
+  scope : TypeScope,
+  scrutinee : @desugar.DesugaredExpr,
+  arms : Array[@desugar.DesugaredMatchArm],
+  expected : @types.Type,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let checked_scrutinee = self.synthesize_checked_expr(scope, scrutinee)
+  guard self.require_checked_expression(
+      checked_scrutinee,
+      scrutinee.loc(),
+      "match scrutinee",
+    )
+    is Some(scrutinee) else {
+    return checked_expression_none_reported(expected)
+  }
+  let matrix = PatternMatrix::PatternMatrix()
+  let checked_arms : Array[@checked.CheckedMatchArm] = []
+  let mut complete = true
+  for arm in arms {
+    let arm_scope = scope.copy()
+    let pattern = self.check_match_pattern(
+      arm_scope,
+      arm.pattern,
+      checked_scrutinee.type_,
+    )
+    if !matrix.is_useful(self.declarations, pattern, checked_scrutinee.type_) {
+      self.diagnostics.push({ kind: UnreachableMatchArm, loc: arm.loc })
+    }
+    matrix.add(pattern)
+    let checked_body = self.check_checked_expr(arm_scope, arm.body, expected)
+    match
+      self.require_checked_expression(checked_body, arm.body.loc(), "match arm") {
+      Some(body) => checked_arms.push({ pattern, body, loc: arm.loc })
+      None => complete = false
+    }
+  }
+  if !matrix.is_exhaustive(self.declarations, checked_scrutinee.type_) {
+    self.diagnostics.push({
+      kind: NonExhaustiveMatch(checked_scrutinee.type_),
+      loc,
+    })
+  }
+  if complete {
+    checked_expression(
+      Match(scrutinee~, arms=checked_arms, type_=expected, loc~),
+      expected,
+    )
+  } else {
+    checked_expression_none_reported(expected)
+  }
+}
+
+///|
+fn SemanticChecker::synthesize_checked_match(
+  self : SemanticChecker,
+  scope : TypeScope,
+  scrutinee : @desugar.DesugaredExpr,
+  arms : Array[@desugar.DesugaredMatchArm],
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let checked_scrutinee = self.synthesize_checked_expr(scope, scrutinee)
+  guard self.require_checked_expression(
+      checked_scrutinee,
+      scrutinee.loc(),
+      "match scrutinee",
+    )
+    is Some(scrutinee) else {
+    return checked_expression_none_reported(Error)
+  }
+  let matrix = PatternMatrix::PatternMatrix()
+  let checked_arms : Array[@checked.CheckedMatchArm] = []
+  let mut result : @types.Type = Error
+  let mut has_result = false
+  let mut complete = true
+  for arm in arms {
+    let arm_scope = scope.copy()
+    let pattern = self.check_match_pattern(
+      arm_scope,
+      arm.pattern,
+      checked_scrutinee.type_,
+    )
+    if !matrix.is_useful(self.declarations, pattern, checked_scrutinee.type_) {
+      self.diagnostics.push({ kind: UnreachableMatchArm, loc: arm.loc })
+    }
+    matrix.add(pattern)
+    let checked_body = self.synthesize_checked_expr(arm_scope, arm.body)
+    self.check_hidden_type_escape(
+      pattern.opened_type_parameters(),
+      checked_body.type_,
+      arm.body.loc(),
+    )
+    if has_result {
+      self.expect_type(result, checked_body.type_, arm.loc)
+    } else {
+      result = checked_body.type_
+      has_result = true
+    }
+    match
+      self.require_checked_expression(checked_body, arm.body.loc(), "match arm") {
+      Some(body) => checked_arms.push({ pattern, body, loc: arm.loc })
+      None => complete = false
+    }
+  }
+  if !has_result {
+    self.diagnostics.push({ kind: CannotInferExpression("empty match"), loc })
+  }
+  if !matrix.is_exhaustive(self.declarations, checked_scrutinee.type_) {
+    self.diagnostics.push({
+      kind: NonExhaustiveMatch(checked_scrutinee.type_),
+      loc,
+    })
+  }
+  if complete {
+    checked_expression(
+      Match(scrutinee~, arms=checked_arms, type_=result, loc~),
+      result,
+    )
+  } else {
+    checked_expression_none_reported(result)
   }
 }
 

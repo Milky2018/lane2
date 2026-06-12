@@ -95,7 +95,15 @@ pub(all) struct CheckedValueParameter {
 ///|
 pub(all) enum CheckedLocalItem {
   Let(CheckedLetDeclaration)
+  PatternLet(CheckedPatternLetDeclaration)
   Function(CheckedFunctionDeclaration)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedPatternLetDeclaration {
+  pattern : CheckedPattern
+  initializer : CheckedExpr
+  loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|

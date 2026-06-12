@@ -168,8 +168,21 @@ pub impl @prettyprinter.Pretty for CheckedLocalItem with fn pretty(
 ) {
   match item {
     Let(declaration) => declaration.pretty()
+    PatternLet(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
   }
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedPatternLetDeclaration with fn pretty(
+  declaration : CheckedPatternLetDeclaration,
+) {
+  text("pattern_let") +
+  space +
+  @pretty.braced_block([
+    @pretty.section("pattern", [declaration.pattern.pretty()]),
+    @pretty.section("initializer", [declaration.initializer.pretty()]),
+  ])
 }
 
 ///|

@@ -283,6 +283,33 @@ fn SemanticChecker::check_checked_local_offer(
 }
 
 ///|
+fn SemanticChecker::check_checked_local_pattern_let(
+  self : SemanticChecker,
+  scope : TypeScope,
+  declaration : @desugar.DesugaredPatternLetDeclaration,
+) -> @checked.CheckedPatternLetDeclaration? {
+  let checked_initializer = self.synthesize_checked_expr(
+    scope,
+    declaration.initializer,
+  )
+  let pattern = self.check_pattern(
+    scope,
+    declaration.pattern,
+    checked_initializer.type_,
+    [],
+  )
+  guard self.require_checked_expression(
+      checked_initializer,
+      declaration.initializer.loc(),
+      "pattern let initializer",
+    )
+    is Some(initializer) else {
+    return None
+  }
+  Some({ pattern, initializer, loc: declaration.loc })
+}
+
+///|
 fn SemanticChecker::check_checked_local_function(
   self : SemanticChecker,
   scope : TypeScope,

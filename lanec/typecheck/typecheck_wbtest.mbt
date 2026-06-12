@@ -1659,6 +1659,133 @@ test "typecheck allows repacking existential enum before leaving match arm" {
 }
 
 ///|
+test "typecheck checked source preserves existential struct pattern let" {
+  let result = expect_checked_source_result(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|fn repack(h : Hide) -> Hide {
+      #|  {
+      #|    let Hide::{ T, val } = h
+      #|    Hide::{ T = T, val: val }
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source_typecheck_result {
+      #|  checked_source {
+      #|    struct type#0 Hide {
+      #|      type tmember#0 tparam#0 T : Type index=0
+      #|      field field#0 val : tparam#0 index=0
+      #|    }
+      #|    fn : (type#0) -> type#0 value#0 repack {
+      #|      parameters {
+      #|        param : type#0 value#1 h
+      #|      }
+      #|      return : type#0
+      #|      body {
+      #|        block : type#0 {
+      #|          result {
+      #|            block : type#0 {
+      #|              pattern_let {
+      #|                pattern {
+      #|                  struct_pattern : type#0 type#0 {
+      #|                    type_pattern tmember#0 tparam#1 T
+      #|                    field_pattern field#0 val {
+      #|                      binding : tparam#1 value#2 val
+      #|                    }
+      #|                  }
+      #|                }
+      #|                initializer {
+      #|                  value : type#0 value#1 h
+      #|                }
+      #|              }
+      #|              result {
+      #|                struct : type#0 type#0 {
+      #|                  type tmember#0 T = tparam#1
+      #|                  field field#0 val {
+      #|                    value : tparam#1 value#2 val
+      #|                  }
+      #|                }
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck checked source preserves existential enum match pattern" {
+  let result = expect_checked_source_result(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn repack(p : Packed) -> Packed {
+      #|  match p {
+      #|    Packed::hide[T](value) => Packed::hide[T](value)
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source_typecheck_result {
+      #|  checked_source {
+      #|    enum type#0 Packed {
+      #|      variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
+      #|    }
+      #|    fn : (type#0) -> type#0 value#0 repack {
+      #|      parameters {
+      #|        param : type#0 value#1 p
+      #|      }
+      #|      return : type#0
+      #|      body {
+      #|        block : type#0 {
+      #|          result {
+      #|            match : type#0 {
+      #|              scrutinee {
+      #|                value : type#0 value#1 p
+      #|              }
+      #|              arms {
+      #|                arm {
+      #|                  pattern {
+      #|                    variant_pattern : type#0 variant#0[tparam#1] {
+      #|                      binding : tparam#1 value#2 value
+      #|                    }
+      #|                  }
+      #|                  body {
+      #|                    variant : type#0 variant#0[tparam#1] {
+      #|                      value : tparam#1 value#2 value
+      #|                    }
+      #|                  }
+      #|                }
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
 test "typecheck unqualified enum variant construction" {
   let result = expect_typecheck_result(
     (
