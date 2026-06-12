@@ -132,29 +132,67 @@ and unresolved or ambiguous states before typed core lowering.
 - [ ] Produce a typed source-level result that contains no unresolved names,
   omitted contextual arguments, or source-only ambiguity states.
 
-## 5. Typed Core ANF
+## 5. Existential Types
+
+Existential types add hidden type witnesses chosen by constructors or providers
+and opened only by pattern-based elimination. The implementation should follow
+`docs/existential-types.md` and keep hidden types out of ordinary value-field
+lookup and expression-dependent type projection.
+
+- [ ] Promote the existential type design into the language specification,
+  including formation, introduction, elimination, scope, and escape rules.
+- [ ] Extend syntax, parser, and pretty printers for existential enum variant
+  type binders such as `hide[T](T)`.
+- [ ] Extend syntax, parser, and pretty printers for struct type members such
+  as `type T : Type`, struct literal type witnesses such as `T = Int`, and
+  struct patterns such as `Hide::{ T, val }`.
+- [ ] Add symbol and resolved IR support for existential type binders, struct
+  type members, type witness fields, and pattern-opened hidden type binders.
+- [ ] Extend type objects and kind checking so existential packages can carry
+  explicit hidden type members while preserving nominal struct and enum
+  identity.
+- [ ] Type check existential enum construction by choosing witness types and
+  checking payloads under the instantiated variant payload type.
+- [ ] Type check existential struct construction by checking type-member
+  witnesses and value fields against the declared member types.
+- [ ] Type check existential elimination in enum and struct patterns by
+  introducing fresh abstract type binders into the arm or remaining local
+  scope.
+- [ ] Reject hidden type escape from opened existential scopes unless the value
+  is repacked into another existential before leaving the scope.
+- [ ] Decide and implement the wildcard spelling for ignored hidden type
+  binders in struct patterns.
+- [ ] Preserve existential witness and opened-type information in Checked
+  Source so later typed core lowering does not need source syntax.
+- [ ] Add valid and invalid parser, resolver, type checker, elaborator, and
+  spec fixture coverage for existential enums, structs, higher-kind-ready type
+  members, and escape diagnostics.
+
+## 6. Typed Core ANF
 
 - [ ] Define the typed core program representation after the source-level
   elaborator has a closed typed result.
 - [ ] Lower checked source semantics into structured ANF with typed nodes and
   origin spans.
 - [ ] Preserve nominal data, first-class functions, type lambdas, type
-  applications, checked patterns, and typed unsafe builtins.
+  applications, existential packages, checked patterns, and typed unsafe
+  builtins.
 - [ ] Remove source-only constructs such as pipeline, contextual offer lookup,
   omitted contextual arguments, and ordinary operator aliases.
 - [ ] Provide a typed core pretty printer and tests based on typed core output.
 
-## 6. Reference Interpreter
+## 7. Reference Interpreter
 
 - [ ] Evaluate whole typed core programs without hard-coding `main`.
 - [ ] Use uniform interpreter values, global environments, call frames, and
   closure environments.
 - [ ] Evaluate first-class calls, type lambdas/applications with runtime type
-  erasure, nominal data, checked patterns, conditionals, and matches.
+  erasure, existential packages, nominal data, checked patterns, conditionals,
+  and matches.
 - [ ] Define the builtin runtime plugin contract and runtime error reports.
 - [ ] Use the interpreter as the semantic oracle for later execution targets.
 
-## 7. Prelude And Conformance
+## 8. Prelude And Conformance
 
 - [ ] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial contextual offer environment from prelude-provided
