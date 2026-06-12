@@ -108,9 +108,9 @@ ordinary local typing has determined their target types.
   primitive operations, nominal construction, and field access.
 - [x] Check enum variant construction and unqualified variant calls after type
   information is available.
-- [ ] Existential: type check enum construction by choosing witness types and
+- [x] Existential: type check enum construction by choosing witness types and
   checking payloads under the instantiated variant payload type.
-- [ ] Existential: type check struct construction by checking type-member
+- [x] Existential: type check struct construction by checking type-member
   witnesses and value fields against the declared member types.
 - [ ] Existential: reject hidden type escape from opened scopes unless the
   value is repacked into another existential before leaving the scope.

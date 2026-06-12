@@ -125,6 +125,9 @@ pub(all) enum TypeCheckDiagnosticKind {
   UnknownField(name~ : String)
   MissingField(name~ : String)
   DuplicateField(name~ : String)
+  UnknownTypeMember(name~ : String)
+  MissingTypeMember(name~ : String)
+  DuplicateTypeMember(name~ : String)
   NotAStruct(@types.Type)
   NonExhaustiveMatch(@types.Type)
   UnreachableMatchArm

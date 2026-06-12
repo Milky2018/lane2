@@ -69,6 +69,7 @@ pub(all) struct CheckedSourceTypeCheckResult {
   source : @checked.CheckedSourceFile?
   diagnostics : Array[TypeCheckDiagnostic]
 } derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedSourceTypeCheckResult
 
 pub(all) struct CheckedStructDeclaration {
   symbol : @symbol.TypeSymbolId
@@ -139,6 +140,9 @@ pub(all) enum TypeCheckDiagnosticKind {
   UnknownField(name~ : String)
   MissingField(name~ : String)
   DuplicateField(name~ : String)
+  UnknownTypeMember(name~ : String)
+  MissingTypeMember(name~ : String)
+  DuplicateTypeMember(name~ : String)
   NotAStruct(@types.Type)
   NonExhaustiveMatch(@types.Type)
   UnreachableMatchArm

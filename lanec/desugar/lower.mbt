@@ -93,7 +93,7 @@ fn desugar_pattern_let_declaration(
 ///|
 fn desugar_struct_literal_field(
   field : @resolve.ResolvedStructLiteralField,
-) -> DesugaredStructLiteralField? {
+) -> DesugaredStructLiteralField {
   match field {
     Value(name~, value~, punned_reference~, loc~) => {
       let value = match value {
@@ -104,9 +104,9 @@ fn desugar_struct_literal_field(
             None => Var(name~, reference=Unresolved(name), loc~)
           }
       }
-      Some({ name, value, loc })
+      Value(name~, value~, loc~)
     }
-    TypeWitness(..) => None
+    TypeWitness(name~, witness~, loc~) => TypeWitness(name~, witness~, loc~)
   }
 }
 
@@ -222,13 +222,7 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
 fn desugar_struct_literal_fields(
   fields : Array[@resolve.ResolvedStructLiteralField],
 ) -> Array[DesugaredStructLiteralField] {
-  let result = []
-  for field in fields {
-    if desugar_struct_literal_field(field) is Some(field) {
-      result.push(field)
-    }
-  }
-  result
+  fields.map(desugar_struct_literal_field)
 }
 
 ///|

@@ -246,20 +246,46 @@ pub impl @prettyprinter.Pretty for CheckedExpr with fn pretty(
       text(name) +
       space +
       @pretty.braced_block([@pretty.section("base", [base.pretty()])])
-    StructLiteral(symbol~, type_arguments~, fields~, type_~, ..) =>
+    StructLiteral(
+      symbol~,
+      type_arguments~,
+      type_witnesses~,
+      fields~,
+      type_~,
+      ..
+    ) =>
       typed_header("struct", type_) +
       space +
       symbol.pretty() +
       type_arguments_doc(type_arguments) +
       space +
-      @pretty.braced_block(fields.map(CheckedStructLiteralField::pretty))
-    Variant(symbol~, arguments~, type_~, ..) =>
+      @pretty.braced_block(
+        type_witnesses.map(CheckedStructTypeWitness::pretty) +
+        fields.map(CheckedStructLiteralField::pretty),
+      )
+    Variant(symbol~, type_arguments~, arguments~, type_~, ..) =>
       typed_header("variant", type_) +
       space +
       symbol.pretty() +
+      type_arguments_doc(type_arguments) +
       space +
       @pretty.braced_block(arguments.map(CheckedExpr::pretty))
   }
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedStructTypeWitness with fn pretty(
+  witness : CheckedStructTypeWitness,
+) {
+  text("type") +
+  space +
+  witness.symbol.pretty() +
+  space +
+  text(witness.name) +
+  space +
+  text("=") +
+  space +
+  witness.type_.pretty()
 }
 
 ///|

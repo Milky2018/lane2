@@ -33,6 +33,36 @@ fn SemanticChecker::check_checked_expr(
       self.check_checked_block(scope, items, result, expected, loc)
     Call(callee~, arguments~, loc~) =>
       self.check_checked_call(scope, callee, arguments, expected, loc)
+    StructLiteral(type_name~, type_arguments~, fields~, loc~) => {
+      let checked = self.synthesize_checked_struct_literal(
+        scope, type_name, type_arguments, fields, loc,
+      )
+      self.expect_type(expected, checked.type_, loc)
+      checked
+    }
+    VariantCall(
+      type_name~,
+      type_arguments~,
+      variant~,
+      variant_type_arguments~,
+      reference~,
+      arguments~,
+      loc~
+    ) => {
+      let checked = self.synthesize_checked_variant_call(
+        scope,
+        type_name,
+        type_arguments,
+        variant,
+        variant_type_arguments,
+        reference,
+        arguments,
+        Some(expected),
+        loc,
+      )
+      self.expect_type(expected, checked.type_, loc)
+      checked
+    }
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
       self.check_checked_function_literal(
         scope, type_parameters, parameters, return_type, body, expected, loc,
@@ -87,6 +117,30 @@ fn SemanticChecker::synthesize_checked_expr(
       self.synthesize_checked_field(scope, base, name, reference, loc)
     Call(callee~, arguments~, loc~) =>
       self.synthesize_checked_call(scope, callee, arguments, loc)
+    StructLiteral(type_name~, type_arguments~, fields~, loc~) =>
+      self.synthesize_checked_struct_literal(
+        scope, type_name, type_arguments, fields, loc,
+      )
+    VariantCall(
+      type_name~,
+      type_arguments~,
+      variant~,
+      variant_type_arguments~,
+      reference~,
+      arguments~,
+      loc~
+    ) =>
+      self.synthesize_checked_variant_call(
+        scope,
+        type_name,
+        type_arguments,
+        variant,
+        variant_type_arguments,
+        reference,
+        arguments,
+        None,
+        loc,
+      )
     Builtin(_, loc~) => {
       self.diagnostics.push({ kind: CannotInferExpression("builtin"), loc })
       checked_expression_none_reported(Error)

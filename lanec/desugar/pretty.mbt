@@ -94,7 +94,11 @@ pub impl @prettyprinter.Pretty for DesugaredPatternLetDeclaration with fn pretty
 pub impl @prettyprinter.Pretty for DesugaredStructLiteralField with fn pretty(
   field : DesugaredStructLiteralField,
 ) {
-  text(field.name) + text(":") + space + field.value.pretty()
+  match field {
+    Value(name~, value~, ..) => text(name) + text(":") + space + value.pretty()
+    TypeWitness(name~, witness~, ..) =>
+      text(name) + space + text("=") + space + witness.pretty()
+  }
 }
 
 ///|

@@ -59,10 +59,13 @@ pub(all) enum DesugaredLocalItem {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct DesugaredStructLiteralField {
-  name : String
-  value : DesugaredExpr
-  loc : SourceSpan
+pub(all) enum DesugaredStructLiteralField {
+  Value(name~ : String, value~ : DesugaredExpr, loc~ : SourceSpan)
+  TypeWitness(
+    name~ : String,
+    witness~ : @resolve.ResolvedType,
+    loc~ : SourceSpan
+  )
 } derive(Debug, Eq)
 
 ///|

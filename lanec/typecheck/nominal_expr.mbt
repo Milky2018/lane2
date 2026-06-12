@@ -13,21 +13,40 @@ fn SemanticChecker::synthesize_variant_call(
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @types.Type {
+  self.synthesize_checked_variant_call(
+    scope, type_name, type_arguments, variant, variant_type_arguments, reference,
+    arguments, expected_result, loc,
+  ).type_
+}
+
+///|
+fn SemanticChecker::synthesize_checked_variant_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  type_name : String?,
+  type_arguments : Array[@resolve.ResolvedType],
+  variant : String,
+  variant_type_arguments : Array[@resolve.ResolvedType],
+  reference : @resolve.ResolvedVariantReference,
+  arguments : Array[@desugar.DesugaredExpr],
+  expected_result : @types.Type?,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
   match type_name {
     Some(type_name) =>
-      self.synthesize_qualified_variant(
+      self.synthesize_checked_qualified_variant(
         scope, type_name, type_arguments, variant, variant_type_arguments, reference,
         arguments, expected_result, loc,
       )
     None =>
-      self.synthesize_unqualified_variant(
+      self.synthesize_checked_unqualified_variant(
         scope, variant, reference, arguments, expected_result, loc,
       )
   }
 }
 
 ///|
-fn SemanticChecker::synthesize_qualified_variant(
+fn SemanticChecker::synthesize_checked_qualified_variant(
   self : SemanticChecker,
   scope : TypeScope,
   type_name : String,
@@ -38,20 +57,21 @@ fn SemanticChecker::synthesize_qualified_variant(
   arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
-) -> @types.Type {
+) -> CheckedExpressionSynthesis {
   let checked_arguments = type_arguments.map(fn(type_) {
     self.check_type(type_)
   })
-  for type_ in variant_type_arguments {
-    ignore(self.check_type(type_))
-  }
+  let checked_variant_arguments = variant_type_arguments.map(fn(type_) {
+    self.check_type(type_)
+  })
   match reference {
     Symbol(symbol) =>
-      self.synthesize_variant_symbol(
+      self.synthesize_checked_variant_symbol(
         scope,
         symbol,
         type_name + "::" + variant,
         checked_arguments,
+        checked_variant_arguments,
         arguments,
         expected_result,
         loc,
@@ -63,24 +83,24 @@ fn SemanticChecker::synthesize_qualified_variant(
         ),
         loc,
       })
-      Error
+      checked_expression_none_reported(Error)
     }
     Ambiguous(name~, ..) => {
       self.report_ambiguous_variant_reference(name, loc)
-      Error
+      checked_expression_none_reported(Error)
     }
     UnresolvedUnqualified(name) => {
       self.diagnostics.push({
         kind: CannotInferExpression("unresolved variant " + name),
         loc,
       })
-      Error
+      checked_expression_none_reported(Error)
     }
   }
 }
 
 ///|
-fn SemanticChecker::synthesize_unqualified_variant(
+fn SemanticChecker::synthesize_checked_unqualified_variant(
   self : SemanticChecker,
   scope : TypeScope,
   variant : String,
@@ -88,13 +108,14 @@ fn SemanticChecker::synthesize_unqualified_variant(
   arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
-) -> @types.Type {
+) -> CheckedExpressionSynthesis {
   match reference {
     Symbol(symbol) =>
-      self.synthesize_variant_symbol(
+      self.synthesize_checked_variant_symbol(
         scope,
         symbol,
         variant,
+        [],
         [],
         arguments,
         expected_result,
@@ -102,14 +123,14 @@ fn SemanticChecker::synthesize_unqualified_variant(
       )
     Ambiguous(name~, ..) => {
       self.report_ambiguous_variant_reference(name, loc)
-      Error
+      checked_expression_none_reported(Error)
     }
     UnresolvedUnqualified(name) => {
       self.diagnostics.push({
         kind: CannotInferExpression("unresolved variant " + name),
         loc,
       })
-      Error
+      checked_expression_none_reported(Error)
     }
     Unresolved(type_name~, variant~) => {
       self.diagnostics.push({
@@ -118,46 +139,49 @@ fn SemanticChecker::synthesize_unqualified_variant(
         ),
         loc,
       })
-      Error
+      checked_expression_none_reported(Error)
     }
   }
 }
 
 ///|
-fn SemanticChecker::synthesize_variant_symbol(
+fn SemanticChecker::synthesize_checked_variant_symbol(
   self : SemanticChecker,
   scope : TypeScope,
   symbol : VariantSymbolId,
   display_name : String,
   explicit_type_arguments : Array[@types.Type],
+  explicit_variant_type_arguments : Array[@types.Type],
   arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
   loc : SourceSpan,
-) -> @types.Type {
+) -> CheckedExpressionSynthesis {
   guard self.source.symbols.variant_metadata(symbol) is Some(metadata) else {
     self.diagnostics.push({
       kind: CannotInferExpression("unknown variant " + display_name),
       loc,
     })
-    return Error
+    return checked_expression_none_reported(Error)
   }
   guard self.declarations.checked_enum(metadata.owner) is Some(declaration) else {
     self.diagnostics.push({
       kind: CannotInferExpression("unknown variant owner " + display_name),
       loc,
     })
-    return Error
+    return checked_expression_none_reported(Error)
   }
   guard declaration.variant(symbol) is Some(variant_declaration) else {
     self.diagnostics.push({
       kind: CannotInferExpression("unknown variant " + display_name),
       loc,
     })
-    return Error
+    return checked_expression_none_reported(Error)
   }
   if variant_declaration.payload.length() != arguments.length() {
     self.diagnostics.push({ kind: CannotInferExpression("variant arity"), loc })
-    return Nominal(metadata.owner, explicit_type_arguments)
+    return checked_expression_none_reported(
+      Nominal(metadata.owner, explicit_type_arguments),
+    )
   }
   let type_arguments = if explicit_type_arguments.is_empty() &&
     !declaration.type_parameters.is_empty() {
@@ -165,7 +189,7 @@ fn SemanticChecker::synthesize_variant_symbol(
         scope, declaration, variant_declaration, arguments, expected_result, loc,
       )
       is Some(type_arguments) else {
-      return Error
+      return checked_expression_none_reported(Error)
     }
     type_arguments
   } else {
@@ -179,18 +203,102 @@ fn SemanticChecker::synthesize_variant_symbol(
     )
     explicit_type_arguments
   }
-  let substitution = variant_type_substitution(
+  let nominal_substitution = variant_type_substitution(
     declaration.type_parameters,
     type_arguments,
   )
-  for index in 0..<variant_declaration.payload.length() {
-    self.check_expr(
-      scope,
-      arguments[index],
-      variant_declaration.payload[index].substitute(substitution),
-    )
+  let hidden_type_arguments = self.variant_hidden_type_arguments(
+    scope, variant_declaration, explicit_variant_type_arguments, arguments, nominal_substitution,
+    display_name, loc,
+  )
+  guard hidden_type_arguments is Some(hidden_type_arguments) else {
+    return checked_expression_none_reported(Error)
   }
-  Nominal(metadata.owner, type_arguments)
+  let hidden_substitution = variant_type_substitution(
+    variant_declaration.type_parameters,
+    hidden_type_arguments,
+  )
+  let checked_arguments = []
+  let mut complete = true
+  for index in 0..<variant_declaration.payload.length() {
+    let expected = variant_declaration.payload[index]
+      .substitute(nominal_substitution)
+      .substitute(hidden_substitution)
+    let checked = self.check_checked_expr(scope, arguments[index], expected)
+    match
+      self.require_checked_expression(
+        checked,
+        arguments[index].loc(),
+        "variant argument",
+      ) {
+      Some(argument) => checked_arguments.push(argument)
+      None => complete = false
+    }
+  }
+  let type_ = @types.Type::Nominal(metadata.owner, type_arguments)
+  if complete {
+    checked_expression(
+      Variant(
+        symbol~,
+        type_arguments=hidden_type_arguments,
+        arguments=checked_arguments,
+        type_~,
+        loc~,
+      ),
+      type_,
+    )
+  } else {
+    checked_expression_none_reported(type_)
+  }
+}
+
+///|
+fn SemanticChecker::variant_hidden_type_arguments(
+  self : SemanticChecker,
+  scope : TypeScope,
+  variant : CheckedVariantDeclaration,
+  explicit : Array[@types.Type],
+  arguments : Array[@desugar.DesugaredExpr],
+  nominal_substitution : @types.TypeSubstitution,
+  display_name : String,
+  loc : SourceSpan,
+) -> Array[@types.Type]? {
+  if !explicit.is_empty() {
+    if explicit.length() != variant.type_parameters.length() {
+      self.diagnostics.push({
+        kind: TypeArgumentArityMismatch(
+          name=display_name,
+          expected=variant.type_parameters.length(),
+          actual=explicit.length(),
+        ),
+        loc,
+      })
+    }
+    return Some(explicit)
+  }
+  if variant.type_parameters.is_empty() {
+    return Some([])
+  }
+  let inference = TypeArgumentInference::TypeArgumentInference(
+    variant.type_parameters,
+  )
+  for index in 0..<variant.payload.length() {
+    if self.synthesize_argument_for_type_arguments(scope, arguments[index])
+      is Some(actual) {
+      inference.collect(
+        variant.payload[index].substitute(nominal_substitution),
+        actual,
+      )
+    }
+  }
+  guard inference.type_arguments() is Some(type_arguments) else {
+    self.diagnostics.push({
+      kind: CannotInferExpression("hidden type arguments"),
+      loc,
+    })
+    return None
+  }
+  Some(type_arguments)
 }
 
 ///|
@@ -256,9 +364,23 @@ fn SemanticChecker::synthesize_struct_literal(
   fields : Array[@desugar.DesugaredStructLiteralField],
   loc : SourceSpan,
 ) -> @types.Type {
+  self.synthesize_checked_struct_literal(
+    scope, type_name, type_arguments, fields, loc,
+  ).type_
+}
+
+///|
+fn SemanticChecker::synthesize_checked_struct_literal(
+  self : SemanticChecker,
+  scope : TypeScope,
+  type_name : String,
+  type_arguments : Array[@resolve.ResolvedType],
+  fields : Array[@desugar.DesugaredStructLiteralField],
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
   guard self.source.symbols.type_named(type_name) is Some(symbol) else {
     self.diagnostics.push({ kind: UnresolvedType(type_name), loc })
-    return Error
+    return checked_expression_none_reported(Error)
   }
   let arguments = type_arguments.map(fn(type_) { self.check_type(type_) })
   check_type_arity(
@@ -272,32 +394,47 @@ fn SemanticChecker::synthesize_struct_literal(
   let type_ = @types.Type::Nominal(symbol, arguments)
   guard self.declarations.checked_struct(symbol) is Some(struct_declaration) else {
     self.diagnostics.push({ kind: NotAStruct(type_), loc })
-    return Error
+    return checked_expression_none_reported(Error)
   }
+  let witnesses = self.check_struct_type_witnesses(
+    struct_declaration, fields, loc,
+  )
+  let nominal_substitution = struct_declaration.nominal_substitution(arguments)
+  let existential_substitution = struct_declaration.existential_substitution(
+    witnesses,
+  )
   let seen = []
+  let checked_fields : Array[@checked.CheckedStructLiteralField] = []
+  let mut complete = true
   for field in fields {
-    if seen.contains(field.name) {
-      self.diagnostics.push({
-        kind: DuplicateField(name=field.name),
-        loc: field.loc,
-      })
+    guard field is Value(name~, value~, loc=field_loc) else { continue }
+    if seen.contains(name) {
+      self.diagnostics.push({ kind: DuplicateField(name~), loc: field_loc })
     } else {
-      seen.push(field.name)
+      seen.push(name)
     }
-    if self.source.symbols.field_named(symbol, field.name) is Some(field_symbol) {
-      let expected = self.declarations.field_type(
-        self.diagnostics,
-        type_,
-        field_symbol,
-        field.name,
-        field.loc,
-      )
-      self.check_expr(scope, field.value, expected)
+    if self.source.symbols.field_named(symbol, name) is Some(field_symbol) {
+      guard struct_declaration.field(field_symbol) is Some(field_declaration) else {
+        self.diagnostics.push({ kind: UnknownField(name~), loc: field_loc })
+        continue
+      }
+      let expected = field_declaration.type_
+        .substitute(nominal_substitution)
+        .substitute(existential_substitution)
+      let checked = self.check_checked_expr(scope, value, expected)
+      match
+        self.require_checked_expression(checked, field_loc, "struct field") {
+        Some(value) =>
+          checked_fields.push({
+            symbol: field_symbol,
+            name,
+            value,
+            loc: field_loc,
+          })
+        None => complete = false
+      }
     } else {
-      self.diagnostics.push({
-        kind: UnknownField(name=field.name),
-        loc: field.loc,
-      })
+      self.diagnostics.push({ kind: UnknownField(name~), loc: field_loc })
     }
   }
   for field in struct_declaration.fields {
@@ -305,7 +442,60 @@ fn SemanticChecker::synthesize_struct_literal(
       self.diagnostics.push({ kind: MissingField(name=field.name), loc })
     }
   }
-  type_
+  if complete {
+    checked_expression(
+      StructLiteral(
+        symbol~,
+        type_arguments=arguments,
+        type_witnesses=witnesses,
+        fields=checked_fields,
+        type_~,
+        loc~,
+      ),
+      type_,
+    )
+  } else {
+    checked_expression_none_reported(type_)
+  }
+}
+
+///|
+fn SemanticChecker::check_struct_type_witnesses(
+  self : SemanticChecker,
+  declaration : CheckedStructDeclaration,
+  fields : Array[@desugar.DesugaredStructLiteralField],
+  loc : SourceSpan,
+) -> Array[@checked.CheckedStructTypeWitness] {
+  let seen = []
+  let witnesses : Array[@checked.CheckedStructTypeWitness] = []
+  for field in fields {
+    guard field is TypeWitness(name~, witness~, loc=field_loc) else { continue }
+    if seen.contains(name) {
+      self.diagnostics.push({ kind: DuplicateTypeMember(name~), loc: field_loc })
+    } else {
+      seen.push(name)
+    }
+    match declaration.type_member_named(name) {
+      Some(type_member) =>
+        witnesses.push({
+          symbol: type_member.symbol,
+          name,
+          type_: self.check_type(witness),
+          loc: field_loc,
+        })
+      None =>
+        self.diagnostics.push({ kind: UnknownTypeMember(name~), loc: field_loc })
+    }
+  }
+  for type_member in declaration.type_members {
+    if !seen.contains(type_member.name) {
+      self.diagnostics.push({
+        kind: MissingTypeMember(name=type_member.name),
+        loc,
+      })
+    }
+  }
+  witnesses
 }
 
 ///|

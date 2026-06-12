@@ -85,6 +85,32 @@ fn CheckedStructDeclaration::field(
 }
 
 ///|
+fn CheckedStructDeclaration::type_member(
+  self : CheckedStructDeclaration,
+  symbol : TypeMemberSymbolId,
+) -> CheckedTypeMemberDeclaration? {
+  for type_member in self.type_members {
+    if type_member.symbol == symbol {
+      return Some(type_member)
+    }
+  }
+  None
+}
+
+///|
+fn CheckedStructDeclaration::type_member_named(
+  self : CheckedStructDeclaration,
+  name : String,
+) -> CheckedTypeMemberDeclaration? {
+  for type_member in self.type_members {
+    if type_member.name == name {
+      return Some(type_member)
+    }
+  }
+  None
+}
+
+///|
 fn CheckedEnumDeclaration::variant(
   self : CheckedEnumDeclaration,
   symbol : VariantSymbolId,
@@ -110,6 +136,20 @@ fn CheckedStructDeclaration::nominal_substitution(
   }
   for index in 0..<length {
     substitution.insert(self.type_parameters[index].id, arguments[index])
+  }
+  substitution
+}
+
+///|
+fn CheckedStructDeclaration::existential_substitution(
+  self : CheckedStructDeclaration,
+  witnesses : Array[@checked.CheckedStructTypeWitness],
+) -> @types.TypeSubstitution {
+  let substitution = @types.TypeSubstitution::TypeSubstitution()
+  for witness in witnesses {
+    if self.type_member(witness.symbol) is Some(type_member) {
+      substitution.insert(type_member.type_parameter.id, witness.type_)
+    }
   }
   substitution
 }

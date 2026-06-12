@@ -30,6 +30,25 @@ pub impl @prettyprinter.Pretty for TypeCheckResult with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for CheckedSourceTypeCheckResult with fn pretty(
+  result : CheckedSourceTypeCheckResult,
+) {
+  let source = match result.source {
+    Some(source) => source.pretty()
+    None => text("<no checked source>")
+  }
+  text("checked_source_typecheck_result") +
+  space +
+  @pretty.braced_block([
+    source,
+    @pretty.section(
+      "diagnostics",
+      result.diagnostics.map(TypeCheckDiagnostic::pretty),
+    ),
+  ])
+}
+
+///|
 pub impl @prettyprinter.Pretty for CheckedDeclarationEnvironment with fn pretty(
   environment : CheckedDeclarationEnvironment,
 ) {
@@ -251,6 +270,10 @@ pub impl @prettyprinter.Pretty for TypeCheckDiagnosticKind with fn pretty(
     UnknownField(name~) => text("unknown_field") + space + text(name)
     MissingField(name~) => text("missing_field") + space + text(name)
     DuplicateField(name~) => text("duplicate_field") + space + text(name)
+    UnknownTypeMember(name~) => text("unknown_type_member") + space + text(name)
+    MissingTypeMember(name~) => text("missing_type_member") + space + text(name)
+    DuplicateTypeMember(name~) =>
+      text("duplicate_type_member") + space + text(name)
     NotAStruct(type_) => text("not_a_struct") + space + type_.pretty()
     NonExhaustiveMatch(type_) =>
       text("non_exhaustive_match") + space + type_.pretty()

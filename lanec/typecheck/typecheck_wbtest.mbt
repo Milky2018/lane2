@@ -25,6 +25,15 @@ fn expect_typecheck_result(source : String) -> TypeCheckResult {
 }
 
 ///|
+fn expect_checked_source_result(
+  source : String,
+) -> CheckedSourceTypeCheckResult {
+  let file = expect_parse_ok(source)
+  let resolved = @resolve.resolve_source_file(file)
+  typecheck_checked_source_file(resolved)
+}
+
+///|
 fn expect_checked_let_initializer(
   source : String,
   name : String,
@@ -1234,6 +1243,60 @@ test "typecheck generic struct construction and field access" {
 }
 
 ///|
+test "typecheck existential struct construction with type witness" {
+  let result = expect_checked_source_result(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|let hidden : Hide = Hide::{ T = Int, val: 1 }
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source_typecheck_result {
+      #|  checked_source {
+      #|    struct type#0 Hide {
+      #|      type tmember#0 tparam#0 T : Type index=0
+      #|      field field#0 val : tparam#0 index=0
+      #|    }
+      #|    let : type#0 value#0 hidden {
+      #|      struct : type#0 type#0 {
+      #|        type tmember#0 T = Int
+      #|        field field#0 val {
+      #|          int 1 : Int
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck reports missing existential struct type witness" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|let hidden : Hide = Hide::{ val: 1 }
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content=(
+      #|missing_type_member T @ 5:29-5:37
+    ),
+  )
+}
+
+///|
 test "typecheck reports field access on non-struct value" {
   let result = expect_typecheck_result(
     (
@@ -1285,6 +1348,66 @@ test "typecheck qualified enum variant construction" {
       #|  checked_values {
       #|    fn value#0 wrap : (Int) -> type#0[Int]
       #|    fn value#1 empty : () -> type#0[Int]
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck existential enum variant construction with explicit witness" {
+  let result = expect_checked_source_result(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|let packed : Packed = Packed::hide[Int](1)
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source_typecheck_result {
+      #|  checked_source {
+      #|    enum type#0 Packed {
+      #|      variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
+      #|    }
+      #|    let : type#0 value#0 packed {
+      #|      variant : type#0 variant#0[Int] {
+      #|        int 1 : Int
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck existential enum variant construction infers witness" {
+  let result = expect_checked_source_result(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|let packed : Packed = Packed::hide(1)
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source_typecheck_result {
+      #|  checked_source {
+      #|    enum type#0 Packed {
+      #|      variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
+      #|    }
+      #|    let : type#0 value#0 packed {
+      #|      variant : type#0 variant#0[Int] {
+      #|        int 1 : Int
+      #|      }
+      #|    }
       #|  }
       #|  diagnostics {}
       #|}

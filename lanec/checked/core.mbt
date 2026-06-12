@@ -173,16 +173,26 @@ pub(all) enum CheckedExpr {
   StructLiteral(
     symbol~ : TypeSymbolId,
     type_arguments~ : Array[@types.Type],
+    type_witnesses~ : Array[CheckedStructTypeWitness],
     fields~ : Array[CheckedStructLiteralField],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   Variant(
     symbol~ : VariantSymbolId,
+    type_arguments~ : Array[@types.Type],
     arguments~ : Array[CheckedExpr],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedStructTypeWitness {
+  symbol : TypeMemberSymbolId
+  name : String
+  type_ : @types.Type
+  loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
