@@ -10,7 +10,7 @@ pub(all) enum TopLevelDeclaration {
   Enum(EnumDeclaration)
   Function(FunctionDeclaration)
   Let(LetDeclaration)
-  Open(OpenDeclaration)
+  Offer(OfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -24,11 +24,11 @@ pub(all) struct StructDeclaration {
 ///|
 pub(all) enum StructMember {
   Field(FieldDeclaration)
-  Open(OpenDeclaration)
 } derive(Debug, Eq)
 
 ///|
 pub(all) struct FieldDeclaration {
+  is_offered : Bool
   name : String
   type_ : Type
   loc : SourceSpan
@@ -61,13 +61,22 @@ pub(all) struct FunctionDeclaration {
 
 ///|
 pub(all) struct Parameter {
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : Type
   loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct ParameterModifiers {
+  is_auto : Bool
+  is_offered : Bool
+} derive(Debug, Eq)
+
+///|
 pub(all) struct LetDeclaration {
+  is_offered : Bool
   name : String?
   type_annotation : Type?
   initializer : Expr
@@ -75,7 +84,7 @@ pub(all) struct LetDeclaration {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct OpenDeclaration {
+pub(all) struct OfferDeclaration {
   name : String
   loc : SourceSpan
 } derive(Debug, Eq)
@@ -135,7 +144,7 @@ pub(all) enum Expr {
     loc~ : SourceSpan
   )
   Match(scrutinee~ : Expr, arms~ : Array[MatchArm], loc~ : SourceSpan)
-  Call(callee~ : Expr, arguments~ : Array[Expr], loc~ : SourceSpan)
+  Call(callee~ : Expr, arguments~ : Array[CallArgument], loc~ : SourceSpan)
   Field(base~ : Expr, name~ : String, loc~ : SourceSpan)
   Unary(operator~ : UnaryOperator, operand~ : Expr, loc~ : SourceSpan)
   Binary(
@@ -175,15 +184,31 @@ pub fn Expr::loc(self : Expr) -> SourceSpan {
 pub(all) enum LocalItem {
   Let(LetDeclaration)
   Function(FunctionDeclaration)
-  Open(OpenDeclaration)
+  Offer(OfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
 pub(all) struct FunctionLiteralParameter {
+  is_offered : Bool
   name : String
   type_annotation : Type?
   loc : SourceSpan
 } derive(Debug, Eq)
+
+///|
+pub(all) enum CallArgument {
+  Positional(Expr)
+  Named(name~ : String, value~ : Expr, loc~ : SourceSpan)
+} derive(Debug, Eq)
+
+///|
+/// Returns the source span covered by this call argument.
+pub fn CallArgument::loc(self : CallArgument) -> SourceSpan {
+  match self {
+    Positional(expression) => expression.loc()
+    Named(loc~, ..) => loc
+  }
+}
 
 ///|
 pub(all) struct StructLiteralField {

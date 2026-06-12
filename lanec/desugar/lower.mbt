@@ -22,7 +22,7 @@ fn desugar_top_level_declaration(
     Function(declaration) =>
       Some(Function(desugar_function_declaration(declaration)))
     Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
-    Open(_) => None
+    Offer(_) => None
   }
 }
 
@@ -60,7 +60,7 @@ fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem? 
     Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
     Function(declaration) =>
       Some(Function(desugar_function_declaration(declaration)))
-    Open(_) => None
+    Offer(_) => None
   }
 }
 

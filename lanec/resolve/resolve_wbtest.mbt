@@ -9,27 +9,6 @@ fn expect_parse_ok(source : String) -> @syntax.SourceFile {
 }
 
 ///|
-fn expect_resolved_body(source : String, name : String) -> ResolvedExpr {
-  let file = expect_parse_ok(source)
-  let resolved = resolve_source_file(file)
-  for declaration in resolved.declarations {
-    if declaration is Function(declaration) && declaration.name == name {
-      return declaration.body
-    }
-  }
-  abort("expected function body")
-}
-
-///|
-/// Resolves a parsed test source and returns only resolver diagnostics.
-///
-/// Example: tests use this helper to inspect unresolved values without matching
-/// the whole resolved source snapshot.
-fn resolve_diagnostics(source : String) -> Array[ResolveDiagnostic] {
-  resolve_source_file_result(expect_parse_ok(source)).diagnostics
-}
-
-///|
 test "collect top level declaration symbols" {
   let file = expect_parse_ok(
     (
@@ -47,7 +26,7 @@ test "collect top level declaration symbols" {
       #|    Option::some(x) => x
       #|  }
       #|}
-      #|let : Point = Point::{ x: 1, y: 2 }
+      #|let origin : Point = Point::{ x: 1, y: 2 }
     ),
   )
   inspect(
@@ -67,7 +46,7 @@ test "collect top level declaration symbols" {
       #|      value#1 parameter value
       #|      value#2 parameter fallback
       #|      value#3 pattern_binder x
-      #|      value#4 top_value <anonymous>
+      #|      value#4 top_value origin
       #|    }
       #|    fields {
       #|      field#0 owner=type#0 x index=0
@@ -93,7 +72,7 @@ test "collect top level declaration symbols" {
       #|        variant#1 Option::some(bind value#3 x) => var value#3 x
       #|      }
       #|    }
-      #|    let value#4 <anonymous> : type#0 Point = Point::{
+      #|    let value#4 origin : type#0 Point = Point::{
       #|      x: 1
       #|      y: 2
       #|    }
@@ -269,174 +248,6 @@ test "keep unknown calls as unresolved value calls" {
 }
 
 ///|
-test "resolve top level open exposes struct fields" {
-  let file = expect_parse_ok(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|let ops : Ops = Ops::{ add: 1 }
-      #|open ops
-      #|fn use() -> Int {
-      #|  add
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(resolve_source_file(file), width=100),
-    content=(
-      #|resolved {
-      #|  symbols {
-      #|    types {
-      #|      type#0 struct Ops/0
-      #|    }
-      #|    type_parameters {}
-      #|    values {
-      #|      value#0 top_function use
-      #|      value#1 top_value ops
-      #|    }
-      #|    fields {
-      #|      field#0 owner=type#0 add index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  declarations {
-      #|    struct type#0 Ops {
-      #|      field field#0 add : Int index=0
-      #|    }
-      #|    let value#1 ops : type#0 Ops = Ops::{
-      #|      add: 1
-      #|    }
-      #|    open ops
-      #|    fn value#0 use() -> Int {
-      #|      var field#0 of value#1 add
-      #|    }
-      #|  }
-      #|}
-    ),
-  )
-}
-
-///|
-test "resolve struct field forwarding when opening containing value" {
-  let file = expect_parse_ok(
-    (
-      #|struct Constants {
-      #|  answer : Int
-      #|}
-      #|struct Environment {
-      #|  constants : Constants
-      #|  open constants
-      #|}
-      #|let env : Environment = Environment::{
-      #|  constants: Constants::{ answer: 42 }
-      #|}
-      #|open env
-      #|fn use() -> Int {
-      #|  answer
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(resolve_source_file(file), width=100),
-    content=(
-      #|resolved {
-      #|  symbols {
-      #|    types {
-      #|      type#0 struct Constants/0
-      #|      type#1 struct Environment/0
-      #|    }
-      #|    type_parameters {}
-      #|    values {
-      #|      value#0 top_function use
-      #|      value#1 top_value env
-      #|    }
-      #|    fields {
-      #|      field#0 owner=type#0 answer index=0
-      #|      field#1 owner=type#1 constants index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  declarations {
-      #|    struct type#0 Constants {
-      #|      field field#0 answer : Int index=0
-      #|    }
-      #|    struct type#1 Environment {
-      #|      field field#1 constants : type#0 Constants index=0
-      #|      open constants
-      #|    }
-      #|    let value#1 env : type#1 Environment = Environment::{
-      #|      constants: Constants::{
-      #|        answer: 42
-      #|      }
-      #|    }
-      #|    open env
-      #|    fn value#0 use() -> Int {
-      #|      var field#1.field#0 of value#1 answer
-      #|    }
-      #|  }
-      #|}
-    ),
-  )
-}
-
-///|
-test "preserve top level open exposure candidates" {
-  let file = expect_parse_ok(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|fn add() -> Int {
-      #|  0
-      #|}
-      #|let ops : Ops = Ops::{ add: 1 }
-      #|open ops
-      #|fn use() -> Int {
-      #|  add
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(resolve_source_file(file), width=100),
-    content=(
-      #|resolved {
-      #|  symbols {
-      #|    types {
-      #|      type#0 struct Ops/0
-      #|    }
-      #|    type_parameters {}
-      #|    values {
-      #|      value#0 top_function add
-      #|      value#1 top_function use
-      #|      value#2 top_value ops
-      #|    }
-      #|    fields {
-      #|      field#0 owner=type#0 add index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  declarations {
-      #|    struct type#0 Ops {
-      #|      field field#0 add : Int index=0
-      #|    }
-      #|    fn value#0 add() -> Int {
-      #|      0
-      #|    }
-      #|    let value#2 ops : type#0 Ops = Ops::{
-      #|      add: 1
-      #|    }
-      #|    open ops
-      #|    fn value#1 use() -> Int {
-      #|      var ?candidates add [field#0 of value#2, value#0] add
-      #|    }
-      #|  }
-      #|}
-    ),
-  )
-}
-
-///|
 test "resolve qualified field access when base type is known" {
   let file = expect_parse_ok(
     (
@@ -545,34 +356,6 @@ test "resolve operator aliases through operation names" {
 }
 
 ///|
-test "resolve operator aliases through opened operation fields" {
-  let body = expect_resolved_body(
-    (
-      #|struct Ops {
-      #|  op_add : (Int, Int) -> Int
-      #|}
-      #|fn int_add(a : Int, b : Int) -> Int {
-      #|  a
-      #|}
-      #|let ops : Ops = Ops::{ op_add: int_add }
-      #|open ops
-      #|fn add(a : Int, b : Int) -> Int {
-      #|  a + b
-      #|}
-    ),
-    "add",
-  )
-  inspect(
-    @prettyprinter.render(body, width=100),
-    content=(
-      #|{
-      #|  var value#5 a +[field#0 of value#4] var value#6 b
-      #|}
-    ),
-  )
-}
-
-///|
 test "report unresolved operator operation name" {
   let file = expect_parse_ok(
     (
@@ -586,229 +369,4 @@ test "report unresolved operator operation name" {
     @prettyprinter.render(result.diagnostics[0]),
     content="unresolved_value op_add",
   )
-}
-
-///|
-test "resolve anonymous top level let as preopen fields" {
-  let file = expect_parse_ok(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|let : Ops = Ops::{ add: 1 }
-      #|fn use() -> Int {
-      #|  add
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(resolve_source_file(file), width=100),
-    content=(
-      #|resolved {
-      #|  symbols {
-      #|    types {
-      #|      type#0 struct Ops/0
-      #|    }
-      #|    type_parameters {}
-      #|    values {
-      #|      value#0 top_function use
-      #|      value#1 top_value <anonymous>
-      #|    }
-      #|    fields {
-      #|      field#0 owner=type#0 add index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  declarations {
-      #|    struct type#0 Ops {
-      #|      field field#0 add : Int index=0
-      #|    }
-      #|    let value#1 <anonymous> : type#0 Ops = Ops::{
-      #|      add: 1
-      #|    }
-      #|    fn value#0 use() -> Int {
-      #|      var field#0 of value#1 add
-      #|    }
-      #|  }
-      #|}
-    ),
-  )
-}
-
-///|
-test "resolve local open exposure as candidates with local bindings" {
-  let file = expect_parse_ok(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|fn use() -> Int {
-      #|  {
-      #|    let ops : Ops = Ops::{ add: 1 }
-      #|    let add = 2
-      #|    open ops
-      #|    add
-      #|  }
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(resolve_source_file(file), width=100),
-    content=(
-      #|resolved {
-      #|  symbols {
-      #|    types {
-      #|      type#0 struct Ops/0
-      #|    }
-      #|    type_parameters {}
-      #|    values {
-      #|      value#0 top_function use
-      #|      value#1 local_binding ops
-      #|      value#2 local_binding add
-      #|    }
-      #|    fields {
-      #|      field#0 owner=type#0 add index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  declarations {
-      #|    struct type#0 Ops {
-      #|      field field#0 add : Int index=0
-      #|    }
-      #|    fn value#0 use() -> Int {
-      #|      {
-      #|        let value#1 ops : type#0 Ops = Ops::{
-      #|          add: 1
-      #|        }
-      #|        let value#2 add = 2
-      #|        open ops
-      #|        var ?candidates add [field#0 of value#1, value#2] add
-      #|      }
-      #|    }
-      #|  }
-      #|}
-    ),
-  )
-}
-
-///|
-test "same open layer keeps repeated exposed names as candidates" {
-  let body = expect_resolved_body(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|let left : Ops = Ops::{ add: 1 }
-      #|let right : Ops = Ops::{ add: 2 }
-      #|open left
-      #|open right
-      #|fn use() -> Int {
-      #|  add
-      #|}
-    ),
-    "use",
-  )
-  inspect(
-    @prettyprinter.render(body, width=100),
-    content=(
-      #|{
-      #|  var ?candidates add [field#0 of value#2, field#0 of value#1] add
-      #|}
-    ),
-  )
-}
-
-///|
-test "inner open layer shadows outer open layer" {
-  let body = expect_resolved_body(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|let outer : Ops = Ops::{ add: 1 }
-      #|open outer
-      #|fn use() -> Int {
-      #|  {
-      #|    let inner : Ops = Ops::{ add: 2 }
-      #|    open inner
-      #|    add
-      #|  }
-      #|}
-    ),
-    "use",
-  )
-  inspect(
-    @prettyprinter.render(body, width=100),
-    content=(
-      #|{
-      #|  {
-      #|    let value#2 inner : type#0 Ops = Ops::{
-      #|      add: 2
-      #|    }
-      #|    open inner
-      #|    var field#0 of value#2 add
-      #|  }
-      #|}
-    ),
-  )
-}
-
-///|
-test "inner plain binding combines with nearest outer open layer" {
-  let body = expect_resolved_body(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|let outer : Ops = Ops::{ add: 1 }
-      #|open outer
-      #|fn use() -> Int {
-      #|  {
-      #|    let add = 2
-      #|    add
-      #|  }
-      #|}
-    ),
-    "use",
-  )
-  inspect(
-    @prettyprinter.render(body, width=100),
-    content=(
-      #|{
-      #|  {
-      #|    let value#2 add = 2
-      #|    var ?candidates add [value#2, field#0 of value#1] add
-      #|  }
-      #|}
-    ),
-  )
-}
-
-///|
-test "open target ignores open exposure candidates" {
-  let diagnostics = resolve_diagnostics(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|let ops : Ops = Ops::{ add: 1 }
-      #|open ops
-      #|open add
-    ),
-  )
-  inspect(@prettyprinter.render(diagnostics[0]), content="unresolved_open add")
-}
-
-///|
-test "top level open cannot see later value binding" {
-  let diagnostics = resolve_diagnostics(
-    (
-      #|struct Ops {
-      #|  add : Int
-      #|}
-      #|open ops
-      #|let ops : Ops = Ops::{ add: 1 }
-    ),
-  )
-  inspect(@prettyprinter.render(diagnostics[0]), content="unresolved_open ops")
 }

@@ -34,7 +34,7 @@ module tasks should live in issues or implementation notes.
   patterns, function bodies, and expression-local binders into resolved IR.
 - [x] Resolve unqualified variant calls when exactly one visible variant
   matches.
-- [ ] Remove `open` and `let open` from syntax, resolution, desugaring,
+- [x] Remove `open` and `let open` from syntax, resolution, desugaring,
   typechecking, and tests.
 - [ ] Resolve `offer` declarations and `let offer` value definitions into a
   contextual offer environment.

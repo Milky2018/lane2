@@ -29,9 +29,7 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedValue(String)
   UnresolvedField(type_name~ : String, field~ : String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
-  UnresolvedOpenValue(String)
-  CannotOpenValue(String)
-  ConflictingOpenExposure(name~ : String, existing~ : String, incoming~ : String)
+  ConflictingTopLevelValue(name~ : String, existing~ : String, incoming~ : String)
   AmbiguousUnqualifiedVariant(name~ : String, candidates~ : Array[ResolveVariantCandidate])
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolveDiagnosticKind
@@ -135,7 +133,7 @@ pub impl @prettyprinter.Pretty for ResolvedLetDeclaration
 pub(all) enum ResolvedLocalItem {
   Let(ResolvedLetDeclaration)
   Function(ResolvedFunctionDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedLocalItem
 
@@ -146,11 +144,11 @@ pub(all) struct ResolvedMatchArm {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedMatchArm
 
-pub(all) struct ResolvedOpenDeclaration {
+pub(all) struct ResolvedOfferDeclaration {
   name : String
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for ResolvedOpenDeclaration
+pub impl @prettyprinter.Pretty for ResolvedOfferDeclaration
 
 pub(all) enum ResolvedPattern {
   Wildcard(@basic.SourceSpan)
@@ -189,7 +187,6 @@ pub impl @prettyprinter.Pretty for ResolvedStructLiteralField
 
 pub(all) enum ResolvedStructMember {
   Field(ResolvedFieldDeclaration)
-  Open(ResolvedOpenDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructMember
 
@@ -205,7 +202,7 @@ pub(all) enum ResolvedTopLevelDeclaration {
   Enum(ResolvedEnumDeclaration)
   Function(ResolvedFunctionDeclaration)
   Let(ResolvedLetDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedTopLevelDeclaration
 

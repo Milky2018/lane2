@@ -22,7 +22,7 @@ pub impl @prettyprinter.Pretty for ResolvedTopLevelDeclaration with fn pretty(
     Enum(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
     Let(declaration) => declaration.pretty()
-    Open(declaration) => declaration.pretty()
+    Offer(declaration) => declaration.pretty()
   }
 }
 
@@ -67,10 +67,8 @@ pub impl @prettyprinter.Pretty for ResolveDiagnosticKind with fn pretty(
       text(type_name) +
       text("::") +
       text(variant)
-    UnresolvedOpenValue(name) => text("unresolved_open") + space + text(name)
-    CannotOpenValue(name) => text("cannot_open") + space + text(name)
-    ConflictingOpenExposure(name~, existing~, incoming~) =>
-      text("conflicting_open") +
+    ConflictingTopLevelValue(name~, existing~, incoming~) =>
+      text("conflicting_top_value") +
       space +
       text(name) +
       space +
@@ -115,7 +113,6 @@ pub impl @prettyprinter.Pretty for ResolvedStructMember with fn pretty(
 ) {
   match item {
     Field(field) => field.pretty()
-    Open(open) => open.pretty()
   }
 }
 
@@ -213,10 +210,10 @@ pub impl @prettyprinter.Pretty for ResolvedLetDeclaration with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for ResolvedOpenDeclaration with fn pretty(
-  declaration : ResolvedOpenDeclaration,
+pub impl @prettyprinter.Pretty for ResolvedOfferDeclaration with fn pretty(
+  declaration : ResolvedOfferDeclaration,
 ) {
-  text("open") + space + text(declaration.name)
+  text("offer") + space + text(declaration.name)
 }
 
 ///|
@@ -364,7 +361,7 @@ pub impl @prettyprinter.Pretty for ResolvedLocalItem with fn pretty(
   match item {
     Let(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
-    Open(declaration) => declaration.pretty()
+    Offer(declaration) => declaration.pretty()
   }
 }
 

@@ -89,33 +89,50 @@ test "parse function literal and pipeline" {
 }
 
 ///|
-test "parse anonymous top level let and struct forwarding" {
+test "parse offer declarations and contextual parameter syntax" {
   let file = expect_parse_ok(
     (
-      #|struct Constants {
-      #|  answer : Int
+      #|struct Equal[A] {
+      #|  equal : (A, A) -> Bool
       #|}
-      #|struct Environment {
-      #|  constants : Constants
-      #|  open constants
+      #|struct Compare[A] {
+      #|  offer equal_impl : Equal[A]
+      #|  less : (A, A) -> Bool
       #|}
-      #|let : Constants = Constants::{ answer: 42 }
+      #|fn[A] op_equal(a : A, b : A, auto op : Equal[A]) -> Bool {
+      #|  op.equal(a, b)
+      #|}
+      #|let offer int_equal_ops : Equal[Int] = Equal::{ equal: int_equal }
+      #|offer int_equal_ops
+      #|fn use(a : Int, b : Int) -> Bool {
+      #|  op_equal(a, b, op=int_equal_ops)
+      #|}
     ),
   )
   inspect(
     @prettyprinter.render(file),
     content=(
-      #|struct Constants {
-      #|  answer : Int
+      #|struct Equal[A] {
+      #|  equal : (A, A) -> Bool
       #|}
       #|
-      #|struct Environment {
-      #|  constants : Constants
-      #|  open constants
+      #|struct Compare[A] {
+      #|  offer equal_impl : Equal[A]
+      #|  less : (A, A) -> Bool
       #|}
       #|
-      #|let : Constants = Constants::{
-      #|  answer: 42
+      #|fn[A] op_equal(a : A, b : A, auto op : Equal[A]) -> Bool {
+      #|  op.equal(a, b)
+      #|}
+      #|
+      #|let offer int_equal_ops : Equal[Int] = Equal::{
+      #|  equal: int_equal
+      #|}
+      #|
+      #|offer int_equal_ops
+      #|
+      #|fn use(a : Int, b : Int) -> Bool {
+      #|  op_equal(a, b, op=int_equal_ops)
       #|}
     ),
   )

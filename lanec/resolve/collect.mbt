@@ -3,7 +3,6 @@ priv struct Resolver {
   registry : SymbolRegistry
   top_values : Array[ValueBinding]
   diagnostics : Array[ResolveDiagnostic]
-  members : NominalMembers
 }
 
 ///|
@@ -35,7 +34,7 @@ pub fn resolve_source_file_result(source : @syntax.SourceFile) -> ResolveResult 
 
 ///|
 fn Resolver::Resolver(registry : SymbolRegistry) -> Resolver {
-  { registry, top_values: [], diagnostics: [], members: NominalMembers() }
+  { registry, top_values: [], diagnostics: [] }
 }
 
 ///|
@@ -72,10 +71,9 @@ fn Resolver::collect_top_level_headers(
           reference: Symbol(symbol),
           type_: None,
           kind: Plain,
-          depth: 0,
         })
       }
-      Let(_) | Open(_) => ()
+      Let(_) | Offer(_) => ()
     }
   }
 }
@@ -112,7 +110,7 @@ fn Resolver::collect_nominal_members(
           |> ignore
         }
       }
-      Function(_) | Let(_) | Open(_) => ()
+      Function(_) | Let(_) | Offer(_) => ()
     }
   }
 }
@@ -121,7 +119,7 @@ fn Resolver::collect_nominal_members(
 /// Resolves one top-level declaration after the global headers are known.
 ///
 /// Example: `fn f() -> Int { 1 }` resolves through the function path, while
-/// `open int_ops` resolves through the top-level open path.
+/// `offer int_ops` resolves through the top-level offer path.
 fn @syntax.TopLevelDeclaration::resolve_top_level(
   self : @syntax.TopLevelDeclaration,
   resolver : Resolver,
@@ -132,12 +130,13 @@ fn @syntax.TopLevelDeclaration::resolve_top_level(
     Function(declaration) =>
       Function(declaration.resolve_top_level_function(resolver))
     Let(declaration) => Let(declaration.resolve_top_level_let(resolver))
-    Open(declaration) => Open(declaration.resolve_top_level_open(resolver))
+    Offer(declaration) =>
+      Offer(declaration.resolve_top_level_offer(resolver.scope([]), resolver))
   }
 }
 
 ///|
-/// Resolves a struct declaration and its fields and forwarding opens.
+/// Resolves a struct declaration and its fields.
 ///
 /// Example: `struct Point { x : Int }` resolves `Point` to a type symbol and
 /// `x` to a field symbol whose declared type is also resolved.
@@ -153,19 +152,10 @@ fn @syntax.StructDeclaration::resolve_struct(
   let scope = resolver.scope(type_parameters)
   let mut field_index = 0
   let members = self.members.map(fn(item) {
-    match item {
-      Field(field) => {
-        let resolved = field.resolve_field(resolver, scope, symbol, field_index)
-        field_index += 1
-        ResolvedStructMember::Field(resolved)
-      }
-      Open(open) => {
-        // Struct-local `open field` is forwarding metadata. It does not expose
-        // names into this resolver scope; later `open value` expands through it.
-        resolver.resolve_struct_forwarding(symbol, open)
-        Open(open.resolve_open())
-      }
-    }
+    guard item is Field(field) else { abort("unexpected struct member") }
+    let resolved = field.resolve_field(resolver, scope, symbol, field_index)
+    field_index += 1
+    ResolvedStructMember::Field(resolved)
   })
   { symbol, name: self.name, type_parameters, members, loc: self.loc }
 }
@@ -221,33 +211,7 @@ fn @syntax.FieldDeclaration::resolve_field(
 ) -> ResolvedFieldDeclaration {
   let symbol = resolver.registry.field_named(owner, self.name).unwrap()
   let type_ = self.type_.resolve_type(resolver, scope)
-  resolver.members.record_field_type(symbol, type_)
   { symbol, name: self.name, type_, index, loc: self.loc }
-}
-
-///|
-/// Resolves struct-local open forwarding metadata for a field.
-///
-/// Example: in `struct Env { constants : Constants; open constants }`,
-/// `constants` must be a field whose resolved type is a nominal struct.
-fn Resolver::resolve_struct_forwarding(
-  self : Resolver,
-  owner : TypeSymbolId,
-  open : @syntax.OpenDeclaration,
-) -> Unit {
-  guard self.registry.field_named(owner, open.name) is Some(field) else {
-    self.report(CannotOpenValue(open.name), open.loc)
-    return
-  }
-  guard self.members.field_type(field) is Some(Nominal(symbol~, ..)) else {
-    self.report(CannotOpenValue(open.name), open.loc)
-    return
-  }
-  if self.registry.type_metadata(symbol) is Some({ kind: Struct, .. }) {
-    self.members.record_struct_forwarding(owner, field)
-  } else {
-    self.report(CannotOpenValue(open.name), open.loc)
-  }
 }
 
 ///|
@@ -365,11 +329,10 @@ fn Resolver::publish_top_level_let(
     reference: Symbol(declaration.symbol),
     type_: declaration.type_annotation,
     kind: Plain,
-    depth: 0,
   }
   match declaration.name {
     Some(_) => self.publish_top_level_binding(binding, loc)
-    None => self.open_top_level_binding(binding, loc)
+    None => ()
   }
 }
 
@@ -399,31 +362,32 @@ fn @syntax.LetDeclaration::resolve_let(
 }
 
 ///|
-/// Resolves the syntax payload of an open declaration.
+/// Resolves the syntax payload of an offer declaration.
 ///
-/// Example: `open int_ops` records the opened value name; top-level and local
-/// callers decide which scope receives the exposed fields.
-fn @syntax.OpenDeclaration::resolve_open(
-  self : @syntax.OpenDeclaration,
-) -> ResolvedOpenDeclaration {
+/// Example: `offer int_add_ops` records the offered value name; later semantic
+/// checking validates its type and uses it for Contextual Resolution.
+fn @syntax.OfferDeclaration::resolve_offer(
+  self : @syntax.OfferDeclaration,
+) -> ResolvedOfferDeclaration {
   { name: self.name, loc: self.loc }
 }
 
 ///|
-/// Resolves a top-level open declaration and exposes opened fields globally.
+/// Resolves a top-level offer declaration.
 ///
-/// Example: after `let int_ops : IntOps = ...; open int_ops`, later top-level
-/// declarations can resolve `op_add` through fields of `int_ops`.
-fn @syntax.OpenDeclaration::resolve_top_level_open(
-  self : @syntax.OpenDeclaration,
+/// Example: after `let int_add_ops : Add[Int] = ...; offer int_add_ops`,
+/// the offer name must already be an ordinary value binding. The contextual
+/// offer environment is built by later typed analysis.
+fn @syntax.OfferDeclaration::resolve_top_level_offer(
+  self : @syntax.OfferDeclaration,
+  scope : ResolveScope,
   resolver : Resolver,
-) -> ResolvedOpenDeclaration {
-  let scope = resolver.scope([])
+) -> ResolvedOfferDeclaration {
   match scope.value_binding(self.name) {
-    Some(binding) => resolver.open_top_level_binding(binding, self.loc)
-    None => resolver.report(UnresolvedOpenValue(self.name), self.loc)
+    Some(_) => ()
+    None => resolver.report(UnresolvedValue(self.name), self.loc)
   }
-  self.resolve_open()
+  self.resolve_offer()
 }
 
 ///|
@@ -549,7 +513,7 @@ fn @syntax.Expr::resolve_expr(
       let next_scope = scope.enter_scope()
       // Local items are resolved in source order against one mutable scope copy.
       // This preserves sequential local bindings while still letting later items
-      // see earlier `let`, `fn`, and `open` effects.
+      // see earlier `let`, `fn`, and `offer` declarations.
       Block(
         items=items.map(fn(item) {
           item.resolve_local_item(resolver, next_scope)
@@ -713,7 +677,7 @@ fn @syntax.Expr::resolve_call(
   self : @syntax.Expr,
   resolver : Resolver,
   scope : ResolveScope,
-  arguments : Array[@syntax.Expr],
+  arguments : Array[@syntax.CallArgument],
   loc : SourceSpan,
 ) -> ResolvedExpr {
   match self {
@@ -726,7 +690,7 @@ fn @syntax.Expr::resolve_call(
           Call(
             callee=Var(name~, reference~, loc=self.loc()),
             arguments=arguments.map(fn(argument) {
-              argument.resolve_expr(resolver, scope)
+              argument.resolve_argument_expr(resolver, scope)
             }),
             loc~,
           )
@@ -737,7 +701,7 @@ fn @syntax.Expr::resolve_call(
                 variant=name,
                 reference~,
                 arguments=arguments.map(fn(argument) {
-                  argument.resolve_expr(resolver, scope)
+                  argument.resolve_argument_expr(resolver, scope)
                 }),
                 loc~,
               )
@@ -746,7 +710,7 @@ fn @syntax.Expr::resolve_call(
               Call(
                 callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
                 arguments=arguments.map(fn(argument) {
-                  argument.resolve_expr(resolver, scope)
+                  argument.resolve_argument_expr(resolver, scope)
                 }),
                 loc~,
               )
@@ -755,7 +719,7 @@ fn @syntax.Expr::resolve_call(
               Call(
                 callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
                 arguments=arguments.map(fn(argument) {
-                  argument.resolve_expr(resolver, scope)
+                  argument.resolve_argument_expr(resolver, scope)
                 }),
                 loc~,
               )
@@ -765,10 +729,27 @@ fn @syntax.Expr::resolve_call(
       Call(
         callee=self.resolve_expr(resolver, scope),
         arguments=arguments.map(fn(argument) {
-          argument.resolve_expr(resolver, scope)
+          argument.resolve_argument_expr(resolver, scope)
         }),
         loc~,
       )
+  }
+}
+
+///|
+/// Resolves the expression carried by a call argument.
+///
+/// Example: `op_add(1, 2, op=custom)` preserves the `custom` expression for
+/// later contextual-argument checking. Full named argument validation belongs
+/// to the type checker because it needs callee metadata.
+fn @syntax.CallArgument::resolve_argument_expr(
+  self : @syntax.CallArgument,
+  resolver : Resolver,
+  scope : ResolveScope,
+) -> ResolvedExpr {
+  match self {
+    Positional(expression) => expression.resolve_expr(resolver, scope)
+    Named(value~, ..) => value.resolve_expr(resolver, scope)
   }
 }
 
@@ -842,25 +823,26 @@ fn @syntax.LocalItem::resolve_local_item(
         declaration.resolve_function_with_symbol(resolver, symbol, scope),
       )
     }
-    Open(declaration) => Open(declaration.resolve_local_open(resolver, scope))
+    Offer(declaration) =>
+      Offer(declaration.resolve_local_offer(resolver, scope))
   }
 }
 
 ///|
-/// Resolves a local open declaration and exposes fields in the current block.
+/// Resolves a local offer declaration.
 ///
-/// Example: in `{ open ops; op_add(a, b) }`, `op_add` resolves through fields
-/// of `ops` for the rest of that block scope.
-fn @syntax.OpenDeclaration::resolve_local_open(
-  self : @syntax.OpenDeclaration,
+/// Example: `{ let ops = ...; offer ops; body }` requires `ops` to have been
+/// introduced by an earlier ordinary local binding.
+fn @syntax.OfferDeclaration::resolve_local_offer(
+  self : @syntax.OfferDeclaration,
   resolver : Resolver,
   scope : ResolveScope,
-) -> ResolvedOpenDeclaration {
+) -> ResolvedOfferDeclaration {
   match scope.value_binding(self.name) {
-    Some(binding) => resolver.open_local_binding(binding, scope, self.loc)
-    None => resolver.report(UnresolvedOpenValue(self.name), self.loc)
+    Some(_) => ()
+    None => resolver.report(UnresolvedValue(self.name), self.loc)
   }
-  self.resolve_open()
+  self.resolve_offer()
 }
 
 ///|
@@ -952,7 +934,7 @@ fn Resolver::scope(
   self : Resolver,
   type_parameters : Array[ResolvedTypeParameter],
 ) -> ResolveScope {
-  { values: self.top_values.copy(), type_parameters, depth: 0 }
+  { values: self.top_values.copy(), type_parameters }
 }
 
 ///|
@@ -994,7 +976,7 @@ fn Resolver::publish_top_level_binding(
       match self.top_value_binding(binding.name) {
         Some(existing) =>
           self.report(
-            ConflictingOpenExposure(
+            ConflictingTopLevelValue(
               name=binding.name,
               existing=self.binding_display(existing),
               incoming=self.binding_display(binding),
@@ -1003,54 +985,6 @@ fn Resolver::publish_top_level_binding(
           )
         None => self.top_values.push(binding)
       }
-    OpenExposure => self.top_values.push(binding)
-  }
-}
-
-///|
-fn Resolver::open_top_level_binding(
-  self : Resolver,
-  binding : ValueBinding,
-  loc : SourceSpan,
-) -> Unit {
-  if self.opened_fields(binding, 0, loc) is Some(fields) {
-    for field in fields {
-      self.publish_top_level_binding(field, loc)
-    }
-  }
-}
-
-///|
-fn Resolver::open_local_binding(
-  self : Resolver,
-  binding : ValueBinding,
-  scope : ResolveScope,
-  loc : SourceSpan,
-) -> Unit {
-  if self.opened_fields(binding, scope.depth, loc) is Some(fields) {
-    for field in fields {
-      scope.define_binding(field)
-    }
-  }
-}
-
-///|
-fn Resolver::opened_fields(
-  self : Resolver,
-  binding : ValueBinding,
-  depth : Int,
-  loc : SourceSpan,
-) -> Array[ValueBinding]? {
-  guard binding.reference is Symbol(base) &&
-    binding.type_ is Some(Nominal(symbol~, ..)) else {
-    self.report(CannotOpenValue(binding.name), loc)
-    return None
-  }
-  if self.registry.type_metadata(symbol) is Some({ kind: Struct, .. }) {
-    Some(self.members.opened_field_bindings(self.registry, base, symbol, depth))
-  } else {
-    self.report(CannotOpenValue(binding.name), loc)
-    None
   }
 }
 

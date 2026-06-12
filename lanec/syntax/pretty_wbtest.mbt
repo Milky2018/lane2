@@ -18,8 +18,18 @@ test "pretty print source file" {
         name: "Point",
         type_parameters: [],
         members: [
-          Field({ name: "x", type_: int_type, loc: test_loc() }),
-          Field({ name: "y", type_: int_type, loc: test_loc() }),
+          Field({
+            is_offered: false,
+            name: "x",
+            type_: int_type,
+            loc: test_loc(),
+          }),
+          Field({
+            is_offered: false,
+            name: "y",
+            type_: int_type,
+            loc: test_loc(),
+          }),
         ],
         loc: test_loc(),
       }),
@@ -36,8 +46,20 @@ test "pretty print source file" {
         type_parameters: [],
         name: "unwrap_or",
         parameters: [
-          { name: "value", type_: option_int_type, loc: test_loc() },
-          { name: "fallback", type_: int_type, loc: test_loc() },
+          {
+            is_auto: false,
+            is_offered: false,
+            name: "value",
+            type_: option_int_type,
+            loc: test_loc(),
+          },
+          {
+            is_auto: false,
+            is_offered: false,
+            name: "fallback",
+            type_: int_type,
+            loc: test_loc(),
+          },
         ],
         return_type: int_type,
         body: Block(

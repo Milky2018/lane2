@@ -29,9 +29,7 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedValue(String)
   UnresolvedField(type_name~ : String, field~ : String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
-  UnresolvedOpenValue(String)
-  CannotOpenValue(String)
-  ConflictingOpenExposure(
+  ConflictingTopLevelValue(
     name~ : String,
     existing~ : String,
     incoming~ : String
@@ -48,7 +46,7 @@ pub(all) enum ResolvedTopLevelDeclaration {
   Enum(ResolvedEnumDeclaration)
   Function(ResolvedFunctionDeclaration)
   Let(ResolvedLetDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -63,7 +61,6 @@ pub(all) struct ResolvedStructDeclaration {
 ///|
 pub(all) enum ResolvedStructMember {
   Field(ResolvedFieldDeclaration)
-  Open(ResolvedOpenDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -114,7 +111,7 @@ pub(all) struct ResolvedLetDeclaration {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct ResolvedOpenDeclaration {
+pub(all) struct ResolvedOfferDeclaration {
   name : String
   loc : SourceSpan
 } derive(Debug, Eq)
@@ -214,7 +211,7 @@ pub(all) struct ResolvedStructPatternField {
 pub(all) enum ResolvedLocalItem {
   Let(ResolvedLetDeclaration)
   Function(ResolvedFunctionDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
