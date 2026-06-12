@@ -227,6 +227,7 @@ pub impl @prettyprinter.Pretty for ResolvedTypeParameter with fn pretty(
 pub impl @prettyprinter.Pretty for ResolvedValueParameter with fn pretty(
   parameter : ResolvedValueParameter,
 ) {
+  parameter_modifiers(parameter.is_auto, parameter.is_offered) +
   parameter.symbol.pretty() +
   space +
   text(parameter.name) +
@@ -234,6 +235,26 @@ pub impl @prettyprinter.Pretty for ResolvedValueParameter with fn pretty(
   text(":") +
   space +
   parameter.type_.pretty()
+}
+
+///|
+fn parameter_modifiers(is_auto : Bool, is_offered : Bool) -> Document {
+  let docs = []
+  if is_auto {
+    docs.push(text("auto"))
+  }
+  if is_offered {
+    docs.push(text("offer"))
+  }
+  if docs.is_empty() {
+    empty
+  } else {
+    let mut doc = docs[0]
+    for index in 1..<docs.length() {
+      doc = doc + space + docs[index]
+    }
+    doc + space
+  }
 }
 
 ///|
@@ -341,7 +362,18 @@ pub impl @prettyprinter.Pretty for ResolvedFunctionLiteralParameter with fn pret
     Some(type_) => space + text(":") + space + type_.pretty()
     None => empty
   }
-  parameter.symbol.pretty() + space + text(parameter.name) + annotation
+  let prefix = if parameter.is_offered { text("offer") + space } else { empty }
+  prefix + parameter.symbol.pretty() + space + text(parameter.name) + annotation
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolvedCallArgument with fn pretty(
+  argument : ResolvedCallArgument,
+) {
+  match argument {
+    Positional(expression) => expression.pretty()
+    Named(name~, value~, ..) => text(name) + text("=") + value.pretty()
+  }
 }
 
 ///|
@@ -451,7 +483,7 @@ pub impl @prettyprinter.Pretty for ResolvedExpr with fn pretty(
       @pretty.braced_block(arms.map(ResolvedMatchArm::pretty))
     Call(callee~, arguments~, ..) =>
       callee.pretty() +
-      @pretty.parenthesized_inline(arguments.map(ResolvedExpr::pretty))
+      @pretty.parenthesized_inline(arguments.map(ResolvedCallArgument::pretty))
     Field(base~, name~, reference~, ..) =>
       base.pretty() + text(".") + reference.pretty() + space + text(name)
     Unary(operator~, reference~, operand~, ..) =>

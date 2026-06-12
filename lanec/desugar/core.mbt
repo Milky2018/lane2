@@ -54,6 +54,12 @@ pub(all) struct DesugaredMatchArm {
 } derive(Debug, Eq)
 
 ///|
+pub(all) enum DesugaredCallArgument {
+  Positional(DesugaredExpr)
+  Named(name~ : String, value~ : DesugaredExpr, loc~ : SourceSpan)
+} derive(Debug, Eq)
+
+///|
 pub(all) enum DesugaredLiteral {
   Int(String)
   String(String)
@@ -109,7 +115,7 @@ pub(all) enum DesugaredExpr {
   )
   Call(
     callee~ : DesugaredExpr,
-    arguments~ : Array[DesugaredExpr],
+    arguments~ : Array[DesugaredCallArgument],
     loc~ : SourceSpan
   )
   Field(

@@ -3,7 +3,7 @@ fn SemanticChecker::synthesize_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> @types.Type {
   // Gamma |- callee => (P_1, ..., P_n) -> R
@@ -33,7 +33,7 @@ fn SemanticChecker::synthesize_callable_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee_type : @types.Type,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @types.Type {
@@ -66,7 +66,7 @@ fn SemanticChecker::synthesize_candidate_call(
   scope : TypeScope,
   name : String,
   candidates : Array[@resolve.ResolvedValueReference],
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> @types.Type {
   let typed_candidates = self.typed_candidates(scope, candidates, name, loc)
@@ -101,7 +101,7 @@ fn SemanticChecker::check_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
@@ -135,7 +135,7 @@ fn SemanticChecker::check_candidate_call(
   scope : TypeScope,
   name : String,
   candidates : Array[@resolve.ResolvedValueReference],
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> Unit {
@@ -168,7 +168,7 @@ fn SemanticChecker::select_callable_by_local_typing(
   scope : TypeScope,
   name : String,
   candidates : Array[@candidates.TypedCandidate],
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @candidates.CallableSelection {
@@ -204,7 +204,7 @@ fn SemanticChecker::viable_callable_candidate(
   self : SemanticChecker,
   scope : TypeScope,
   candidate : @candidates.TypedCandidate,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> @candidates.CallableCandidate? {
@@ -282,7 +282,7 @@ fn SemanticChecker::check_call_arguments(
   self : SemanticChecker,
   scope : TypeScope,
   parameters : Array[@types.Type],
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> Unit {
   // Gamma |- f => (P_1, ..., P_n) -> R
@@ -297,6 +297,25 @@ fn SemanticChecker::check_call_arguments(
     return
   }
   for index in 0..<parameters.length() {
-    self.check_expr(scope, arguments[index], parameters[index])
+    self.check_call_argument(scope, arguments[index], parameters[index])
+  }
+}
+
+///|
+fn SemanticChecker::check_call_argument(
+  self : SemanticChecker,
+  scope : TypeScope,
+  argument : @desugar.DesugaredCallArgument,
+  parameter : @types.Type,
+) -> Unit {
+  match argument {
+    Positional(expression) => self.check_expr(scope, expression, parameter)
+    Named(name~, value~, loc~) => {
+      self.diagnostics.push({
+        kind: CannotInferExpression("invalid named argument " + name),
+        loc,
+      })
+      self.check_expr(scope, value, parameter)
+    }
   }
 }

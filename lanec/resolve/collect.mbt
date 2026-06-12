@@ -300,7 +300,14 @@ fn @syntax.Parameter::resolve_parameter(
   let type_ = self.type_.resolve_type(resolver, scope)
   let symbol = resolver.registry.define_value(self.name, Parameter, self.loc)
   scope.define_value(self.name, symbol, Some(type_))
-  { symbol, name: self.name, type_, loc: self.loc }
+  {
+    symbol,
+    is_auto: self.is_auto,
+    is_offered: self.is_offered,
+    name: self.name,
+    type_,
+    loc: self.loc,
+  }
 }
 
 ///|
@@ -690,7 +697,7 @@ fn @syntax.Expr::resolve_call(
           Call(
             callee=Var(name~, reference~, loc=self.loc()),
             arguments=arguments.map(fn(argument) {
-              argument.resolve_argument_expr(resolver, scope)
+              argument.resolve_call_argument(resolver, scope)
             }),
             loc~,
           )
@@ -701,7 +708,7 @@ fn @syntax.Expr::resolve_call(
                 variant=name,
                 reference~,
                 arguments=arguments.map(fn(argument) {
-                  argument.resolve_argument_expr(resolver, scope)
+                  argument.resolve_positional_call_argument(resolver, scope)
                 }),
                 loc~,
               )
@@ -710,7 +717,7 @@ fn @syntax.Expr::resolve_call(
               Call(
                 callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
                 arguments=arguments.map(fn(argument) {
-                  argument.resolve_argument_expr(resolver, scope)
+                  argument.resolve_call_argument(resolver, scope)
                 }),
                 loc~,
               )
@@ -719,7 +726,7 @@ fn @syntax.Expr::resolve_call(
               Call(
                 callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
                 arguments=arguments.map(fn(argument) {
-                  argument.resolve_argument_expr(resolver, scope)
+                  argument.resolve_call_argument(resolver, scope)
                 }),
                 loc~,
               )
@@ -729,7 +736,7 @@ fn @syntax.Expr::resolve_call(
       Call(
         callee=self.resolve_expr(resolver, scope),
         arguments=arguments.map(fn(argument) {
-          argument.resolve_argument_expr(resolver, scope)
+          argument.resolve_call_argument(resolver, scope)
         }),
         loc~,
       )
@@ -742,7 +749,27 @@ fn @syntax.Expr::resolve_call(
 /// Example: `op_add(1, 2, op=custom)` preserves the `custom` expression for
 /// later contextual-argument checking. Full named argument validation belongs
 /// to the type checker because it needs callee metadata.
-fn @syntax.CallArgument::resolve_argument_expr(
+fn @syntax.CallArgument::resolve_call_argument(
+  self : @syntax.CallArgument,
+  resolver : Resolver,
+  scope : ResolveScope,
+) -> ResolvedCallArgument {
+  match self {
+    Positional(expression) =>
+      Positional(expression.resolve_expr(resolver, scope))
+    Named(name~, value~, loc~) =>
+      Named(name~, value=value.resolve_expr(resolver, scope), loc~)
+  }
+}
+
+///|
+/// Resolves a call argument in a syntactic position that only accepts
+/// positional values.
+///
+/// Example: variant construction accepts `some(x)`, while named contextual
+/// arguments are reserved for direct function calls and are therefore reduced
+/// to their value expression here.
+fn @syntax.CallArgument::resolve_positional_call_argument(
   self : @syntax.CallArgument,
   resolver : Resolver,
   scope : ResolveScope,
@@ -794,7 +821,13 @@ fn @syntax.FunctionLiteralParameter::resolve_function_literal_parameter(
   })
   let symbol = resolver.registry.define_value(self.name, Parameter, self.loc)
   scope.define_value(self.name, symbol, type_annotation)
-  { symbol, name: self.name, type_annotation, loc: self.loc }
+  {
+    symbol,
+    is_offered: self.is_offered,
+    name: self.name,
+    type_annotation,
+    loc: self.loc,
+  }
 }
 
 ///|

@@ -143,7 +143,7 @@ fn SemanticChecker::synthesize_checked_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
   self.synthesize_checked_call_with_expected(
@@ -160,7 +160,7 @@ fn SemanticChecker::synthesize_checked_call_with_expected(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
@@ -227,7 +227,7 @@ fn SemanticChecker::check_checked_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
@@ -248,7 +248,7 @@ fn SemanticChecker::synthesize_checked_resolved_callable_call(
   scope : TypeScope,
   reference : @resolve.ResolvedValueReference,
   name : String,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
@@ -293,7 +293,7 @@ fn SemanticChecker::synthesize_checked_callable_candidate(
   scope : TypeScope,
   name : String,
   candidate : @candidates.CallableCandidate,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
   let checked_callee = self.synthesize_checked_value_reference(
@@ -348,7 +348,7 @@ fn SemanticChecker::check_checked_call_arguments(
   self : SemanticChecker,
   scope : TypeScope,
   parameters : Array[@types.Type],
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> Array[@checked.CheckedExpr]? {
   if parameters.length() != arguments.length() {
@@ -358,7 +358,7 @@ fn SemanticChecker::check_checked_call_arguments(
   let checked_arguments = []
   let mut complete = true
   for index in 0..<parameters.length() {
-    let checked = self.check_checked_expr(
+    let checked = self.check_checked_call_argument(
       scope,
       arguments[index],
       parameters[index],
@@ -366,7 +366,7 @@ fn SemanticChecker::check_checked_call_arguments(
     match
       self.require_checked_expression(
         checked,
-        arguments[index].loc(),
+        arguments[index].value_expr().loc(),
         "call argument",
       ) {
       Some(argument) => checked_arguments.push(argument)
@@ -377,6 +377,26 @@ fn SemanticChecker::check_checked_call_arguments(
     Some(checked_arguments)
   } else {
     None
+  }
+}
+
+///|
+fn SemanticChecker::check_checked_call_argument(
+  self : SemanticChecker,
+  scope : TypeScope,
+  argument : @desugar.DesugaredCallArgument,
+  parameter : @types.Type,
+) -> CheckedExpressionSynthesis {
+  match argument {
+    Positional(expression) =>
+      self.check_checked_expr(scope, expression, parameter)
+    Named(name~, value~, loc~) => {
+      self.diagnostics.push({
+        kind: CannotInferExpression("invalid named argument " + name),
+        loc,
+      })
+      self.check_checked_expr(scope, value, parameter)
+    }
   }
 }
 

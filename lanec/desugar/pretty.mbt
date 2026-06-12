@@ -155,9 +155,19 @@ pub impl @prettyprinter.Pretty for DesugaredExpr with fn pretty(
       @pretty.braced_block(arms.map(DesugaredMatchArm::pretty))
     Call(callee~, arguments~, ..) =>
       callee.pretty() +
-      @pretty.parenthesized_inline(arguments.map(DesugaredExpr::pretty))
+      @pretty.parenthesized_inline(arguments.map(DesugaredCallArgument::pretty))
     Field(base~, name~, reference~, ..) =>
       base.pretty() + text(".") + reference.pretty() + space + text(name)
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for DesugaredCallArgument with fn pretty(
+  argument : DesugaredCallArgument,
+) {
+  match argument {
+    Positional(expression) => expression.pretty()
+    Named(name~, value~, ..) => text(name) + text("=") + value.pretty()
   }
 }
 

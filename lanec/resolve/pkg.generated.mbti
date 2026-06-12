@@ -46,6 +46,12 @@ pub(all) struct ResolveVariantCandidate {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolveVariantCandidate
 
+pub(all) enum ResolvedCallArgument {
+  Positional(ResolvedExpr)
+  Named(name~ : String, value~ : ResolvedExpr, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedCallArgument
+
 pub(all) struct ResolvedEnumDeclaration {
   symbol : @symbol.TypeSymbolId
   name : String
@@ -78,7 +84,7 @@ pub(all) enum ResolvedExpr {
   Block(items~ : Array[ResolvedLocalItem], result~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   If(condition~ : ResolvedExpr, then_branch~ : ResolvedExpr, else_branch~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   Match(scrutinee~ : ResolvedExpr, arms~ : Array[ResolvedMatchArm], loc~ : @basic.SourceSpan)
-  Call(callee~ : ResolvedExpr, arguments~ : Array[ResolvedExpr], loc~ : @basic.SourceSpan)
+  Call(callee~ : ResolvedExpr, arguments~ : Array[ResolvedCallArgument], loc~ : @basic.SourceSpan)
   Field(base~ : ResolvedExpr, name~ : String, reference~ : ResolvedFieldReference, loc~ : @basic.SourceSpan)
   Unary(operator~ : @syntax.UnaryOperator, reference~ : ResolvedValueReference, operand~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   Binary(operator~ : @syntax.BinaryOperator, reference~ : ResolvedValueReference, left~ : ResolvedExpr, right~ : ResolvedExpr, loc~ : @basic.SourceSpan)
@@ -115,6 +121,7 @@ pub impl @prettyprinter.Pretty for ResolvedFunctionDeclaration
 
 pub(all) struct ResolvedFunctionLiteralParameter {
   symbol : @symbol.ValueSymbolId
+  is_offered : Bool
   name : String
   type_annotation : ResolvedType?
   loc : @basic.SourceSpan
@@ -224,6 +231,8 @@ pub impl @prettyprinter.Pretty for ResolvedTypeParameter
 
 pub(all) struct ResolvedValueParameter {
   symbol : @symbol.ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : ResolvedType
   loc : @basic.SourceSpan

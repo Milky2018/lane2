@@ -126,6 +126,8 @@ pub(all) struct ResolvedTypeParameter {
 ///|
 pub(all) struct ResolvedValueParameter {
   symbol : ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : ResolvedType
   loc : SourceSpan
@@ -180,9 +182,16 @@ pub(all) enum ResolvedVariantReference {
 ///|
 pub(all) struct ResolvedFunctionLiteralParameter {
   symbol : ValueSymbolId
+  is_offered : Bool
   name : String
   type_annotation : ResolvedType?
   loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) enum ResolvedCallArgument {
+  Positional(ResolvedExpr)
+  Named(name~ : String, value~ : ResolvedExpr, loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|
@@ -267,7 +276,7 @@ pub(all) enum ResolvedExpr {
   )
   Call(
     callee~ : ResolvedExpr,
-    arguments~ : Array[ResolvedExpr],
+    arguments~ : Array[ResolvedCallArgument],
     loc~ : SourceSpan
   )
   Field(
