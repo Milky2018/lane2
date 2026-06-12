@@ -33,19 +33,22 @@ module tasks should live in issues or implementation notes.
 - [x] Resolve source type references, value references, qualified variants,
   patterns, function bodies, and expression-local binders into resolved IR.
 - [x] Resolve unqualified variant calls when exactly one visible variant
-  matches, and preserve ambiguous candidates in resolved IR.
-- [x] Resolve direct `open` and named open bindings for values with explicit
-  nominal struct type annotations.
+  matches.
+- [ ] Remove `open` and `let open` from syntax, resolution, desugaring,
+  typechecking, and tests.
+- [ ] Resolve `offer` declarations and `let offer` value definitions into a
+  contextual offer environment.
 - [x] Resolve field access into field symbol identities after enough type
   information is available.
-- [x] Resolve struct field forwarding after checked field types are available.
-- [x] Resolve operator aliases through ordinary operation names and open
-  candidate sets.
+- [ ] Resolve contextual forwarding fields declared with `offer field : Type`
+  after checked field types are available.
+- [ ] Resolve operator aliases through ordinary operation names while
+  preserving call origin metadata for diagnostics.
 - [x] Report diagnostics for unresolved types, unresolved values, unresolved
-  qualified variants, ambiguous unqualified variants, and invalid `open`
-  targets.
-- [x] Preserve repeated open and preopen exposures as candidate sets for
-  use-site disambiguation.
+  qualified variants, and ambiguous unqualified variants.
+- [ ] Report diagnostics and warnings for invalid offers, duplicate offers,
+  missing contextual offers, ambiguous contextual offers, and invalid explicit
+  contextual arguments.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
 
@@ -54,35 +57,33 @@ module tasks should live in issues or implementation notes.
 Local type inference is implemented as two source-level judgments: synthesis
 computes a type from an expression, and checking verifies an expression against
 an expected type. It must not introduce Hindley-Milner-style global unification
-state. Lane2's open overload resolution is an extension layer over these local
-typing judgments.
+state. Contextual Resolution supplies omitted contextual arguments only after
+ordinary local typing has determined their target types.
 
 - [x] Move the type-checking engine into the dedicated `lanec/typecheck`
   package, with no compatibility wrapper under `lanec/check`.
 - [x] Build the checked declaration environment for custom types, including
   struct field types and enum variant payload types.
 - [x] Introduce the first source-level type checker slice for annotated
-  values, direct calls, blocks, struct literals, and opened fields.
-- [x] Introduce type-directed candidate selection as an internal type-checker
-  package for expected-type and call-argument disambiguation.
+  values, direct calls, blocks, struct literals, and field access.
+- [ ] Replace open candidate selection with Contextual Resolution for omitted
+  `auto` parameters.
 - [x] Propagate expected types through function bodies, block results, `if`
-  branches, and known call parameters to drive local candidate selection.
+  branches, and known call parameters to drive local checking.
 - [x] Check desugared operator alias calls as ordinary calls to resolved `op_*`
-  values, including open candidate selection by argument types.
+  named functions.
 - [x] Reframe the checker around explicit synthesis (`synthesize(expr) -> T`)
   and checking (`check(expr, expected)`) judgments.
 - [x] Implement non-generic bidirectional local checking for function literals,
   calls, blocks, `if` branches, struct literals, field access, and non-thunked
   operator aliases.
-- [x] Treat open overload selection as a candidate layer over local typing
-  derivations: each viable candidate must type-check under the same local
-  context, and multiple viable candidates remain ambiguous.
+- [ ] Check direct named calls with trailing `auto` parameters, explicit
+  contextual arguments, and contextually resolved omitted arguments.
 - [x] Implement local type argument synthesis for generic applications,
   including constraints from argument types and expected result types in
   checking mode.
-- [x] Ensure candidate sets are eliminated by checking: every resolved value
-  candidate use must either select one concrete reference or produce a stable
-  ambiguity diagnostic.
+- [ ] Ensure checked source contains no omitted contextual arguments and no
+  contextual offer ambiguity states.
 - [x] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.
 - [x] Check forall introduction/elimination, generic candidate instantiation,
@@ -120,8 +121,8 @@ and unresolved or ambiguous states before typed core lowering.
   checking.
 - [x] Desugar `&&` and `||` into thunked calls to `op_and` and
   `op_or`.
-- [x] Desugar open declarations away after their name-resolution effects have
-  been applied.
+- [ ] Preserve call origin metadata when desugaring operators into `op_*`
+  direct named calls.
 - [x] Desugar struct field punning into explicit field values.
 - [x] Desugar qualified and unqualified enum variant expressions into one
   variant-call expression shape.
@@ -130,7 +131,7 @@ and unresolved or ambiguous states before typed core lowering.
 - [ ] Integrate checked-source lowering with the resolved-to-checked source
   elaboration pipeline.
 - [ ] Produce a typed source-level result that contains no unresolved names,
-  open candidate sets, or source-only ambiguity states.
+  omitted contextual arguments, or source-only ambiguity states.
 
 ## 5. Typed Core ANF
 
@@ -140,8 +141,8 @@ and unresolved or ambiguous states before typed core lowering.
   origin spans.
 - [ ] Preserve nominal data, first-class functions, type lambdas, type
   applications, checked patterns, and typed unsafe builtins.
-- [ ] Remove source-only constructs such as pipeline, open/preopen lookup,
-  candidate sets, and ordinary operator aliases.
+- [ ] Remove source-only constructs such as pipeline, contextual offer lookup,
+  omitted contextual arguments, and ordinary operator aliases.
 - [ ] Provide a typed core pretty printer and tests based on typed core output.
 
 ## 6. Reference Interpreter
@@ -157,8 +158,8 @@ and unresolved or ambiguous states before typed core lowering.
 ## 7. Prelude And Conformance
 
 - [ ] Encode and check the v1 prelude as Lane2 source.
-- [ ] Populate the initial preopen namespace from prelude-provided open
-  bindings.
+- [ ] Populate the initial contextual offer environment from prelude-provided
+  offered value definitions.
 - [ ] Provide required intrinsic implementations through builtin runtime
   plugins.
 - [ ] Expand valid and invalid conformance fixtures under `spec/examples`.

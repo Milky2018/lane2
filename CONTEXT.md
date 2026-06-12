@@ -65,7 +65,7 @@ The source-shaped tree produced from Lane2 concrete syntax.
 _Avoid_: typed tree, core IR
 
 **Resolved AST**:
-A source-shaped tree whose names, variants, operators, and open-scope references have been resolved.
+A source-shaped tree whose names, variants, and operator aliases have been resolved.
 _Avoid_: parsed AST, typed core
 
 **Semantic Lowering**:
@@ -165,8 +165,8 @@ A set of top-level functions or types that may refer to one another regardless o
 _Avoid_: forward declarations, hoisted statements
 
 **Ordered Top-Level Value Scope**:
-The rule that top-level immutable values and top-level opens may refer only to earlier available values.
-_Avoid_: recursive top-level values, forward top-level open
+The rule that top-level immutable values may refer only to earlier available values.
+_Avoid_: recursive top-level values, forward top-level value reference
 
 **Strict Evaluation**:
 The rule that an expression is evaluated when it is reached, and function arguments are evaluated before the function body runs.
@@ -452,21 +452,53 @@ _Avoid_: tuple, anonymous product type
 The rule that type parameters of a generic function or data constructor are inferred at the use site unless ambiguity requires explicit type arguments.
 _Avoid_: mandatory type application, global generic inference
 
+**Contextual Resolution**:
+The type-directed process that supplies omitted contextual arguments from visible offers.
+_Avoid_: open overload resolution, trait instance search, name resolution
+
+**Contextual Offer**:
+A named value identifier made available to **Contextual Resolution**.
+_Avoid_: offered expression, offered field path, open binding
+
+**Contextual Parameter**:
+A function parameter marked for omission at eligible call sites and supplied by **Contextual Resolution**.
+_Avoid_: typeclass constraint, trait bound, hidden type parameter
+
+**Offered Parameter**:
+A function parameter that is automatically offered in the function body.
+_Avoid_: automatically propagated auto parameter, implicit local open
+
+**Contextual Forwarding Field**:
+A struct field that becomes an additional contextual offer when the containing struct value is offered.
+_Avoid_: open field, inherited field, ordinary unqualified field exposure
+
+**Explicit Contextual Argument**:
+A named call argument that explicitly supplies a **Contextual Parameter** instead of using **Contextual Resolution**.
+_Avoid_: general labelled argument, positional contextual argument
+
+**Direct Named Function Call**:
+A call whose callee is a direct value reference to a function definition symbol.
+_Avoid_: function value call, field function call, parenthesized callee expression
+
+**Call Origin Metadata**:
+Source information retained across desugaring so diagnostics can refer to the user-written call or operator form.
+_Avoid_: erased source name, generated-only span
+
+**Contextual Resolution Diagnostic**:
+A diagnostic produced when contextual arguments cannot be supplied or checked.
+_Avoid_: generic inference failure, unresolved open candidate
+
+**Offer Declaration**:
+A declaration that adds an existing value identifier to the contextual offer environment.
+_Avoid_: open declaration, import declaration, expression offer
+
+**Offered Value Definition**:
+A value definition that defines a named value and immediately adds it to the contextual offer environment.
+_Avoid_: anonymous offer, open binding, unnamed prelude entry
+
 **Operation Value**:
-A value whose fields provide named operations that may be used explicitly or opened into local resolution.
+A value whose fields provide named operations through ordinary field access.
 _Avoid_: trait instance, interface implementation
-
-**Open Scope Extension**:
-A lexical scope extension introduced by `open value` where the fields of a struct value may be referenced from the declaration point to the end of the current scope.
-_Avoid_: module import, implicit instance search, expression open
-
-**Top-Level Open**:
-A top-level **Open Scope Extension**.
-_Avoid_: module import, implicit instance search
-
-**Struct Field Forwarding**:
-A struct declaration entry `open field` that forwards the opened field's exposed names when the containing struct value is opened.
-_Avoid_: inherited field, function-body open
 
 **Operator Alias**:
 A symbolic operator form that resolves through its corresponding ordinary operation name.
@@ -479,6 +511,10 @@ _Avoid_: compiler-only operator method, ad-hoc operator field
 **Operation Name**:
 A normal value name with an `op_` prefix that may be targeted by a fixed operator alias mapping.
 _Avoid_: reserved identifier, user-defined operator token
+
+**Operation Field**:
+A field inside a prelude operation struct that stores the implementation function.
+_Avoid_: operator alias target, op-prefixed field
 
 **Prelude Operation**:
 A prelude-defined nominal operation struct whose fields use conventional operation names.
@@ -504,44 +540,20 @@ _Avoid_: name-only builtin lookup, type-checked intrinsic
 An execution-target diagnostic result that reports interpreter or plugin failure without becoming a Lane2 language-level exception.
 _Avoid_: catchable exception, panic
 
-**Ambiguous Candidate Diagnostic**:
-A diagnostic that reports an unresolved choice among value candidates and lists source-level disambiguation paths.
-_Avoid_: symbol-id-only ambiguity, silent default choice
+**Ambiguous Contextual Offer Diagnostic**:
+A diagnostic that reports multiple visible contextual offers matching one contextual parameter type.
+_Avoid_: open candidate ambiguity, silent default choice
 
 **Required Intrinsic**:
 An intrinsic name that every conforming Lane2/Core v1 implementation must provide for portable programs.
 _Avoid_: placeholder builtin, implementation-only primitive
-
-**Preopen Namespace**:
-A default-open namespace populated by prelude-provided **Open Bindings** before user code is checked.
-_Avoid_: implicit instance search, operation-only prelude, anonymous namespace
-
-**Open Exposure**:
-Checked metadata describing which field values an open declaration or **Open Binding** contributes to a lexical open layer.
-_Avoid_: generated accessor, import binding
-
-**Preopen Exposure**:
-An **Open Exposure** in the **Preopen Namespace**.
-_Avoid_: anonymous runtime binding, open syntax node
-
-**Open Binding**:
-A named value declaration whose value is automatically opened into the following scope.
-_Avoid_: primitive declaration form, unnamed value declaration, discarded value
-
-**Open Candidate Set**:
-A same-name value lookup result formed from an ordinary value binding and field values exposed by open scope extensions.
-_Avoid_: unrestricted overload set, trait instance search
-
-**Plain Value Reference**:
-A value reference written with a leading dot that resolves only ordinary lexical value bindings and excludes open exposures.
-_Avoid_: field access, candidate selection syntax
 
 **Qualified Field Access**:
 A field access expression whose base value is resolved before selecting a field.
 _Avoid_: candidate-set field search, namespace lookup
 
 **Prelude**:
-The initial language environment that provides primitive types, primitive functions, and default preopened values before user definitions are checked.
+The initial language environment that provides primitive types, primitive functions, and default language support before user definitions are checked.
 _Avoid_: module system, imports
 
 ## Relationships
@@ -564,7 +576,7 @@ _Avoid_: module system, imports
 - **Typed Core IR** uses **Symbol Identity** for references.
 - Expressions and bindings in **Typed Core IR** are **Typed Core Nodes**.
 - **Typed Core IR** may carry **Origin Spans** for diagnostics, but spans do not affect semantics.
-- **Source Elaboration** removes **Open Scope Extensions**, **Preopen Namespace** lookups, **Pipeline Expressions**, and **Operator Aliases** before **Typed Core IR**.
+- **Source Elaboration** removes **Pipeline Expressions** and **Operator Aliases** before **Typed Core IR**.
 - **Typed Core IR** uses **Administrative Normal Form**.
 - **Typed Core IR** uses **Structured ANF**, not basic blocks.
 - **Core Atoms** may include function values and **Type Lambdas**.
@@ -581,7 +593,7 @@ _Avoid_: module system, imports
 - An **Immutable Value Definition** is a kind of **Top-Level Definition**.
 - A top-level **Immutable Value Definition** must include an explicit type annotation.
 - Top-level functions and types may form a **Recursive Definition Group**.
-- Top-level immutable values and top-level opens follow **Ordered Top-Level Value Scope**.
+- Top-level immutable values follow **Ordered Top-Level Value Scope**.
 - A top-level function body may refer to any top-level value or function regardless of textual order.
 - Lane2 uses **Strict Evaluation**.
 - A top-level function has an **Explicit Top-Level Function Signature**.
@@ -656,11 +668,11 @@ _Avoid_: module system, imports
 - Lane2 uses **MoonBit-Like Syntax** without mutation or assignment.
 - Lane2 uses **Type Annotation Spacing** for type annotations; struct literal field assignment remains `field: expression`.
 - Lane2 uses a **Keyword-Delimited Top Level**.
+- `offer` is a Lane2 keyword.
 - Lane2 has **Conditional Expressions**, not statement-only conditionals.
 - A **Conditional Expression** requires a `Bool` condition; Lane2 has no truthiness conversion.
 - A **Block Expression** may contain local value and function bindings, but not local type definitions.
 - A **Block Expression** has local items followed by exactly one final expression, not multiple expression statements or an implicit unit result.
-- `open` is a local item and must appear before the final expression in a **Block Expression**.
 - A function uses a **Block Function Body**.
 - A function uses an **Arrow Return Type**.
 - A named function has an **Explicit Named Function Signature**.
@@ -682,46 +694,94 @@ _Avoid_: module system, imports
 - Generic struct literals and enum variants may omit type arguments when local information determines them.
 - Lane2 v1 has no type aliases; named domain types are represented with **Struct Types** or **Enum Types**.
 - Lane2 v1 has no trait, typeclass, or interface constraints.
+- **Contextual Resolution** supplies omitted contextual arguments from visible **Contextual Offers**.
+- **Contextual Resolution Diagnostics** distinguish missing offers, ambiguous offers, and invalid explicit contextual arguments.
+- A **Contextual Offer** offers a value identifier, not an expression or field path.
+- An **Offer Declaration** has the shape `offer name`.
+- An **Offered Value Definition** has the shape `let offer name : Type = expression`.
+- An **Offered Value Definition** is equivalent to defining the value and then introducing an **Offer Declaration** for the same identifier.
+- An **Offered Value Definition** must be named.
+- An **Offered Value Definition** checks its initializer before the defined value enters the contextual offer environment.
+- **Contextual Offers** use lexical scope and affect only **Contextual Resolution**.
+- A local **Offer Declaration** is visible from its declaration point to the end of the current block.
+- A top-level **Offer Declaration** contributes to the top-level contextual offer environment.
+- Top-level **Offer Declarations** follow **Ordered Top-Level Value Scope** and cannot refer to later values.
+- Top-level function bodies are checked with the complete top-level contextual offer environment.
+- Top-level value initializers are checked only with contextual offers available earlier in **Ordered Top-Level Value Scope**.
+- Local **Offer Declarations** can only offer values already visible at that point in the block.
+- Nested local function bodies can see contextual offers from their lexical environment.
+- Any value identifier with a known type may become a **Contextual Offer**.
+- A **Contextual Forwarding Field** is offered only when the containing value is offered.
+- A **Contextual Forwarding Field** is declared as a struct field with the `offer` modifier.
+- A **Contextual Forwarding Field** contributes only to **Contextual Resolution**, not to ordinary value lookup.
+- A **Contextual Forwarding Field** is constructed and accessed with the same field name as an ordinary struct field.
+- A **Contextual Forwarding Field** has the field type obtained from normal nominal field typing of the containing value.
+- **Contextual Forwarding Fields** are expanded recursively with cycle detection.
+- Multiple visible **Contextual Offers** may overlap; ambiguity is reported only when **Contextual Resolution** needs one matching value.
+- Contextual offer deduplication uses offer identity, not runtime value equality.
+- Visible **Contextual Offers** from nested lexical scopes are combined rather than shadowed.
+- Repeating the same **Contextual Offer** is semantically idempotent but should produce a warning.
+- A value must have a known synthesized or annotated type before it can become a **Contextual Offer**.
+- **Contextual Resolution** never infers an offered value's type from later contextual uses.
+- **Contextual Resolution** never infers generic type arguments for the call being completed.
+- **Contextual Resolution** matches offers by Lane2 type equality only.
+- **Contextual Resolution** does not apply offered functions or recursively resolve their contextual parameters to manufacture a matching value.
+- Lane2 v1 does not instantiate polymorphic offers during **Contextual Resolution**.
+- A **Contextual Parameter** may have any Lane2 type.
+- A **Contextual Parameter** remains an ordinary value parameter in the function type.
+- **Contextual Resolution** is call syntax sugar; checked calls contain all ordinary arguments explicitly.
+- Only functions introduced by a function definition may declare **Contextual Parameters**.
+- Top-level functions and local named functions may declare **Contextual Parameters**.
+- Function literals cannot declare **Contextual Parameters**.
+- A **Contextual Parameter** is an ordinary value binding inside the function body.
+- A **Contextual Parameter** is not automatically offered inside the function body.
+- Any function parameter may be an **Offered Parameter**.
+- Function literals may declare **Offered Parameters**.
+- `auto offer` marks a parameter as both a **Contextual Parameter** and an **Offered Parameter**.
+- An **Offered Parameter** behaves as if the function body starts with an **Offer Declaration** for that parameter.
+- Calls through ordinary function values must provide every ordinary argument explicitly.
+- **Contextual Parameters** must form a contiguous suffix of a function definition's parameter list.
+- **Offered Parameters** that are not contextual may appear anywhere in a parameter list.
+- A caller may supply an **Explicit Contextual Argument** for a **Contextual Parameter** using `name=value`.
+- **Explicit Contextual Arguments** are named so that a caller may supply selected contextual parameters while leaving others to **Contextual Resolution**.
+- **Explicit Contextual Arguments** may appear in any order but cannot repeat the same contextual parameter.
+- **Explicit Contextual Arguments** remove the named parameters from the set that **Contextual Resolution** must supply.
+- The right-hand side of an **Explicit Contextual Argument** is an ordinary expression.
+- **Explicit Contextual Arguments** participate in generic call inference like ordinary explicit arguments.
+- **Explicit Contextual Arguments** are processed before **Contextual Resolution** supplies remaining omitted contextual arguments.
+- **Explicit Contextual Arguments** are valid only for direct calls to named functions that declare **Contextual Parameters**.
+- Calls through ordinary function values cannot use **Explicit Contextual Arguments**.
+- **Contextual Resolution** for omitted call arguments is valid only for **Direct Named Function Calls**.
+- Positional call arguments fill non-contextual parameters before any omitted contextual suffix.
+- Positional call arguments cannot fill **Contextual Parameters**.
+- Non-contextual parameters cannot be supplied with named call arguments in v1.
 - An **Operation Value** can provide behavior without traits, typeclasses, or interfaces.
-- An **Open Scope Extension** makes struct field values available as unqualified names.
-- An **Open Scope Extension** extends from its declaration point to the end of the current lexical scope.
-- An **Open Scope Extension** is introduced from a visible value name, not an arbitrary expression.
-- An **Open Scope Extension** may use the inferred type of a previously checked binding.
-- A local **Open Scope Extension** may open a preceding local binding whose struct type was inferred.
-- An **Open Scope Extension** reports an error at its declaration point if its target is missing or is not a struct value.
-- A **Top-Level Open** exposes struct field values to later top-level definitions.
-- Top-level open scope extensions share the top-level lexical layer and may merge exposed fields into **Open Candidate Sets**.
 - Plain value bindings use lexical shadowing between scope layers.
-- Open scope extensions use lexical shadowing between scope layers.
-- Within one visible scope layer, open scope extensions may form an **Open Candidate Set**.
-- Plain value bindings do not shadow open scope extensions.
-- Open scope extensions do not shadow plain value bindings.
-- Multiple open scope extensions in the same lexical layer merge their exposed fields into the same **Open Candidate Set**.
-- An unqualified value reference combines the nearest plain binding candidate with the nearest open exposure candidates.
-- A **Plain Value Reference** resolves only ordinary lexical value bindings.
-- A **Plain Value Reference** still follows ordinary lexical shadowing among plain bindings.
 - **Qualified Field Access** requires its base expression to resolve to a unique value before field selection.
-- **Qualified Field Access** does not search through an unresolved **Open Candidate Set** for a base value.
-- **Struct Field Forwarding** affects what is exposed when a struct value is opened, but does not open that field inside ordinary function bodies.
-- Direct fields and forwarded fields from the same opened struct value contribute to the same open exposure layer.
-- Open exposure never reports conflicts at the open declaration point; ambiguity is reported only at use sites.
 - Operation laws are API conventions, not compiler-checked rules.
 - An **Operator Alias** such as `+` resolves as the corresponding ordinary operation name, such as `op_add`.
 - An **Operator Alias** may resolve through an ordinary local function with the corresponding operation name.
-- An **Operator Alias** participates in the same lexical lookup and candidate selection as the corresponding ordinary operation name.
+- An **Operator Alias** is elaborated through the corresponding ordinary operation name.
+- An **Operator Alias** elaborates to a **Direct Named Function Call** when its operation name resolves to a function definition symbol.
+- Desugaring an **Operator Alias** preserves **Call Origin Metadata** such as the operation name and source span.
 - A **Recognized Operation** requires only that the corresponding operation name resolves to a suitable value.
 - An **Operation Name** is an ordinary value name, not a reserved word.
+- User code may define **Operation Names**.
+- Ordinary value binding uniqueness still applies to **Operation Names**.
+- **Operation Names** use the `op_` prefix at top level, while **Operation Fields** use short names such as `add` or `sub`.
 - Lane2 fixes mappings from built-in operator tokens to operation names, but does not allow user-defined operator tokens or mappings in v1.
 - A **Prelude Operation** is an API convention rather than a required source for operator resolution.
-- Lane2 v1 includes `open` and recognized mappings for prelude operations such as `Add`, `Sub`, `Mul`, `Div`, and `Equal`.
+- Lane2 v1 does not include `open`.
 - Equality operators are provided by an `Equal` prelude operation containing both `equal` and `not_equal`.
+- `op_equal` and `op_not_equal` use **Contextual Resolution** to obtain an `Equal[T]` operation value.
 - Ordering operators are provided by a `Compare` prelude operation that may forward an `Equal` operation.
 - Recognized operator mappings use operation names such as `op_add` for `+`, `op_sub` for `-`, `op_mul` for `*`, `op_div` for `/`, `op_rem` for `%`, `op_neg` for unary `-`, `op_equal` for `==`, `op_not_equal` for `!=`, `op_less` for `<`, `op_less_eq` for `<=`, `op_greater` for `>`, `op_greater_eq` for `>=`, `op_and` for `&&`, `op_or` for `||`, and `op_not` for `!`.
 - `&&` and `||` are recognized **Short-Circuit Boolean Operations** whose right operand is thunked before calling `op_and` or `op_or`.
+- `&&` and `||` still use **Contextual Resolution** through their thunked `op_and` and `op_or` calls.
 - In **Typed Core IR**, `&&` and `||` lower to **Thunked Operator Calls**, not direct `if` expressions.
 - Ordinary calls to `op_and` and `op_or` do not thunk their arguments.
 - Other operator aliases lower to **Resolved Operator Calls**.
-- Primitive operators are not special-cased; even primitive `+` and `==` require the relevant **Prelude Operation** to be opened.
+- Primitive operators are not special-cased by source syntax.
 - An **Unsafe Builtin** is outside Lane2's safety guarantee and requires a direct expected type.
 - **Typed Core IR** represents an **Unsafe Builtin** as a **Typed Unsafe Builtin**.
 - **Builtin Runtime Plugins** provide execution behavior for unsafe builtins while the **Compiler Project** defines the core contract.
@@ -729,41 +789,12 @@ _Avoid_: module system, imports
 - A **Builtin Runtime Plugin** may produce a **Runtime Error Report**, but builtin misuse remains outside Lane2's safety guarantee.
 - A **Required Intrinsic** is a portable builtin name; other builtin names are implementation-defined unsafe intrinsics.
 - `%bool_and`, `%bool_or`, `%bool_not`, and `%bool_equal` are not **Required Intrinsics**; the corresponding boolean prelude operations are implemented through ordinary `if`.
-- The **Preopen Namespace** is open by default.
-- An **Open Binding** must have a struct type; its fields become an **Open Exposure**.
-- An **Open Binding** defines a normal named value and opens that value from the declaration point forward.
-- An **Open Binding** is syntax sugar for a value declaration immediately followed by opening that value.
-- An **Open Binding** may appear as a top-level value declaration or as a local item.
-- A top-level **Open Binding** must include a type annotation, as all top-level value declarations do.
-- A local **Open Binding** may omit its type annotation when the initializer determines a unique struct type.
-- A local **Open Binding** cannot use later references to infer the opened value's type.
-- Top-level and local **Open Bindings** are not forward-visible or recursively open.
-- In **Typed Core IR**, an **Open Binding** becomes checked value data plus **Open Exposure**.
-- **Open Exposure** is produced during type checking or elaboration, after the opened value's struct type is known.
-- Multiple opened field values with the same name may form an **Open Candidate Set**.
-- Open exposures in the same scope may repeat names; repeated names are handled at use sites through candidate selection.
-- An **Open Candidate Set** may contain any value, not only functions or operations.
-- An **Open Candidate Set** must be narrowed to one candidate by expected type, call shape, or another direct local typing constraint.
-- Candidate selection may use a direct expected type, including a function body's expected return type.
-- Candidate selection may use local expected types produced inside the same expression, such as branch result checking for `if` or `match`.
-- Candidate selection for a function call may use argument count and argument checking against each candidate's parameter types.
-- Generic candidates may be instantiated using the same direct local typing information.
-- If multiple instantiated candidates are applicable, the reference remains ambiguous.
-- Candidate selection does not use global constraint solving or later unrelated uses.
-- Lane2 exposes ambiguity instead of choosing a default candidate when more than one candidate remains applicable.
-- An **Ambiguous Candidate Diagnostic** should list writable disambiguation paths such as `.name` and `owner.field`.
-- If local typing cannot select exactly one candidate, the reference is ambiguous.
-- Open exposures in the same lexical layer add candidates; inner open layers shadow outer open layers, including preopen.
-- The **Preopen Namespace** exposes field values, not generated field accessors.
-- A **Prelude** may contribute open bindings to the **Preopen Namespace**.
 - Module import and export rules are outside the current design scope.
 - The v1 **Prelude** is implementation-supplied Lane2 source checked before user code.
-- Prelude-provided **Preopen Namespace** entries are visible throughout user code.
-- User-defined **Open Bindings** contribute to the top-level or local open layer from their declaration point forward.
-- A **Top-Level Open** contributes to the top-level lexical layer's **Open Candidate Sets** while preserving ordered top-level value scope.
 
 ## Resolved Clarifications
 
 - "没有可变状态" was clarified to mean a **Pure Core**, not merely an imperative language without mutable variables.
 - "变量定义" was clarified as **Immutable Value Definition**, because Lane2 does not allow reassignment in the pure core.
 - "type inference" was clarified as **Local Type Inference**, not Hindley-Milner-style global inference that flattens local polymorphism into top-level declarations.
+- "`open`" was retired from Lane2 v1; operator support is no longer modeled as opened struct-field lookup.

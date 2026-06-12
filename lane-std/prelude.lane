@@ -3,53 +3,112 @@
 // language specification.
 
 struct Add[T] {
-  op_add : (T, T) -> T
+  add : (T, T) -> T
 }
 
 struct Sub[T] {
-  op_sub : (T, T) -> T
+  sub : (T, T) -> T
 }
 
 struct Mul[T] {
-  op_mul : (T, T) -> T
+  mul : (T, T) -> T
 }
 
 struct Div[T] {
-  op_div : (T, T) -> T
+  div : (T, T) -> T
 }
 
 struct Rem[T] {
-  op_rem : (T, T) -> T
+  rem : (T, T) -> T
 }
 
 struct Neg[T] {
-  op_neg : (T) -> T
+  neg : (T) -> T
 }
 
 struct And {
-  op_and : (Bool, () -> Bool) -> Bool
+  and : (Bool, () -> Bool) -> Bool
 }
 
 struct Or {
-  op_or : (Bool, () -> Bool) -> Bool
+  or : (Bool, () -> Bool) -> Bool
 }
 
 struct Not {
-  op_not : (Bool) -> Bool
+  not : (Bool) -> Bool
 }
 
 struct Equal[T] {
-  op_equal : (T, T) -> Bool
-  op_not_equal : (T, T) -> Bool
+  equal : (T, T) -> Bool
+  not_equal : (T, T) -> Bool
 }
 
 struct Compare[T] {
-  equal_impl : Equal[T]
-  open equal_impl
-  op_less : (T, T) -> Bool
-  op_less_eq : (T, T) -> Bool
-  op_greater : (T, T) -> Bool
-  op_greater_eq : (T, T) -> Bool
+  offer equal_impl : Equal[T]
+  less : (T, T) -> Bool
+  less_eq : (T, T) -> Bool
+  greater : (T, T) -> Bool
+  greater_eq : (T, T) -> Bool
+}
+
+fn[T] op_add(a : T, b : T, auto op : Add[T]) -> T {
+  op.add(a, b)
+}
+
+fn[T] op_sub(a : T, b : T, auto op : Sub[T]) -> T {
+  op.sub(a, b)
+}
+
+fn[T] op_mul(a : T, b : T, auto op : Mul[T]) -> T {
+  op.mul(a, b)
+}
+
+fn[T] op_div(a : T, b : T, auto op : Div[T]) -> T {
+  op.div(a, b)
+}
+
+fn[T] op_rem(a : T, b : T, auto op : Rem[T]) -> T {
+  op.rem(a, b)
+}
+
+fn[T] op_neg(value : T, auto op : Neg[T]) -> T {
+  op.neg(value)
+}
+
+fn op_and(a : Bool, b : () -> Bool, auto op : And) -> Bool {
+  op.and(a, b)
+}
+
+fn op_or(a : Bool, b : () -> Bool, auto op : Or) -> Bool {
+  op.or(a, b)
+}
+
+fn op_not(value : Bool, auto op : Not) -> Bool {
+  op.not(value)
+}
+
+fn[T] op_equal(a : T, b : T, auto op : Equal[T]) -> Bool {
+  op.equal(a, b)
+}
+
+fn[T] op_not_equal(a : T, b : T, auto op : Equal[T]) -> Bool {
+  op.not_equal(a, b)
+}
+
+fn[T] op_less(a : T, b : T, auto op : Compare[T]) -> Bool {
+  op.less(a, b)
+}
+
+fn[T] op_less_eq(a : T, b : T, auto op : Compare[T]) -> Bool {
+  op.less_eq(a, b)
+}
+
+fn[T] op_greater(a : T, b : T, auto op : Compare[T]) -> Bool {
+  op.greater(a, b)
+}
+
+fn[T] op_greater_eq(a : T, b : T, auto op : Compare[T]) -> Bool {
+  op.greater_eq(a, b)
 }
 
 fn int_add(a : Int, b : Int) -> Int {
@@ -122,8 +181,8 @@ fn bool_equal(a : Bool, b : Bool) -> Bool {
 
 fn[T] make_equal(equal : (T, T) -> Bool) -> Equal[T] {
   Equal::{
-    op_equal: equal,
-    op_not_equal: fn(a : T, b : T) -> Bool {
+    equal,
+    not_equal: fn(a : T, b : T) -> Bool {
       if equal(a, b) {
         false
       } else {
@@ -139,19 +198,19 @@ fn[T] make_compare(
 ) -> Compare[T] {
   Compare::{
     equal_impl,
-    op_less: less,
-    op_less_eq: fn(a : T, b : T) -> Bool {
-      if equal_impl.op_equal(a, b) {
+    less,
+    less_eq: fn(a : T, b : T) -> Bool {
+      if equal_impl.equal(a, b) {
         true
       } else {
         less(a, b)
       }
     },
-    op_greater: fn(a : T, b : T) -> Bool {
+    greater: fn(a : T, b : T) -> Bool {
       less(b, a)
     },
-    op_greater_eq: fn(a : T, b : T) -> Bool {
-      if equal_impl.op_equal(a, b) {
+    greater_eq: fn(a : T, b : T) -> Bool {
+      if equal_impl.equal(a, b) {
         true
       } else {
         less(b, a)
@@ -160,19 +219,19 @@ fn[T] make_compare(
   }
 }
 
-let open int_add_ops : Add[Int] = Add::{ op_add: int_add }
-let open int_sub_ops : Sub[Int] = Sub::{ op_sub: int_sub }
-let open int_mul_ops : Mul[Int] = Mul::{ op_mul: int_mul }
-let open int_div_ops : Div[Int] = Div::{ op_div: int_div }
-let open int_rem_ops : Rem[Int] = Rem::{ op_rem: int_rem }
-let open int_neg_ops : Neg[Int] = Neg::{ op_neg: int_neg }
+let offer int_add_ops : Add[Int] = Add::{ add: int_add }
+let offer int_sub_ops : Sub[Int] = Sub::{ sub: int_sub }
+let offer int_mul_ops : Mul[Int] = Mul::{ mul: int_mul }
+let offer int_div_ops : Div[Int] = Div::{ div: int_div }
+let offer int_rem_ops : Rem[Int] = Rem::{ rem: int_rem }
+let offer int_neg_ops : Neg[Int] = Neg::{ neg: int_neg }
 
 let int_equal_ops : Equal[Int] = make_equal(int_equal)
-let open int_compare_ops : Compare[Int] = make_compare(int_equal_ops, int_less)
+let offer int_compare_ops : Compare[Int] = make_compare(int_equal_ops, int_less)
 
-let open bool_and_ops : And = And::{ op_and: bool_and }
-let open bool_or_ops : Or = Or::{ op_or: bool_or }
-let open bool_not_ops : Not = Not::{ op_not: bool_not }
-let open bool_equal_ops : Equal[Bool] = make_equal(bool_equal)
+let offer bool_and_ops : And = And::{ and: bool_and }
+let offer bool_or_ops : Or = Or::{ or: bool_or }
+let offer bool_not_ops : Not = Not::{ not: bool_not }
+let offer bool_equal_ops : Equal[Bool] = make_equal(bool_equal)
 
-let open string_equal_ops : Equal[String] = make_equal(string_equal)
+let offer string_equal_ops : Equal[String] = make_equal(string_equal)
