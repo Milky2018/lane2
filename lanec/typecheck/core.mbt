@@ -133,6 +133,7 @@ pub(all) enum TypeCheckDiagnosticKind {
   UnreachableMatchArm
   DuplicatePatternBinder(name~ : String)
   PatternArityMismatch(name~ : String, expected~ : Int, actual~ : Int)
+  HiddenTypeEscape(type_~ : @types.Type)
   InvalidIntLiteral(String)
   CannotInferExpression(String)
 } derive(Debug, Eq)

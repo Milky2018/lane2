@@ -112,7 +112,7 @@ ordinary local typing has determined their target types.
   checking payloads under the instantiated variant payload type.
 - [x] Existential: type check struct construction by checking type-member
   witnesses and value fields against the declared member types.
-- [ ] Existential: reject hidden type escape from opened scopes unless the
+- [x] Existential: reject hidden type escape from opened scopes unless the
   value is repacked into another existential before leaving the scope.
 - Pattern analysis:
   - [x] Use a pattern matrix model for exhaustiveness and usefulness checking.

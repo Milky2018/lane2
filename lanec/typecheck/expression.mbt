@@ -109,7 +109,7 @@ fn SemanticChecker::check_block(
         self.check_local_function(next_scope, declaration)
       Offer(declaration) => self.check_local_offer(next_scope, declaration)
       PatternLet(declaration) =>
-        self.check_local_pattern_let(next_scope, declaration)
+        ignore(self.check_local_pattern_let(next_scope, declaration))
     }
   }
   self.check_expr(next_scope, result, expected)
@@ -189,17 +189,22 @@ fn SemanticChecker::synthesize_block(
   result : @desugar.DesugaredExpr,
 ) -> @types.Type {
   let next_scope = scope.copy()
+  let opened_type_parameters : Array[TypeParameterId] = []
   for item in items {
     match item {
       Let(declaration) => self.check_local_let(next_scope, declaration)
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
       Offer(declaration) => self.check_local_offer(next_scope, declaration)
-      PatternLet(declaration) =>
-        self.check_local_pattern_let(next_scope, declaration)
+      PatternLet(declaration) => {
+        let pattern = self.check_local_pattern_let(next_scope, declaration)
+        opened_type_parameters.append(pattern.opened_type_parameters())
+      }
     }
   }
-  self.synthesize_expr(next_scope, result)
+  let type_ = self.synthesize_expr(next_scope, result)
+  self.check_hidden_type_escape(opened_type_parameters, type_, result.loc())
+  type_
 }
 
 ///|

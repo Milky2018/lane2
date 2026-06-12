@@ -1575,6 +1575,90 @@ test "typecheck existential struct pattern checks field under opened witness" {
 }
 
 ///|
+test "typecheck rejects escaped existential struct binder from block result" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|fn bad(h : Hide) -> Int {
+      #|  {
+      #|    let escaped = {
+      #|      let Hide::{ T, val } = h
+      #|      val
+      #|    }
+      #|    1
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0], width=100),
+    content="hidden_type_escape tparam#1 @ 9:7-9:10",
+  )
+}
+
+///|
+test "typecheck allows repacking existential struct before leaving block" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|fn repack(h : Hide) -> Hide {
+      #|  {
+      #|    let Hide::{ T, val } = h
+      #|    Hide::{ T = T, val: val }
+      #|  }
+      #|}
+    ),
+  )
+  inspect(@prettyprinter.render(result.diagnostics, width=100), content="[]")
+}
+
+///|
+test "typecheck rejects escaped existential enum binder from match result" {
+  let result = expect_typecheck_result(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn bad(p : Packed) -> Int {
+      #|  {
+      #|    let escaped = match p {
+      #|      Packed::hide[T](value) => value
+      #|    }
+      #|    1
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0], width=100),
+    content="hidden_type_escape tparam#1 @ 7:33-7:38",
+  )
+}
+
+///|
+test "typecheck allows repacking existential enum before leaving match arm" {
+  let result = expect_typecheck_result(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn repack(p : Packed) -> Packed {
+      #|  match p {
+      #|    Packed::hide[T](value) => Packed::hide[T](value)
+      #|  }
+      #|}
+    ),
+  )
+  inspect(@prettyprinter.render(result.diagnostics, width=100), content="[]")
+}
+
+///|
 test "typecheck unqualified enum variant construction" {
   let result = expect_typecheck_result(
     (

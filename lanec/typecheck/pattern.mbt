@@ -90,6 +90,11 @@ fn SemanticChecker::synthesize_match(
     }
     matrix.add(pattern)
     let arm_type = self.synthesize_expr(arm_scope, arm.body)
+    self.check_hidden_type_escape(
+      pattern.opened_type_parameters(),
+      arm_type,
+      arm.body.loc(),
+    )
     if has_result {
       self.expect_type(result, arm_type, arm.loc)
     } else {

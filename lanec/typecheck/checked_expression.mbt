@@ -179,7 +179,7 @@ fn SemanticChecker::check_checked_block(
           None => complete = false
         }
       PatternLet(declaration) =>
-        self.check_local_pattern_let(next_scope, declaration)
+        ignore(self.check_local_pattern_let(next_scope, declaration))
     }
   }
   let checked_result = self.check_checked_expr(next_scope, result, expected)

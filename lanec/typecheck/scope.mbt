@@ -202,16 +202,16 @@ fn SemanticChecker::check_local_pattern_let(
   self : SemanticChecker,
   scope : TypeScope,
   declaration : @desugar.DesugaredPatternLetDeclaration,
-) -> Unit {
+) -> @checked.CheckedPattern {
   // Pattern-let is sequential elimination:
   //
   //   Gamma |- initializer => T
   //   Gamma, binders(pattern : T) |- rest
   //
-  // Existential type binders opened by the pattern are represented in resolved
-  // IR now; escape checking is implemented by the later existential checker.
+  // Existential type binders opened by the pattern are recorded in the checked
+  // pattern so block synthesis can reject hidden-type escape at the scope exit.
   let type_ = self.synthesize_expr(scope, declaration.initializer)
-  ignore(self.check_pattern(scope, declaration.pattern, type_, []))
+  self.check_pattern(scope, declaration.pattern, type_, [])
 }
 
 ///|

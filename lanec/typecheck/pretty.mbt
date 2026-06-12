@@ -290,6 +290,8 @@ pub impl @prettyprinter.Pretty for TypeCheckDiagnosticKind with fn pretty(
       space +
       text("actual=") +
       text(actual.to_string())
+    HiddenTypeEscape(type_~) =>
+      text("hidden_type_escape") + space + type_.pretty()
     InvalidIntLiteral(raw) => text("invalid_int_literal") + space + text(raw)
     CannotInferExpression(label) => text("cannot_infer") + space + text(label)
   }
