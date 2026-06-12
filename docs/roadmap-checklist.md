@@ -164,7 +164,7 @@ and unresolved or ambiguous states before typed core lowering.
 
 ## 5. Typed Core ANF
 
-- [ ] Define the typed core program representation after the source-level
+- [x] Define the typed core program representation after the source-level
   elaborator has a closed typed result.
 - [ ] Lower checked source semantics into structured ANF with typed nodes and
   origin spans.
@@ -175,7 +175,7 @@ and unresolved or ambiguous states before typed core lowering.
   scopes without depending on source syntax.
 - [ ] Remove source-only constructs such as pipeline, contextual offer lookup,
   omitted contextual arguments, and ordinary operator aliases.
-- [ ] Provide a typed core pretty printer and tests based on typed core output.
+- [x] Provide a typed core pretty printer and tests based on typed core output.
 
 ## 6. Reference Interpreter
 

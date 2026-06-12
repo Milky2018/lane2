@@ -1,0 +1,110 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/lane2/core"
+
+import {
+  "Milky2018/lane2/basic",
+  "Milky2018/lane2/checked",
+  "Milky2018/lane2/symbol",
+  "Milky2018/lane2/types",
+  "moonbit-community/prettyprinter",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum CoreAtom {
+  Literal(literal~ : @checked.CheckedLiteral, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Value(name~ : String, symbol~ : @symbol.ValueSymbolId, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  UnsafeBuiltin(name~ : String, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Function(parameters~ : Array[@checked.CheckedValueParameter], body~ : CoreExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  TypeLambda(type_parameters~ : Array[@types.TypeParameter], body~ : CoreAtom, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub fn CoreAtom::loc(Self) -> @basic.SourceSpan
+pub fn CoreAtom::type_(Self) -> @types.Type
+pub impl @prettyprinter.Pretty for CoreAtom
+
+pub(all) enum CoreBinding {
+  Value(symbol~ : @symbol.ValueSymbolId, name~ : String?, rhs~ : CoreRhs, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Pattern(pattern~ : @checked.CheckedPattern, initializer~ : CoreAtom, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreBinding
+
+pub(all) enum CoreExpr {
+  Atom(atom~ : CoreAtom, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Let(binding~ : CoreBinding, body~ : CoreExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  If(condition~ : CoreAtom, then_branch~ : CoreExpr, else_branch~ : CoreExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Match(scrutinee~ : CoreAtom, arms~ : Array[CoreMatchArm], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub fn CoreExpr::loc(Self) -> @basic.SourceSpan
+pub fn CoreExpr::type_(Self) -> @types.Type
+pub impl @prettyprinter.Pretty for CoreExpr
+
+pub(all) struct CoreFunctionDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String
+  type_parameters : Array[@types.TypeParameter]
+  parameters : Array[@checked.CheckedValueParameter]
+  return_type : @types.Type
+  body : CoreExpr
+  type_ : @types.Type
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreFunctionDeclaration
+
+pub(all) struct CoreLetDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String?
+  value : CoreExpr
+  type_ : @types.Type
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreLetDeclaration
+
+pub(all) struct CoreMatchArm {
+  pattern : @checked.CheckedPattern
+  body : CoreExpr
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreMatchArm
+
+pub(all) struct CoreProgram {
+  declarations : Array[CoreTopLevelDeclaration]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreProgram
+
+pub(all) enum CoreRhs {
+  Atom(CoreAtom)
+  Call(callee~ : CoreAtom, arguments~ : Array[CoreAtom], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  TypeApplication(callee~ : CoreAtom, arguments~ : Array[@types.Type], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Field(base~ : CoreAtom, field~ : @symbol.FieldSymbolId, name~ : String, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Struct(symbol~ : @symbol.TypeSymbolId, type_arguments~ : Array[@types.Type], type_witnesses~ : Array[@checked.CheckedStructTypeWitness], fields~ : Array[CoreStructField], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Variant(symbol~ : @symbol.VariantSymbolId, type_arguments~ : Array[@types.Type], arguments~ : Array[CoreAtom], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub fn CoreRhs::loc(Self) -> @basic.SourceSpan
+pub fn CoreRhs::type_(Self) -> @types.Type
+pub impl @prettyprinter.Pretty for CoreRhs
+
+pub(all) struct CoreStructField {
+  symbol : @symbol.FieldSymbolId
+  name : String
+  value : CoreAtom
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreStructField
+
+pub(all) enum CoreTopLevelDeclaration {
+  Struct(@checked.CheckedStructDeclaration)
+  Enum(@checked.CheckedEnumDeclaration)
+  Function(CoreFunctionDeclaration)
+  Let(CoreLetDeclaration)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreTopLevelDeclaration
+
+// Type aliases
+
+// Traits
+

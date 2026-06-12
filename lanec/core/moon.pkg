@@ -1,0 +1,8 @@
+import {
+  "Milky2018/lane2/basic",
+  "Milky2018/lane2/checked",
+  "Milky2018/lane2/pretty",
+  "Milky2018/lane2/symbol",
+  "Milky2018/lane2/types",
+  "moonbit-community/prettyprinter",
+}
