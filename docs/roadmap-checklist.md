@@ -14,7 +14,7 @@ affect. Items prefixed with `Existential:` refer to the design note in
 - [x] Lexer and parser.
 - [x] Syntax AST and syntax pretty printer.
 - [x] Parser tests based on pretty-printed output.
-- [ ] Existential: promote the design into the language specification,
+- [x] Existential: promote the design into the language specification,
   including formation, introduction, elimination, scope, and escape rules.
 - [ ] Existential: extend syntax, parser, and pretty printers for enum variant
   type binders such as `hide[T](T)`.
