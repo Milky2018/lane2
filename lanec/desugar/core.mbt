@@ -35,6 +35,13 @@ pub(all) struct DesugaredLetDeclaration {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct DesugaredPatternLetDeclaration {
+  pattern : @resolve.ResolvedPattern
+  initializer : DesugaredExpr
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
 pub(all) struct DesugaredOfferDeclaration {
   symbol : @symbol.ValueSymbolId
   name : String
@@ -46,6 +53,7 @@ pub(all) struct DesugaredOfferDeclaration {
 ///|
 pub(all) enum DesugaredLocalItem {
   Let(DesugaredLetDeclaration)
+  PatternLet(DesugaredPatternLetDeclaration)
   Function(DesugaredFunctionDeclaration)
   Offer(DesugaredOfferDeclaration)
 } derive(Debug, Eq)
@@ -90,6 +98,7 @@ pub(all) enum DesugaredExpr {
     type_name~ : String?,
     type_arguments~ : Array[@resolve.ResolvedType],
     variant~ : String,
+    variant_type_arguments~ : Array[@resolve.ResolvedType],
     reference~ : @resolve.ResolvedVariantReference,
     arguments~ : Array[DesugaredExpr],
     loc~ : SourceSpan

@@ -35,6 +35,7 @@ pub impl @prettyprinter.Pretty for NominalTypeKind
 pub struct SymbolRegistry {
   types : Array[TypeSymbolMetadata]
   type_parameters : Array[TypeParameterMetadata]
+  type_members : Array[TypeMemberSymbolMetadata]
   values : Array[ValueSymbolMetadata]
   fields : Array[FieldSymbolMetadata]
   variants : Array[VariantSymbolMetadata]
@@ -42,12 +43,16 @@ pub struct SymbolRegistry {
 pub fn SymbolRegistry::SymbolRegistry() -> Self
 pub fn SymbolRegistry::define_field(Self, TypeSymbolId, String, Int, @basic.SourceSpan) -> FieldSymbolId
 pub fn SymbolRegistry::define_type(Self, String, NominalTypeKind, Int, @basic.SourceSpan) -> TypeSymbolId
+pub fn SymbolRegistry::define_type_member(Self, TypeSymbolId, String, Int, TypeParameterId, @basic.SourceSpan) -> TypeMemberSymbolId
 pub fn SymbolRegistry::define_type_parameter(Self, String, @basic.SourceSpan) -> TypeParameterId
 pub fn SymbolRegistry::define_value(Self, String, ValueSymbolKind, @basic.SourceSpan) -> ValueSymbolId
 pub fn SymbolRegistry::define_variant(Self, TypeSymbolId, String, Int, Int, @basic.SourceSpan) -> VariantSymbolId
 pub fn SymbolRegistry::field_metadata(Self, FieldSymbolId) -> FieldSymbolMetadata?
 pub fn SymbolRegistry::field_named(Self, TypeSymbolId, String) -> FieldSymbolId?
 pub fn SymbolRegistry::fields_of(Self, TypeSymbolId) -> Array[FieldSymbolMetadata]
+pub fn SymbolRegistry::type_member_metadata(Self, TypeMemberSymbolId) -> TypeMemberSymbolMetadata?
+pub fn SymbolRegistry::type_member_named(Self, TypeSymbolId, String) -> TypeMemberSymbolId?
+pub fn SymbolRegistry::type_members_of(Self, TypeSymbolId) -> Array[TypeMemberSymbolMetadata]
 pub fn SymbolRegistry::type_metadata(Self, TypeSymbolId) -> TypeSymbolMetadata?
 pub fn SymbolRegistry::type_named(Self, String) -> TypeSymbolId?
 pub fn SymbolRegistry::type_parameter_metadata(Self, TypeParameterId) -> TypeParameterMetadata?
@@ -56,6 +61,21 @@ pub fn SymbolRegistry::variant_metadata(Self, VariantSymbolId) -> VariantSymbolM
 pub fn SymbolRegistry::variant_named(Self, TypeSymbolId, String) -> VariantSymbolId?
 pub fn SymbolRegistry::variants_named(Self, String) -> Array[VariantSymbolId]
 pub impl @prettyprinter.Pretty for SymbolRegistry
+
+pub struct TypeMemberSymbolId {
+  index : Int
+} derive(Compare, Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for TypeMemberSymbolId
+
+pub(all) struct TypeMemberSymbolMetadata {
+  id : TypeMemberSymbolId
+  owner : TypeSymbolId
+  type_parameter : TypeParameterId
+  name : String
+  index : Int
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for TypeMemberSymbolMetadata
 
 pub struct TypeParameterId {
   index : Int

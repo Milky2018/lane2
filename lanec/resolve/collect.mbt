@@ -151,15 +151,82 @@ fn @syntax.StructDeclaration::resolve_struct(
   )
   let scope = resolver.scope(type_parameters)
   let mut field_index = 0
+  let mut type_member_index = 0
   let members = []
   for item in self.members {
-    if item is Field(field) {
-      let resolved = field.resolve_field(resolver, scope, symbol, field_index)
-      field_index += 1
-      members.push(ResolvedStructMember::Field(resolved))
+    match item {
+      TypeMember(type_member) => {
+        let resolved = type_member.resolve_type_member(
+          resolver, scope, symbol, type_member_index,
+        )
+        type_member_index += 1
+        members.push(ResolvedStructMember::TypeMember(resolved))
+      }
+      Field(field) => {
+        let resolved = field.resolve_field(resolver, scope, symbol, field_index)
+        field_index += 1
+        members.push(Field(resolved))
+      }
     }
   }
   { symbol, name: self.name, type_parameters, members, loc: self.loc }
+}
+
+///|
+/// Resolves one struct type-member declaration and exposes it to later fields.
+///
+/// Example: in `struct Hide { type T : Type; val : T }`, resolving `T`
+/// creates both a member identity owned by `Hide` and an abstract type
+/// parameter used by the following field annotation.
+fn @syntax.TypeMemberDeclaration::resolve_type_member(
+  self : @syntax.TypeMemberDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+  owner : TypeSymbolId,
+  index : Int,
+) -> ResolvedTypeMemberDeclaration {
+  let type_parameter_symbol = resolver.registry.define_type_parameter(
+    self.name,
+    self.loc,
+  )
+  let type_parameter : ResolvedTypeParameter = {
+    symbol: type_parameter_symbol,
+    name: self.name,
+    loc: self.loc,
+  }
+  let symbol = resolver.registry.define_type_member(
+    owner,
+    self.name,
+    index,
+    type_parameter_symbol,
+    self.loc,
+  )
+  scope.type_parameters.push(type_parameter)
+  {
+    symbol,
+    type_parameter,
+    name: self.name,
+    kind: self.kind.resolve_kind(),
+    index,
+    loc: self.loc,
+  }
+}
+
+///|
+/// Resolves kind syntax without interpreting higher-kind support yet.
+///
+/// Example: `Type -> Type` remains an arrow kind in resolved IR so the later
+/// kind checker can decide whether that form is accepted in the current phase.
+fn @syntax.Kind::resolve_kind(self : @syntax.Kind) -> ResolvedKind {
+  match self {
+    Type(loc~) => Type(loc~)
+    Arrow(parameter~, result~, loc~) =>
+      Arrow(
+        parameter=parameter.resolve_kind(),
+        result=result.resolve_kind(),
+        loc~,
+      )
+  }
 }
 
 ///|
@@ -248,6 +315,7 @@ fn @syntax.EnumVariant::resolve_variant(
     symbol,
     name: self.name,
     index,
+    type_parameters: variant_parameters,
     payload: self.payload.map(fn(type_) {
       type_.resolve_type(resolver, variant_scope)
     }),
@@ -510,9 +578,9 @@ fn @syntax.Expr::resolve_expr(
       type_name~,
       type_arguments~,
       variant~,
+      variant_type_arguments~,
       arguments~,
-      loc~,
-      ..
+      loc~
     ) =>
       QualifiedVariant(
         type_name~,
@@ -520,6 +588,9 @@ fn @syntax.Expr::resolve_expr(
           type_.resolve_type(resolver, scope)
         }),
         variant~,
+        variant_type_arguments=variant_type_arguments.map(fn(type_) {
+          type_.resolve_type(resolver, scope)
+        }),
         reference=resolver.variant_reference(type_name, variant, loc),
         arguments=arguments.map(fn(argument) {
           argument.resolve_expr(resolver, scope)
@@ -830,7 +901,7 @@ fn @syntax.StructLiteralField::resolve_struct_literal_field(
   self : @syntax.StructLiteralField,
   resolver : Resolver,
   scope : ResolveScope,
-) -> ResolvedStructLiteralField? {
+) -> ResolvedStructLiteralField {
   match self {
     Value(name~, value~, loc~) => {
       let punned_reference = match value {
@@ -841,17 +912,15 @@ fn @syntax.StructLiteralField::resolve_struct_literal_field(
           Some(reference)
         }
       }
-      Some({
-        name,
-        value: value.map(fn(value) { value.resolve_expr(resolver, scope) }),
-        punned_reference,
-        loc,
-      })
+      Value(
+        name~,
+        value=value.map(fn(value) { value.resolve_expr(resolver, scope) }),
+        punned_reference~,
+        loc~,
+      )
     }
-    TypeWitness(witness~, ..) => {
-      witness.resolve_type(resolver, scope) |> ignore
-      None
-    }
+    TypeWitness(name~, witness~, loc~) =>
+      TypeWitness(name~, witness=witness.resolve_type(resolver, scope), loc~)
   }
 }
 
@@ -861,13 +930,7 @@ fn resolve_struct_literal_fields(
   resolver : Resolver,
   scope : ResolveScope,
 ) -> Array[ResolvedStructLiteralField] {
-  let resolved = []
-  for field in fields {
-    if field.resolve_struct_literal_field(resolver, scope) is Some(field) {
-      resolved.push(field)
-    }
-  }
-  resolved
+  fields.map(fn(field) { field.resolve_struct_literal_field(resolver, scope) })
 }
 
 ///|
@@ -908,7 +971,7 @@ fn @syntax.LocalItem::resolve_local_item(
     Let(declaration) =>
       Let(declaration.resolve_let(resolver, scope, LocalBinding))
     PatternLet(declaration) =>
-      Let(declaration.resolve_pattern_let(resolver, scope))
+      PatternLet(declaration.resolve_pattern_let(resolver, scope))
     Function(declaration) => {
       let symbol = resolver.registry.define_value(
         declaration.name,
@@ -932,15 +995,10 @@ fn @syntax.PatternLetDeclaration::resolve_pattern_let(
   self : @syntax.PatternLetDeclaration,
   resolver : Resolver,
   scope : ResolveScope,
-) -> ResolvedLetDeclaration {
+) -> ResolvedPatternLetDeclaration {
   let initializer = self.initializer.resolve_expr(resolver, scope)
-  self.pattern.resolve_pattern(resolver, scope) |> ignore
-  let symbol = resolver.registry.define_value(
-    "<pattern>",
-    LocalBinding,
-    self.loc,
-  )
-  { symbol, name: None, type_annotation: None, initializer, loc: self.loc }
+  let pattern = self.pattern.resolve_pattern(resolver, scope)
+  { pattern, initializer, loc: self.loc }
 }
 
 ///|
@@ -994,20 +1052,29 @@ fn @syntax.Pattern::resolve_pattern(
     IntLiteral(value, loc~) => IntLiteral(value, loc~)
     StringLiteral(value, loc~) => StringLiteral(value, loc~)
     BoolLiteral(value, loc~) => BoolLiteral(value, loc~)
-    QualifiedVariant(type_name~, variant~, arguments~, loc~, ..) =>
+    QualifiedVariant(type_name~, variant~, type_binders~, arguments~, loc~) => {
+      let type_binders = resolver.resolve_type_parameters(type_binders, loc)
+      scope.type_parameters.append(type_binders)
       QualifiedVariant(
         type_name~,
         variant~,
+        type_binders~,
         reference=resolver.variant_reference(type_name, variant, loc),
         arguments=arguments.map(fn(argument) {
           argument.resolve_pattern(resolver, scope)
         }),
         loc~,
       )
+    }
     Struct(type_name~, fields~, loc~) =>
       Struct(
         type_name~,
-        fields=resolve_struct_pattern_fields(fields, resolver, scope),
+        fields=resolve_struct_pattern_fields(
+          fields,
+          resolver,
+          scope,
+          resolver.registry.type_named(type_name),
+        ),
         loc~,
       )
   }
@@ -1022,9 +1089,13 @@ fn @syntax.StructPatternField::resolve_struct_pattern_field(
   self : @syntax.StructPatternField,
   resolver : Resolver,
   scope : ResolveScope,
-) -> ResolvedStructPatternField? {
+  owner : TypeSymbolId?,
+) -> ResolvedStructPatternField {
   match self {
     Value(name~, pattern~, loc~) => {
+      if pattern is None && owner_has_type_member(resolver, owner, name) {
+        return resolver.resolve_pattern_type_binder(scope, name, loc)
+      }
       let pattern = match pattern {
         Some(pattern) => pattern.resolve_pattern(resolver, scope)
         None => {
@@ -1033,9 +1104,37 @@ fn @syntax.StructPatternField::resolve_struct_pattern_field(
           Binding(name~, symbol~, loc~)
         }
       }
-      Some({ name, pattern, loc })
+      Value(name~, pattern~, loc~)
     }
-    TypeBinder(_) | TypeWildcard(_) => None
+    TypeBinder(name~, loc~) =>
+      resolver.resolve_pattern_type_binder(scope, name, loc)
+    TypeWildcard(loc~) => TypeWildcard(loc~)
+  }
+}
+
+///|
+fn Resolver::resolve_pattern_type_binder(
+  self : Resolver,
+  scope : ResolveScope,
+  name : String,
+  loc : SourceSpan,
+) -> ResolvedStructPatternField {
+  let symbol = self.registry.define_type_parameter(name, loc)
+  let type_parameter = { symbol, name, loc }
+  scope.type_parameters.push(type_parameter)
+  TypeBinder(name~, type_parameter~, loc~)
+}
+
+///|
+fn owner_has_type_member(
+  resolver : Resolver,
+  owner : TypeSymbolId?,
+  name : String,
+) -> Bool {
+  if owner is Some(owner) {
+    resolver.registry.type_member_named(owner, name) is Some(_)
+  } else {
+    false
   }
 }
 
@@ -1044,14 +1143,11 @@ fn resolve_struct_pattern_fields(
   fields : Array[@syntax.StructPatternField],
   resolver : Resolver,
   scope : ResolveScope,
+  owner : TypeSymbolId?,
 ) -> Array[ResolvedStructPatternField] {
-  let resolved = []
-  for field in fields {
-    if field.resolve_struct_pattern_field(resolver, scope) is Some(field) {
-      resolved.push(field)
-    }
-  }
-  resolved
+  fields.map(fn(field) {
+    field.resolve_struct_pattern_field(resolver, scope, owner)
+  })
 }
 
 ///|
@@ -1059,7 +1155,7 @@ fn Resolver::scope(
   self : Resolver,
   type_parameters : Array[ResolvedTypeParameter],
 ) -> ResolveScope {
-  { values: self.top_values.copy(), type_parameters }
+  { values: self.top_values.copy(), type_parameters: type_parameters.copy() }
 }
 
 ///|

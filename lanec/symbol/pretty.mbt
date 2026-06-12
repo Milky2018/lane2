@@ -18,6 +18,13 @@ pub impl @prettyprinter.Pretty for TypeParameterId with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for TypeMemberSymbolId with fn pretty(
+  id : TypeMemberSymbolId,
+) {
+  id_doc("tmember", id.index)
+}
+
+///|
 pub impl @prettyprinter.Pretty for ValueSymbolId with fn pretty(
   id : ValueSymbolId,
 ) {
@@ -83,6 +90,24 @@ pub impl @prettyprinter.Pretty for TypeParameterMetadata with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for TypeMemberSymbolMetadata with fn pretty(
+  metadata : TypeMemberSymbolMetadata,
+) {
+  metadata.id.pretty() +
+  space +
+  text("owner=") +
+  metadata.owner.pretty() +
+  space +
+  text("parameter=") +
+  metadata.type_parameter.pretty() +
+  space +
+  text(metadata.name) +
+  space +
+  text("index=") +
+  text(metadata.index.to_string())
+}
+
+///|
 pub impl @prettyprinter.Pretty for ValueSymbolMetadata with fn pretty(
   metadata : ValueSymbolMetadata,
 ) {
@@ -135,6 +160,10 @@ pub impl @prettyprinter.Pretty for SymbolRegistry with fn pretty(
     @pretty.section(
       "type_parameters",
       registry.type_parameters.map(TypeParameterMetadata::pretty),
+    ),
+    @pretty.section(
+      "type_members",
+      registry.type_members.map(TypeMemberSymbolMetadata::pretty),
     ),
     @pretty.section("values", registry.values.map(ValueSymbolMetadata::pretty)),
     @pretty.section("fields", registry.fields.map(FieldSymbolMetadata::pretty)),

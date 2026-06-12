@@ -9,6 +9,8 @@ test "symbol registry pretty prints separated identities" {
   let point = registry.define_type("Point", Struct, 0, loc())
   let option = registry.define_type("Option", Enum, 1, loc())
   registry.define_type_parameter("A", loc()) |> ignore
+  let hidden = registry.define_type_parameter("T", loc())
+  registry.define_type_member(point, "T", 0, hidden, loc()) |> ignore
   registry.define_value("unwrap_or", TopLevelFunction, loc()) |> ignore
   registry.define_value("fallback", Parameter, loc()) |> ignore
   registry.define_field(point, "x", 0, loc()) |> ignore
@@ -25,6 +27,10 @@ test "symbol registry pretty prints separated identities" {
       #|  }
       #|  type_parameters {
       #|    tparam#0 A
+      #|    tparam#1 T
+      #|  }
+      #|  type_members {
+      #|    tmember#0 owner=type#0 parameter=tparam#1 T index=0
       #|  }
       #|  values {
       #|    value#0 top_function unwrap_or

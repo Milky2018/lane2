@@ -60,7 +60,18 @@ pub(all) struct ResolvedStructDeclaration {
 
 ///|
 pub(all) enum ResolvedStructMember {
+  TypeMember(ResolvedTypeMemberDeclaration)
   Field(ResolvedFieldDeclaration)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct ResolvedTypeMemberDeclaration {
+  symbol : TypeMemberSymbolId
+  type_parameter : ResolvedTypeParameter
+  name : String
+  kind : ResolvedKind
+  index : Int
+  loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
@@ -87,6 +98,7 @@ pub(all) struct ResolvedEnumVariant {
   symbol : VariantSymbolId
   name : String
   index : Int
+  type_parameters : Array[ResolvedTypeParameter]
   payload : Array[ResolvedType]
   loc : SourceSpan
 } derive(Debug, Eq)
@@ -125,6 +137,12 @@ pub(all) struct ResolvedTypeParameter {
   symbol : TypeParameterId
   name : String
   loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) enum ResolvedKind {
+  Type(loc~ : SourceSpan)
+  Arrow(parameter~ : ResolvedKind, result~ : ResolvedKind, loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|
@@ -199,11 +217,14 @@ pub(all) enum ResolvedCallArgument {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct ResolvedStructLiteralField {
-  name : String
-  value : ResolvedExpr?
-  punned_reference : ResolvedValueReference?
-  loc : SourceSpan
+pub(all) enum ResolvedStructLiteralField {
+  Value(
+    name~ : String,
+    value~ : ResolvedExpr?,
+    punned_reference~ : ResolvedValueReference?,
+    loc~ : SourceSpan
+  )
+  TypeWitness(name~ : String, witness~ : ResolvedType, loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|
@@ -214,17 +235,29 @@ pub(all) struct ResolvedMatchArm {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct ResolvedStructPatternField {
-  name : String
-  pattern : ResolvedPattern
-  loc : SourceSpan
+pub(all) enum ResolvedStructPatternField {
+  Value(name~ : String, pattern~ : ResolvedPattern, loc~ : SourceSpan)
+  TypeBinder(
+    name~ : String,
+    type_parameter~ : ResolvedTypeParameter,
+    loc~ : SourceSpan
+  )
+  TypeWildcard(loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|
 pub(all) enum ResolvedLocalItem {
   Let(ResolvedLetDeclaration)
+  PatternLet(ResolvedPatternLetDeclaration)
   Function(ResolvedFunctionDeclaration)
   Offer(ResolvedOfferDeclaration)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct ResolvedPatternLetDeclaration {
+  pattern : ResolvedPattern
+  initializer : ResolvedExpr
+  loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
@@ -238,6 +271,7 @@ pub(all) enum ResolvedExpr {
     type_name~ : String,
     type_arguments~ : Array[ResolvedType],
     variant~ : String,
+    variant_type_arguments~ : Array[ResolvedType],
     reference~ : ResolvedVariantReference,
     arguments~ : Array[ResolvedExpr],
     loc~ : SourceSpan
@@ -315,6 +349,7 @@ pub(all) enum ResolvedPattern {
   QualifiedVariant(
     type_name~ : String,
     variant~ : String,
+    type_binders~ : Array[ResolvedTypeParameter],
     reference~ : ResolvedVariantReference,
     arguments~ : Array[ResolvedPattern],
     loc~ : SourceSpan

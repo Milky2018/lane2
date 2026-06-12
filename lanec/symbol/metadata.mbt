@@ -31,6 +31,16 @@ pub(all) struct TypeParameterMetadata {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct TypeMemberSymbolMetadata {
+  id : TypeMemberSymbolId
+  owner : TypeSymbolId
+  type_parameter : TypeParameterId
+  name : String
+  index : Int
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
 pub(all) struct ValueSymbolMetadata {
   id : ValueSymbolId
   name : String

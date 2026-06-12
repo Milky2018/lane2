@@ -9,6 +9,11 @@ pub struct TypeParameterId {
 } derive(Debug, Eq, Compare)
 
 ///|
+pub struct TypeMemberSymbolId {
+  index : Int
+} derive(Debug, Eq, Compare)
+
+///|
 pub struct ValueSymbolId {
   index : Int
 } derive(Debug, Eq, Compare)

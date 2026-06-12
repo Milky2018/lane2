@@ -41,6 +41,7 @@ test "collect top level declaration symbols" {
       #|    type_parameters {
       #|      tparam#0 A
       #|    }
+      #|    type_members {}
       #|    values {
       #|      value#0 top_function unwrap_or
       #|      value#1 parameter value
@@ -106,6 +107,7 @@ test "resolve unqualified variant calls after nominal member collection" {
       #|    type_parameters {
       #|      tparam#0 A
       #|    }
+      #|    type_members {}
       #|    values {
       #|      value#0 top_function wrap
       #|      value#1 parameter value
@@ -123,6 +125,113 @@ test "resolve unqualified variant calls after nominal member collection" {
       #|    enum type#0 Option[tparam#0 A] {
       #|      variant variant#0 none index=0 payloads=0
       #|      variant variant#1 some index=1 payloads=1(tparam#0 A)
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "resolve existential surface metadata" {
+  let file = expect_parse_ok(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn make(value : Int) -> Hide {
+      #|  Hide::{ T = Int, val: value }
+      #|}
+      #|fn use(h : Hide, p : Packed) -> Int {
+      #|  {
+      #|    let Hide::{ T, val } = h
+      #|    match p {
+      #|      Packed::hide[U](x) => 1
+      #|    }
+      #|  }
+      #|}
+      #|fn ignore_hidden(h : Hide) -> Int {
+      #|  {
+      #|    let Hide::{ _, val } = h
+      #|    1
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file(file), width=100),
+    content=(
+      #|resolved {
+      #|  symbols {
+      #|    types {
+      #|      type#0 struct Hide/0
+      #|      type#1 enum Packed/0
+      #|    }
+      #|    type_parameters {
+      #|      tparam#0 T
+      #|      tparam#1 T
+      #|      tparam#2 T
+      #|      tparam#3 U
+      #|    }
+      #|    type_members {
+      #|      tmember#0 owner=type#0 parameter=tparam#0 T index=0
+      #|    }
+      #|    values {
+      #|      value#0 top_function make
+      #|      value#1 top_function use
+      #|      value#2 top_function ignore_hidden
+      #|      value#3 parameter value
+      #|      value#4 parameter h
+      #|      value#5 parameter p
+      #|      value#6 pattern_binder val
+      #|      value#7 pattern_binder x
+      #|      value#8 parameter h
+      #|      value#9 pattern_binder val
+      #|    }
+      #|    fields {
+      #|      field#0 owner=type#0 val index=0
+      #|    }
+      #|    variants {
+      #|      variant#0 owner=type#1 hide index=0 payloads=1
+      #|    }
+      #|  }
+      #|  declarations {
+      #|    struct type#0 Hide {
+      #|      type tmember#0 tparam#0 T : Type index=0
+      #|      field field#0 val : tparam#0 T index=0
+      #|    }
+      #|    enum type#1 Packed {
+      #|      variant variant#0 hide index=0 payloads=1[tparam#1 T](tparam#1 T)
+      #|    }
+      #|    fn value#0 make(value#3 value : Int) -> type#0 Hide {
+      #|      Hide::{
+      #|        T = Int
+      #|        val: var value#3 value
+      #|      }
+      #|    }
+      #|    fn value#1 use(value#4 h : type#0 Hide, value#5 p : type#1 Packed) -> Int {
+      #|      {
+      #|        let Hide{
+      #|          type tparam#2 T
+      #|          val: bind value#6 val
+      #|        } = var value#4 h
+      #|        match var value#5 p {
+      #|          variant#0 Packed::hide[tparam#3 U](bind value#7 x) => 1
+      #|        }
+      #|      }
+      #|    }
+      #|    fn value#2 ignore_hidden(value#8 h : type#0 Hide) -> Int {
+      #|      {
+      #|        let Hide{
+      #|          type _
+      #|          val: bind value#9 val
+      #|        } = var value#8 h
+      #|        1
+      #|      }
       #|    }
       #|  }
       #|}
@@ -178,6 +287,7 @@ test "resolve ambiguous unqualified variant calls" {
       #|      type#1 enum Right/0
       #|    }
       #|    type_parameters {}
+      #|    type_members {}
       #|    values {
       #|      value#0 top_function choose
       #|      value#1 parameter value
@@ -225,6 +335,7 @@ test "keep unknown calls as unresolved value calls" {
       #|  symbols {
       #|    types {}
       #|    type_parameters {}
+      #|    type_members {}
       #|    values {
       #|      value#0 top_function call_unknown
       #|      value#1 parameter value
@@ -269,6 +380,7 @@ test "resolve qualified field access when base type is known" {
       #|      type#0 struct Point/0
       #|    }
       #|    type_parameters {}
+      #|    type_members {}
       #|    values {
       #|      value#0 top_function get_x
       #|      value#1 parameter point
@@ -331,6 +443,7 @@ test "resolve operator aliases through operation names" {
       #|  symbols {
       #|    types {}
       #|    type_parameters {}
+      #|    type_members {}
       #|    values {
       #|      value#0 top_function op_add
       #|      value#1 top_function add

@@ -71,9 +71,23 @@ pub impl @prettyprinter.Pretty for DesugaredLocalItem with fn pretty(
 ) {
   match item {
     Let(declaration) => declaration.pretty()
+    PatternLet(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
     Offer(declaration) => declaration.pretty()
   }
+}
+
+///|
+pub impl @prettyprinter.Pretty for DesugaredPatternLetDeclaration with fn pretty(
+  declaration : DesugaredPatternLetDeclaration,
+) {
+  text("let") +
+  space +
+  declaration.pattern.pretty() +
+  space +
+  text("=") +
+  space +
+  declaration.initializer.pretty()
 }
 
 ///|
@@ -114,6 +128,7 @@ pub impl @prettyprinter.Pretty for DesugaredExpr with fn pretty(
       type_name~,
       type_arguments~,
       variant~,
+      variant_type_arguments~,
       reference~,
       arguments~,
       ..
@@ -127,6 +142,7 @@ pub impl @prettyprinter.Pretty for DesugaredExpr with fn pretty(
       space +
       owner +
       text(variant) +
+      type_arguments_doc(variant_type_arguments) +
       @pretty.parenthesized_inline(arguments.map(DesugaredExpr::pretty))
     }
     StructLiteral(type_name~, type_arguments~, fields~, ..) =>

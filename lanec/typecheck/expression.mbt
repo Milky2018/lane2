@@ -35,6 +35,7 @@ fn SemanticChecker::check_expr(
       type_name~,
       type_arguments~,
       variant~,
+      variant_type_arguments~,
       reference~,
       arguments~,
       loc~
@@ -44,6 +45,7 @@ fn SemanticChecker::check_expr(
         type_name,
         type_arguments,
         variant,
+        variant_type_arguments,
         reference,
         arguments,
         Some(expected),
@@ -106,6 +108,8 @@ fn SemanticChecker::check_block(
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
       Offer(declaration) => self.check_local_offer(next_scope, declaration)
+      PatternLet(declaration) =>
+        self.check_local_pattern_let(next_scope, declaration)
     }
   }
   self.check_expr(next_scope, result, expected)
@@ -146,6 +150,7 @@ fn SemanticChecker::synthesize_expr(
       type_name~,
       type_arguments~,
       variant~,
+      variant_type_arguments~,
       reference~,
       arguments~,
       loc~
@@ -155,6 +160,7 @@ fn SemanticChecker::synthesize_expr(
         type_name,
         type_arguments,
         variant,
+        variant_type_arguments,
         reference,
         arguments,
         None,
@@ -189,6 +195,8 @@ fn SemanticChecker::synthesize_block(
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
       Offer(declaration) => self.check_local_offer(next_scope, declaration)
+      PatternLet(declaration) =>
+        self.check_local_pattern_let(next_scope, declaration)
     }
   }
   self.synthesize_expr(next_scope, result)

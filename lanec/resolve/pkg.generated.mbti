@@ -65,6 +65,7 @@ pub(all) struct ResolvedEnumVariant {
   symbol : @symbol.VariantSymbolId
   name : String
   index : Int
+  type_parameters : Array[ResolvedTypeParameter]
   payload : Array[ResolvedType]
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
@@ -76,7 +77,7 @@ pub(all) enum ResolvedExpr {
   BoolLiteral(Bool, loc~ : @basic.SourceSpan)
   UnitLiteral(loc~ : @basic.SourceSpan)
   Var(name~ : String, reference~ : ResolvedValueReference, loc~ : @basic.SourceSpan)
-  QualifiedVariant(type_name~ : String, type_arguments~ : Array[ResolvedType], variant~ : String, reference~ : ResolvedVariantReference, arguments~ : Array[ResolvedExpr], loc~ : @basic.SourceSpan)
+  QualifiedVariant(type_name~ : String, type_arguments~ : Array[ResolvedType], variant~ : String, variant_type_arguments~ : Array[ResolvedType], reference~ : ResolvedVariantReference, arguments~ : Array[ResolvedExpr], loc~ : @basic.SourceSpan)
   UnqualifiedVariant(variant~ : String, reference~ : ResolvedVariantReference, arguments~ : Array[ResolvedExpr], loc~ : @basic.SourceSpan)
   StructLiteral(type_name~ : String, type_arguments~ : Array[ResolvedType], fields~ : Array[ResolvedStructLiteralField], loc~ : @basic.SourceSpan)
   Builtin(String, loc~ : @basic.SourceSpan)
@@ -129,6 +130,12 @@ pub(all) struct ResolvedFunctionLiteralParameter {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedFunctionLiteralParameter
 
+pub(all) enum ResolvedKind {
+  Type(loc~ : @basic.SourceSpan)
+  Arrow(parameter~ : ResolvedKind, result~ : ResolvedKind, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedKind
+
 pub(all) struct ResolvedLetDeclaration {
   symbol : @symbol.ValueSymbolId
   name : String?
@@ -140,6 +147,7 @@ pub impl @prettyprinter.Pretty for ResolvedLetDeclaration
 
 pub(all) enum ResolvedLocalItem {
   Let(ResolvedLetDeclaration)
+  PatternLet(ResolvedPatternLetDeclaration)
   Function(ResolvedFunctionDeclaration)
   Offer(ResolvedOfferDeclaration)
 } derive(Eq, @debug.Debug)
@@ -167,10 +175,17 @@ pub(all) enum ResolvedPattern {
   IntLiteral(String, loc~ : @basic.SourceSpan)
   StringLiteral(String, loc~ : @basic.SourceSpan)
   BoolLiteral(Bool, loc~ : @basic.SourceSpan)
-  QualifiedVariant(type_name~ : String, variant~ : String, reference~ : ResolvedVariantReference, arguments~ : Array[ResolvedPattern], loc~ : @basic.SourceSpan)
+  QualifiedVariant(type_name~ : String, variant~ : String, type_binders~ : Array[ResolvedTypeParameter], reference~ : ResolvedVariantReference, arguments~ : Array[ResolvedPattern], loc~ : @basic.SourceSpan)
   Struct(type_name~ : String, fields~ : Array[ResolvedStructPatternField], loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedPattern
+
+pub(all) struct ResolvedPatternLetDeclaration {
+  pattern : ResolvedPattern
+  initializer : ResolvedExpr
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedPatternLetDeclaration
 
 pub(all) struct ResolvedSourceFile {
   symbols : @symbol.SymbolRegistry
@@ -188,23 +203,22 @@ pub(all) struct ResolvedStructDeclaration {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructDeclaration
 
-pub(all) struct ResolvedStructLiteralField {
-  name : String
-  value : ResolvedExpr?
-  punned_reference : ResolvedValueReference?
-  loc : @basic.SourceSpan
+pub(all) enum ResolvedStructLiteralField {
+  Value(name~ : String, value~ : ResolvedExpr?, punned_reference~ : ResolvedValueReference?, loc~ : @basic.SourceSpan)
+  TypeWitness(name~ : String, witness~ : ResolvedType, loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructLiteralField
 
 pub(all) enum ResolvedStructMember {
+  TypeMember(ResolvedTypeMemberDeclaration)
   Field(ResolvedFieldDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructMember
 
-pub(all) struct ResolvedStructPatternField {
-  name : String
-  pattern : ResolvedPattern
-  loc : @basic.SourceSpan
+pub(all) enum ResolvedStructPatternField {
+  Value(name~ : String, pattern~ : ResolvedPattern, loc~ : @basic.SourceSpan)
+  TypeBinder(name~ : String, type_parameter~ : ResolvedTypeParameter, loc~ : @basic.SourceSpan)
+  TypeWildcard(loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructPatternField
 
@@ -225,6 +239,16 @@ pub(all) enum ResolvedType {
   Unresolved(name~ : String, arguments~ : Array[ResolvedType], loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedType
+
+pub(all) struct ResolvedTypeMemberDeclaration {
+  symbol : @symbol.TypeMemberSymbolId
+  type_parameter : ResolvedTypeParameter
+  name : String
+  kind : ResolvedKind
+  index : Int
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedTypeMemberDeclaration
 
 pub(all) struct ResolvedTypeParameter {
   symbol : @symbol.TypeParameterId

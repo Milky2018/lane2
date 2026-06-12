@@ -7,6 +7,7 @@ fn SemanticChecker::synthesize_variant_call(
   type_name : String?,
   type_arguments : Array[@resolve.ResolvedType],
   variant : String,
+  variant_type_arguments : Array[@resolve.ResolvedType],
   reference : @resolve.ResolvedVariantReference,
   arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
@@ -15,8 +16,8 @@ fn SemanticChecker::synthesize_variant_call(
   match type_name {
     Some(type_name) =>
       self.synthesize_qualified_variant(
-        scope, type_name, type_arguments, variant, reference, arguments, expected_result,
-        loc,
+        scope, type_name, type_arguments, variant, variant_type_arguments, reference,
+        arguments, expected_result, loc,
       )
     None =>
       self.synthesize_unqualified_variant(
@@ -32,6 +33,7 @@ fn SemanticChecker::synthesize_qualified_variant(
   type_name : String,
   type_arguments : Array[@resolve.ResolvedType],
   variant : String,
+  variant_type_arguments : Array[@resolve.ResolvedType],
   reference : @resolve.ResolvedVariantReference,
   arguments : Array[@desugar.DesugaredExpr],
   expected_result : @types.Type?,
@@ -40,6 +42,9 @@ fn SemanticChecker::synthesize_qualified_variant(
   let checked_arguments = type_arguments.map(fn(type_) {
     self.check_type(type_)
   })
+  for type_ in variant_type_arguments {
+    ignore(self.check_type(type_))
+  }
   match reference {
     Symbol(symbol) =>
       self.synthesize_variant_symbol(

@@ -71,6 +71,8 @@ fn desugar_offer_declaration(
 fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem? {
   match item {
     Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
+    PatternLet(declaration) =>
+      Some(PatternLet(desugar_pattern_let_declaration(declaration)))
     Function(declaration) =>
       Some(Function(desugar_function_declaration(declaration)))
     Offer(declaration) => Some(Offer(desugar_offer_declaration(declaration)))
@@ -78,19 +80,34 @@ fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem? 
 }
 
 ///|
+fn desugar_pattern_let_declaration(
+  declaration : @resolve.ResolvedPatternLetDeclaration,
+) -> DesugaredPatternLetDeclaration {
+  {
+    pattern: declaration.pattern,
+    initializer: desugar_expr(declaration.initializer),
+    loc: declaration.loc,
+  }
+}
+
+///|
 fn desugar_struct_literal_field(
   field : @resolve.ResolvedStructLiteralField,
-) -> DesugaredStructLiteralField {
-  let value = match field.value {
-    Some(value) => desugar_expr(value)
-    None =>
-      match field.punned_reference {
-        Some(reference) => Var(name=field.name, reference~, loc=field.loc)
+) -> DesugaredStructLiteralField? {
+  match field {
+    Value(name~, value~, punned_reference~, loc~) => {
+      let value = match value {
+        Some(value) => desugar_expr(value)
         None =>
-          Var(name=field.name, reference=Unresolved(field.name), loc=field.loc)
+          match punned_reference {
+            Some(reference) => Var(name~, reference~, loc~)
+            None => Var(name~, reference=Unresolved(name), loc~)
+          }
       }
+      Some({ name, value, loc })
+    }
+    TypeWitness(..) => None
   }
-  { name: field.name, value, loc: field.loc }
 }
 
 ///|
@@ -110,6 +127,7 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
       type_name~,
       type_arguments~,
       variant~,
+      variant_type_arguments~,
       reference~,
       arguments~,
       loc~
@@ -118,6 +136,7 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
         type_name=Some(type_name),
         type_arguments~,
         variant~,
+        variant_type_arguments~,
         reference~,
         arguments=arguments.map(desugar_expr),
         loc~,
@@ -127,6 +146,7 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
         type_name=None,
         type_arguments=[],
         variant~,
+        variant_type_arguments=[],
         reference~,
         arguments=arguments.map(desugar_expr),
         loc~,
@@ -135,7 +155,7 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
       StructLiteral(
         type_name~,
         type_arguments~,
-        fields=fields.map(desugar_struct_literal_field),
+        fields=desugar_struct_literal_fields(fields),
         loc~,
       )
     Builtin(name, loc~) => Builtin(name, loc~)
@@ -196,6 +216,19 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
     Pipeline(left~, right~, loc~) =>
       desugar_pipeline(desugar_expr(left), desugar_expr(right), loc)
   }
+}
+
+///|
+fn desugar_struct_literal_fields(
+  fields : Array[@resolve.ResolvedStructLiteralField],
+) -> Array[DesugaredStructLiteralField] {
+  let result = []
+  for field in fields {
+    if desugar_struct_literal_field(field) is Some(field) {
+      result.push(field)
+    }
+  }
+  result
 }
 
 ///|

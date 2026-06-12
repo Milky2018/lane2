@@ -66,7 +66,7 @@ affect. Items prefixed with `Existential:` refer to the design note in
   contextual arguments.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
-- [ ] Existential: add symbol and resolved IR support for existential type
+- [x] Existential: add symbol and resolved IR support for existential type
   binders, struct type members, type witness fields, and pattern-opened hidden
   type binders.
 

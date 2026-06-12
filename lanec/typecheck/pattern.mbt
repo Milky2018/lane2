@@ -160,7 +160,7 @@ fn SemanticChecker::check_pattern(
       self.expect_type(expected, Primitive(Bool), loc)
       Literal(literal=Bool(value), type_=expected, loc~)
     }
-    QualifiedVariant(type_name~, variant~, reference~, arguments~, loc~) =>
+    QualifiedVariant(type_name~, variant~, reference~, arguments~, loc~, ..) =>
       self.check_variant_pattern(
         scope, type_name, variant, reference, arguments, expected, binders, loc,
       )
@@ -347,19 +347,15 @@ fn SemanticChecker::check_struct_pattern(
   }
   let seen = []
   for field in fields {
-    if seen.contains(field.name) {
-      self.diagnostics.push({
-        kind: DuplicateField(name=field.name),
-        loc: field.loc,
-      })
-    } else {
-      seen.push(field.name)
-    }
-    if self.source.symbols.field_named(symbol, field.name) is None {
-      self.diagnostics.push({
-        kind: UnknownField(name=field.name),
-        loc: field.loc,
-      })
+    if field is Value(name~, loc~, ..) {
+      if seen.contains(name) {
+        self.diagnostics.push({ kind: DuplicateField(name~), loc })
+      } else {
+        seen.push(name)
+      }
+      if self.source.symbols.field_named(symbol, name) is None {
+        self.diagnostics.push({ kind: UnknownField(name~), loc })
+      }
     }
   }
   let substitution = declaration.nominal_substitution(type_arguments)
@@ -367,9 +363,10 @@ fn SemanticChecker::check_struct_pattern(
   for declaration_field in declaration.fields {
     match fields.find_by_name(declaration_field.name) {
       Some(field) => {
+        guard field is Value(pattern~, loc~, ..) else { continue }
         let checked = self.check_pattern(
           scope,
-          field.pattern,
+          pattern,
           declaration_field.type_.substitute(substitution),
           binders,
         )
@@ -377,7 +374,7 @@ fn SemanticChecker::check_struct_pattern(
           symbol: declaration_field.symbol,
           name: declaration_field.name,
           pattern: checked,
-          loc: field.loc,
+          loc,
         }
         checked_fields.push(checked_field)
       }
@@ -397,7 +394,7 @@ fn Array::find_by_name(
   name : String,
 ) -> @resolve.ResolvedStructPatternField? {
   for field in self {
-    if field.name == name {
+    if field is Value(name=field_name, ..) && field_name == name {
       return Some(field)
     }
   }

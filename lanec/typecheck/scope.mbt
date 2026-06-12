@@ -198,6 +198,23 @@ fn SemanticChecker::check_local_offer(
 }
 
 ///|
+fn SemanticChecker::check_local_pattern_let(
+  self : SemanticChecker,
+  scope : TypeScope,
+  declaration : @desugar.DesugaredPatternLetDeclaration,
+) -> Unit {
+  // Pattern-let is sequential elimination:
+  //
+  //   Gamma |- initializer => T
+  //   Gamma, binders(pattern : T) |- rest
+  //
+  // Existential type binders opened by the pattern are represented in resolved
+  // IR now; escape checking is implemented by the later existential checker.
+  let type_ = self.synthesize_expr(scope, declaration.initializer)
+  ignore(self.check_pattern(scope, declaration.pattern, type_, []))
+}
+
+///|
 fn SemanticChecker::check_local_function(
   self : SemanticChecker,
   scope : TypeScope,

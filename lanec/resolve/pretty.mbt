@@ -112,7 +112,39 @@ pub impl @prettyprinter.Pretty for ResolvedStructMember with fn pretty(
   item : ResolvedStructMember,
 ) {
   match item {
+    TypeMember(type_member) => type_member.pretty()
     Field(field) => field.pretty()
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolvedTypeMemberDeclaration with fn pretty(
+  type_member : ResolvedTypeMemberDeclaration,
+) {
+  text("type") +
+  space +
+  type_member.symbol.pretty() +
+  space +
+  type_member.type_parameter.symbol.pretty() +
+  space +
+  text(type_member.name) +
+  space +
+  text(":") +
+  space +
+  type_member.kind.pretty() +
+  space +
+  text("index=") +
+  text(type_member.index.to_string())
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolvedKind with fn pretty(
+  kind : ResolvedKind,
+) {
+  match kind {
+    Type(..) => text("Type")
+    Arrow(parameter~, result~, ..) =>
+      parameter.pretty() + space + text("->") + space + result.pretty()
   }
 }
 
@@ -165,6 +197,7 @@ pub impl @prettyprinter.Pretty for ResolvedEnumVariant with fn pretty(
   space +
   text("payloads=") +
   text(variant.payload.length().to_string()) +
+  type_parameters_doc(variant.type_parameters) +
   payload_doc(variant.payload)
 }
 
@@ -394,9 +427,14 @@ pub impl @prettyprinter.Pretty for ResolvedCallArgument with fn pretty(
 pub impl @prettyprinter.Pretty for ResolvedStructLiteralField with fn pretty(
   field : ResolvedStructLiteralField,
 ) {
-  match field.value {
-    Some(value) => text(field.name) + text(":") + space + value.pretty()
-    None => text(field.name)
+  match field {
+    Value(name~, value~, ..) =>
+      match value {
+        Some(value) => text(name) + text(":") + space + value.pretty()
+        None => text(name)
+      }
+    TypeWitness(name~, witness~, ..) =>
+      text(name) + space + text("=") + space + witness.pretty()
   }
 }
 
@@ -406,9 +444,23 @@ pub impl @prettyprinter.Pretty for ResolvedLocalItem with fn pretty(
 ) {
   match item {
     Let(declaration) => declaration.pretty()
+    PatternLet(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
     Offer(declaration) => declaration.pretty()
   }
+}
+
+///|
+pub impl @prettyprinter.Pretty for ResolvedPatternLetDeclaration with fn pretty(
+  declaration : ResolvedPatternLetDeclaration,
+) {
+  text("let") +
+  space +
+  declaration.pattern.pretty() +
+  space +
+  text("=") +
+  space +
+  declaration.initializer.pretty()
 }
 
 ///|
@@ -422,7 +474,13 @@ pub impl @prettyprinter.Pretty for ResolvedMatchArm with fn pretty(
 pub impl @prettyprinter.Pretty for ResolvedStructPatternField with fn pretty(
   field : ResolvedStructPatternField,
 ) {
-  text(field.name) + text(":") + space + field.pattern.pretty()
+  match field {
+    Value(name~, pattern~, ..) =>
+      text(name) + text(":") + space + pattern.pretty()
+    TypeBinder(name~, type_parameter~, ..) =>
+      text("type") + space + type_parameter.symbol.pretty() + space + text(name)
+    TypeWildcard(..) => text("type _")
+  }
 }
 
 ///|
@@ -440,6 +498,7 @@ pub impl @prettyprinter.Pretty for ResolvedExpr with fn pretty(
       type_name~,
       type_arguments~,
       variant~,
+      variant_type_arguments~,
       reference~,
       arguments~,
       ..
@@ -450,6 +509,7 @@ pub impl @prettyprinter.Pretty for ResolvedExpr with fn pretty(
       type_arguments_doc(type_arguments) +
       text("::") +
       text(variant) +
+      type_arguments_doc(variant_type_arguments) +
       @pretty.parenthesized_inline(arguments.map(ResolvedExpr::pretty))
     UnqualifiedVariant(variant~, reference~, arguments~, ..) =>
       reference.pretty() +
@@ -533,12 +593,20 @@ pub impl @prettyprinter.Pretty for ResolvedPattern with fn pretty(
     IntLiteral(value, ..) => text(value)
     StringLiteral(value, ..) => text("\"") + text(value) + text("\"")
     BoolLiteral(value, ..) => text(value.to_string())
-    QualifiedVariant(type_name~, variant~, reference~, arguments~, ..) =>
+    QualifiedVariant(
+      type_name~,
+      variant~,
+      type_binders~,
+      reference~,
+      arguments~,
+      ..
+    ) =>
       reference.pretty() +
       space +
       text(type_name) +
       text("::") +
       text(variant) +
+      type_parameters_doc(type_binders) +
       @pretty.parenthesized_inline(arguments.map(ResolvedPattern::pretty))
     Struct(type_name~, fields~, ..) =>
       text(type_name) +

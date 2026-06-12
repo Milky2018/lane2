@@ -24,7 +24,7 @@ pub impl @prettyprinter.Pretty for DesugaredCallArgument
 pub(all) enum DesugaredExpr {
   Literal(literal~ : DesugaredLiteral, loc~ : @basic.SourceSpan)
   Var(name~ : String, reference~ : @resolve.ResolvedValueReference, loc~ : @basic.SourceSpan)
-  VariantCall(type_name~ : String?, type_arguments~ : Array[@resolve.ResolvedType], variant~ : String, reference~ : @resolve.ResolvedVariantReference, arguments~ : Array[DesugaredExpr], loc~ : @basic.SourceSpan)
+  VariantCall(type_name~ : String?, type_arguments~ : Array[@resolve.ResolvedType], variant~ : String, variant_type_arguments~ : Array[@resolve.ResolvedType], reference~ : @resolve.ResolvedVariantReference, arguments~ : Array[DesugaredExpr], loc~ : @basic.SourceSpan)
   StructLiteral(type_name~ : String, type_arguments~ : Array[@resolve.ResolvedType], fields~ : Array[DesugaredStructLiteralField], loc~ : @basic.SourceSpan)
   Builtin(String, loc~ : @basic.SourceSpan)
   FunctionLiteral(type_parameters~ : Array[@resolve.ResolvedTypeParameter], parameters~ : Array[@resolve.ResolvedFunctionLiteralParameter], return_type~ : @resolve.ResolvedType?, body~ : DesugaredExpr, loc~ : @basic.SourceSpan)
@@ -67,6 +67,7 @@ pub impl @prettyprinter.Pretty for DesugaredLiteral
 
 pub(all) enum DesugaredLocalItem {
   Let(DesugaredLetDeclaration)
+  PatternLet(DesugaredPatternLetDeclaration)
   Function(DesugaredFunctionDeclaration)
   Offer(DesugaredOfferDeclaration)
 } derive(Eq, @debug.Debug)
@@ -87,6 +88,13 @@ pub(all) struct DesugaredOfferDeclaration {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for DesugaredOfferDeclaration
+
+pub(all) struct DesugaredPatternLetDeclaration {
+  pattern : @resolve.ResolvedPattern
+  initializer : DesugaredExpr
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for DesugaredPatternLetDeclaration
 
 pub(all) struct DesugaredSourceFile {
   symbols : @symbol.SymbolRegistry
