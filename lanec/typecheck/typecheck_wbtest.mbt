@@ -215,7 +215,7 @@ test "typecheck inserts contextual auto argument" {
       #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
       #|  op.add(a, b)
       #|}
-      #|let offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|offer int_add_ops : Add[Int] = builtin("%int_add_ops")
       #|let answer : Int = 1 + 2
     ),
     "answer",
@@ -280,7 +280,7 @@ test "typecheck accepts explicit named contextual argument" {
 }
 
 ///|
-test "typecheck separate offer declaration supplies contextual argument" {
+test "typecheck offer value declaration supplies contextual argument" {
   let expression = expect_checked_let_initializer(
     (
       #|struct Add[A] {
@@ -289,8 +289,7 @@ test "typecheck separate offer declaration supplies contextual argument" {
       #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
       #|  op.add(a, b)
       #|}
-      #|let int_add_ops : Add[Int] = builtin("%int_add_ops")
-      #|offer int_add_ops
+      #|offer int_add_ops : Add[Int] = builtin("%int_add_ops")
       #|let answer : Int = 1 + 2
     ),
     "answer",
@@ -330,7 +329,7 @@ test "typecheck auto offer parameter is visible in function body" {
       #|fn[A] twice(x : A, auto offer op : Add[A]) -> A {
       #|  x + x
       #|}
-      #|let offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|offer int_add_ops : Add[Int] = builtin("%int_add_ops")
       #|let answer : Int = twice(1)
     ),
   )
@@ -376,7 +375,7 @@ test "typecheck forwards offered struct fields" {
       #|fn[A] op_equal(a : A, b : A, auto op : Equal[A]) -> Bool {
       #|  op.equal(a, b)
       #|}
-      #|let offer int_compare_ops : Compare[Int] = builtin("%int_compare_ops")
+      #|offer int_compare_ops : Compare[Int] = builtin("%int_compare_ops")
       #|let answer : Bool = 1 == 2
     ),
     "answer",
@@ -408,7 +407,7 @@ test "typecheck forwards offered struct fields" {
 }
 
 ///|
-test "typecheck repeated identical offer is idempotent" {
+test "typecheck local offer value declaration supplies contextual argument" {
   let expression = expect_checked_let_initializer(
     (
       #|struct Add[A] {
@@ -417,10 +416,10 @@ test "typecheck repeated identical offer is idempotent" {
       #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
       #|  op.add(a, b)
       #|}
-      #|let int_add_ops : Add[Int] = builtin("%int_add_ops")
-      #|offer int_add_ops
-      #|offer int_add_ops
-      #|let answer : Int = 1 + 2
+      #|let answer : Int = {
+      #|  offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|  1 + 2
+      #|}
     ),
     "answer",
     Primitive(Int),
@@ -428,18 +427,25 @@ test "typecheck repeated identical offer is idempotent" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|call : Int {
-      #|  callee {
-      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|block : Int {
+      #|  let : type#0[Int] value#4 int_add_ops {
+      #|    unsafe_builtin "%int_add_ops" : type#0[Int]
+      #|  }
+      #|  result {
+      #|    call : Int {
       #|      callee {
-      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|        type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|          callee {
+      #|            value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|          }
+      #|        }
+      #|      }
+      #|      arguments {
+      #|        int 1 : Int
+      #|        int 2 : Int
+      #|        value : type#0[Int] value#4 int_add_ops
       #|      }
       #|    }
-      #|  }
-      #|  arguments {
-      #|    int 1 : Int
-      #|    int 2 : Int
-      #|    value : type#0[Int] value#4 int_add_ops
       #|  }
       #|}
     ),
@@ -498,8 +504,8 @@ test "typecheck reports ambiguous contextual offer" {
       #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
       #|  op.add(a, b)
       #|}
-      #|let offer add_a : Add[Int] = builtin("%add_a")
-      #|let offer add_b : Add[Int] = builtin("%add_b")
+      #|offer add_a : Add[Int] = builtin("%add_a")
+      #|offer add_b : Add[Int] = builtin("%add_b")
       #|let answer : Int = 1 + 2
     ),
   )

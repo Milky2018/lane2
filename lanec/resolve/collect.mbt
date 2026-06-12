@@ -119,7 +119,8 @@ fn Resolver::collect_nominal_members(
 /// Resolves one top-level declaration after the global headers are known.
 ///
 /// Example: `fn f() -> Int { 1 }` resolves through the function path, while
-/// `offer int_ops` resolves through the top-level offer path.
+/// `offer int_ops : Add[Int] = value` resolves through the top-level offered
+/// value path.
 fn @syntax.TopLevelDeclaration::resolve_top_level(
   self : @syntax.TopLevelDeclaration,
   resolver : Resolver,
@@ -130,8 +131,7 @@ fn @syntax.TopLevelDeclaration::resolve_top_level(
     Function(declaration) =>
       Function(declaration.resolve_top_level_function(resolver))
     Let(declaration) => Let(declaration.resolve_top_level_let(resolver))
-    Offer(declaration) =>
-      Offer(declaration.resolve_top_level_offer(resolver.scope([]), resolver))
+    Offer(declaration) => Offer(declaration.resolve_top_level_offer(resolver))
   }
 }
 
@@ -372,47 +372,53 @@ fn @syntax.LetDeclaration::resolve_let(
   if self.name is Some(name) {
     scope.define_value(name, symbol, type_annotation)
   }
-  {
-    symbol,
-    is_offered: self.is_offered,
-    name: self.name,
-    type_annotation,
-    initializer,
-    loc: self.loc,
-  }
+  { symbol, name: self.name, type_annotation, initializer, loc: self.loc }
 }
 
 ///|
-/// Resolves the syntax payload of an offer declaration.
+/// Resolves a top-level offered value declaration.
 ///
-/// Example: `offer int_add_ops` records the offered value name; later semantic
-/// checking validates its type and uses it for Contextual Resolution.
-fn @syntax.OfferDeclaration::resolve_offer_with_reference(
-  self : @syntax.OfferDeclaration,
-  reference : ResolvedValueReference,
-) -> ResolvedOfferDeclaration {
-  { name: self.name, reference, loc: self.loc }
-}
-
-///|
-/// Resolves a top-level offer declaration.
-///
-/// Example: after `let int_add_ops : Add[Int] = ...; offer int_add_ops`,
-/// the offer name must already be an ordinary value binding. The contextual
-/// offer environment is built by later typed analysis.
+/// Example: `offer int_add_ops : Add[Int] = value` defines `int_add_ops` for
+/// later top-level declarations and marks it for Contextual Resolution.
 fn @syntax.OfferDeclaration::resolve_top_level_offer(
   self : @syntax.OfferDeclaration,
-  scope : ResolveScope,
   resolver : Resolver,
 ) -> ResolvedOfferDeclaration {
-  let reference = match scope.value_binding(self.name) {
-    Some(binding) => binding.reference
-    None => {
-      resolver.report(UnresolvedValue(self.name), self.loc)
-      Unresolved(self.name)
-    }
-  }
-  self.resolve_offer_with_reference(reference)
+  let scope = resolver.scope([])
+  let declaration = self.resolve_offer_value(resolver, scope, TopLevelValue)
+  resolver.publish_top_level_offer(declaration, self.loc)
+  declaration
+}
+
+///|
+fn Resolver::publish_top_level_offer(
+  self : Resolver,
+  declaration : ResolvedOfferDeclaration,
+  loc : SourceSpan,
+) -> Unit {
+  self.publish_top_level_binding(
+    {
+      name: declaration.name,
+      reference: Symbol(declaration.symbol),
+      type_: Some(declaration.type_annotation),
+      kind: Plain,
+    },
+    loc,
+  )
+}
+
+///|
+fn @syntax.OfferDeclaration::resolve_offer_value(
+  self : @syntax.OfferDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+  kind : @symbol.ValueSymbolKind,
+) -> ResolvedOfferDeclaration {
+  let initializer = self.initializer.resolve_expr(resolver, scope)
+  let type_annotation = self.type_annotation.resolve_type(resolver, scope)
+  let symbol = resolver.registry.define_value(self.name, kind, self.loc)
+  scope.define_value(self.name, symbol, Some(type_annotation))
+  { symbol, name: self.name, type_annotation, initializer, loc: self.loc }
 }
 
 ///|
@@ -880,23 +886,16 @@ fn @syntax.LocalItem::resolve_local_item(
 }
 
 ///|
-/// Resolves a local offer declaration.
+/// Resolves a local offered value declaration.
 ///
-/// Example: `{ let ops = ...; offer ops; body }` requires `ops` to have been
-/// introduced by an earlier ordinary local binding.
+/// Example: `{ offer ops : Add[Int] = value; body }` defines `ops` for later
+/// local items and marks it for Contextual Resolution.
 fn @syntax.OfferDeclaration::resolve_local_offer(
   self : @syntax.OfferDeclaration,
   resolver : Resolver,
   scope : ResolveScope,
 ) -> ResolvedOfferDeclaration {
-  let reference = match scope.value_binding(self.name) {
-    Some(binding) => binding.reference
-    None => {
-      resolver.report(UnresolvedValue(self.name), self.loc)
-      Unresolved(self.name)
-    }
-  }
-  self.resolve_offer_with_reference(reference)
+  self.resolve_offer_value(resolver, scope, LocalBinding)
 }
 
 ///|

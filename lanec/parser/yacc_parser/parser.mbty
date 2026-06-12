@@ -82,7 +82,7 @@ top_level_declaration -> TopLevelDeclaration
   | enum_declaration { Enum($1) }
   | function_declaration { Function($1) }
   | top_level_let_declaration { Let($1) }
-  | offer_declaration { Offer($1) }
+  | offer_value_declaration { Offer($1) }
   ;
 
 struct_declaration -> StructDeclaration
@@ -170,19 +170,13 @@ parameter_modifiers -> ParameterModifiers
 
 top_level_let_declaration -> LetDeclaration
   : "let" IDENT ":" type "=" expression {
-    { is_offered: false, name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
-  }
-  | "let" "offer" IDENT ":" type "=" expression {
-    { is_offered: true, name: Some($3), type_annotation: Some($5), initializer: $7, loc: span($sloc) }
+    { name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
   }
   ;
 
 local_let_declaration -> LetDeclaration
   : "let" IDENT local_type_annotation "=" expression {
-    { is_offered: false, name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
-  }
-  | "let" "offer" IDENT local_type_annotation "=" expression {
-    { is_offered: true, name: Some($3), type_annotation: $4, initializer: $6, loc: span($sloc) }
+    { name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
   }
   ;
 
@@ -191,9 +185,9 @@ local_type_annotation -> Type?
   | ":" type { Some($2) }
   ;
 
-offer_declaration -> OfferDeclaration
-  : "offer" IDENT {
-    { name: $2, loc: span($sloc) }
+offer_value_declaration -> OfferDeclaration
+  : "offer" IDENT ":" type "=" expression {
+    { name: $2, type_annotation: $4, initializer: $6, loc: span($sloc) }
   }
   ;
 
@@ -390,7 +384,7 @@ local_items -> Array[LocalItem]
 local_item -> LocalItem
   : local_let_declaration { Let($1) }
   | function_declaration { Function($1) }
-  | offer_declaration { Offer($1) }
+  | offer_value_declaration { Offer($1) }
   ;
 
 if_expression -> Expr

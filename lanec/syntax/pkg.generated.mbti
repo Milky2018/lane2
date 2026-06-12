@@ -102,7 +102,6 @@ pub(all) struct FunctionLiteralParameter {
 pub impl @prettyprinter.Pretty for FunctionLiteralParameter
 
 pub(all) struct LetDeclaration {
-  is_offered : Bool
   name : String?
   type_annotation : Type?
   initializer : Expr
@@ -126,6 +125,8 @@ pub impl @prettyprinter.Pretty for MatchArm
 
 pub(all) struct OfferDeclaration {
   name : String
+  type_annotation : Type
+  initializer : Expr
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for OfferDeclaration

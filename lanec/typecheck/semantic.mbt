@@ -108,9 +108,6 @@ fn SemanticChecker::check_top_level_let(
     self.synthesize_expr(self.root_scope(), declaration.initializer)
   }
   self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
-  if declaration.is_offered {
-    self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
-  }
   self.values.push(
     Let({
       symbol: declaration.symbol,
@@ -124,26 +121,20 @@ fn SemanticChecker::check_top_level_let(
 ///|
 fn SemanticChecker::check_top_level_offer(
   self : SemanticChecker,
-  declaration : @resolve.ResolvedOfferDeclaration,
+  declaration : @desugar.DesugaredOfferDeclaration,
 ) -> Unit {
-  let scope = self.root_scope()
-  match declaration.reference {
-    Symbol(symbol) =>
-      match scope.lookup(symbol) {
-        Some(type_) =>
-          self.offer_symbol(self.offers, symbol, type_, declaration.loc)
-        None =>
-          self.diagnostics.push({
-            kind: CannotInferExpression("offer value has no checked type"),
-            loc: declaration.loc,
-          })
-      }
-    _ =>
-      self.diagnostics.push({
-        kind: CannotInferExpression("offer requires a resolved value"),
-        loc: declaration.loc,
-      })
-  }
+  let type_ = self.check_type(declaration.type_annotation)
+  self.check_expr(self.root_scope(), declaration.initializer, type_)
+  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
+  self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
+  self.values.push(
+    Let({
+      symbol: declaration.symbol,
+      name: Some(declaration.name),
+      type_,
+      loc: declaration.loc,
+    }),
+  )
 }
 
 ///|

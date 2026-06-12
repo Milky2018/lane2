@@ -53,6 +53,19 @@ pub impl @prettyprinter.Pretty for DesugaredLetDeclaration with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for DesugaredOfferDeclaration with fn pretty(
+  declaration : DesugaredOfferDeclaration,
+) {
+  text("offer") +
+  space +
+  declaration.symbol.pretty() +
+  space +
+  text(declaration.name) +
+  space +
+  @pretty.braced_block([declaration.initializer.pretty()])
+}
+
+///|
 pub impl @prettyprinter.Pretty for DesugaredLocalItem with fn pretty(
   item : DesugaredLocalItem,
 ) {

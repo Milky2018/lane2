@@ -105,7 +105,6 @@ pub(all) struct ResolvedFunctionDeclaration {
 ///|
 pub(all) struct ResolvedLetDeclaration {
   symbol : ValueSymbolId
-  is_offered : Bool
   name : String?
   type_annotation : ResolvedType?
   initializer : ResolvedExpr
@@ -114,8 +113,10 @@ pub(all) struct ResolvedLetDeclaration {
 
 ///|
 pub(all) struct ResolvedOfferDeclaration {
+  symbol : ValueSymbolId
   name : String
-  reference : ResolvedValueReference
+  type_annotation : ResolvedType
+  initializer : ResolvedExpr
   loc : SourceSpan
 } derive(Debug, Eq)
 

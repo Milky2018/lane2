@@ -50,7 +50,6 @@ pub impl @prettyprinter.Pretty for DesugaredFunctionDeclaration
 
 pub(all) struct DesugaredLetDeclaration {
   symbol : @symbol.ValueSymbolId
-  is_offered : Bool
   name : String?
   type_annotation : @resolve.ResolvedType?
   initializer : DesugaredExpr
@@ -69,7 +68,7 @@ pub impl @prettyprinter.Pretty for DesugaredLiteral
 pub(all) enum DesugaredLocalItem {
   Let(DesugaredLetDeclaration)
   Function(DesugaredFunctionDeclaration)
-  Offer(@resolve.ResolvedOfferDeclaration)
+  Offer(DesugaredOfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for DesugaredLocalItem
 
@@ -79,6 +78,15 @@ pub(all) struct DesugaredMatchArm {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for DesugaredMatchArm
+
+pub(all) struct DesugaredOfferDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String
+  type_annotation : @resolve.ResolvedType
+  initializer : DesugaredExpr
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for DesugaredOfferDeclaration
 
 pub(all) struct DesugaredSourceFile {
   symbols : @symbol.SymbolRegistry
@@ -99,7 +107,7 @@ pub(all) enum DesugaredTopLevelDeclaration {
   Enum(@resolve.ResolvedEnumDeclaration)
   Function(DesugaredFunctionDeclaration)
   Let(DesugaredLetDeclaration)
-  Offer(@resolve.ResolvedOfferDeclaration)
+  Offer(DesugaredOfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for DesugaredTopLevelDeclaration
 

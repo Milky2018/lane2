@@ -488,13 +488,9 @@ _Avoid_: erased source name, generated-only span
 A diagnostic produced when contextual arguments cannot be supplied or checked.
 _Avoid_: generic inference failure, unresolved open candidate
 
-**Offer Declaration**:
-A declaration that adds an existing value identifier to the contextual offer environment.
-_Avoid_: open declaration, import declaration, expression offer
-
 **Offered Value Definition**:
 A value definition that defines a named value and immediately adds it to the contextual offer environment.
-_Avoid_: anonymous offer, open binding, unnamed prelude entry
+_Avoid_: anonymous offer, open binding, standalone offer form, unnamed prelude entry
 
 **Operation Value**:
 A value whose fields provide named operations through ordinary field access.
@@ -696,21 +692,18 @@ _Avoid_: module system, imports
 - Lane2 v1 has no trait, typeclass, or interface constraints.
 - **Contextual Resolution** supplies omitted contextual arguments from visible **Contextual Offers**.
 - **Contextual Resolution Diagnostics** distinguish missing offers, ambiguous offers, and invalid explicit contextual arguments.
-- A **Contextual Offer** offers a value identifier, not an expression or field path.
-- An **Offer Declaration** has the shape `offer name`.
-- An **Offered Value Definition** has the shape `let offer name : Type = expression`.
-- An **Offered Value Definition** is equivalent to defining the value and then introducing an **Offer Declaration** for the same identifier.
+- A **Contextual Offer** offers a named value, not an expression or field path.
+- An **Offered Value Definition** has the shape `offer name : Type = expression`.
 - An **Offered Value Definition** must be named.
+- An **Offered Value Definition** must have an explicit type annotation.
 - An **Offered Value Definition** checks its initializer before the defined value enters the contextual offer environment.
 - **Contextual Offers** use lexical scope and affect only **Contextual Resolution**.
-- A local **Offer Declaration** is visible from its declaration point to the end of the current block.
-- A top-level **Offer Declaration** contributes to the top-level contextual offer environment.
-- Top-level **Offer Declarations** follow **Ordered Top-Level Value Scope** and cannot refer to later values.
+- A local **Offered Value Definition** is visible from its declaration point to the end of the current block.
+- A top-level **Offered Value Definition** contributes to the top-level contextual offer environment.
+- Top-level **Offered Value Definitions** follow **Ordered Top-Level Value Scope** and cannot refer to later values.
 - Top-level function bodies are checked with the complete top-level contextual offer environment.
 - Top-level value initializers are checked only with contextual offers available earlier in **Ordered Top-Level Value Scope**.
-- Local **Offer Declarations** can only offer values already visible at that point in the block.
 - Nested local function bodies can see contextual offers from their lexical environment.
-- Any value identifier with a known type may become a **Contextual Offer**.
 - A **Contextual Forwarding Field** is offered only when the containing value is offered.
 - A **Contextual Forwarding Field** is declared as a struct field with the `offer` modifier.
 - A **Contextual Forwarding Field** contributes only to **Contextual Resolution**, not to ordinary value lookup.
@@ -720,8 +713,7 @@ _Avoid_: module system, imports
 - Multiple visible **Contextual Offers** may overlap; ambiguity is reported only when **Contextual Resolution** needs one matching value.
 - Contextual offer deduplication uses offer identity, not runtime value equality.
 - Visible **Contextual Offers** from nested lexical scopes are combined rather than shadowed.
-- Repeating the same **Contextual Offer** is semantically idempotent but should produce a warning.
-- A value must have a known synthesized or annotated type before it can become a **Contextual Offer**.
+- A value must have a known annotated type before it can become a top-level **Contextual Offer**.
 - **Contextual Resolution** never infers an offered value's type from later contextual uses.
 - **Contextual Resolution** never infers generic type arguments for the call being completed.
 - **Contextual Resolution** matches offers by Lane2 type equality only.
@@ -738,7 +730,7 @@ _Avoid_: module system, imports
 - Any function parameter may be an **Offered Parameter**.
 - Function literals may declare **Offered Parameters**.
 - `auto offer` marks a parameter as both a **Contextual Parameter** and an **Offered Parameter**.
-- An **Offered Parameter** behaves as if the function body starts with an **Offer Declaration** for that parameter.
+- An **Offered Parameter** behaves as if the parameter is present in the function body's contextual offer environment.
 - Calls through ordinary function values must provide every ordinary argument explicitly.
 - **Contextual Parameters** must form a contiguous suffix of a function definition's parameter list.
 - **Offered Parameters** that are not contextual may appear anywhere in a parameter list.

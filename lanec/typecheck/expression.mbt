@@ -105,8 +105,7 @@ fn SemanticChecker::check_block(
       Let(declaration) => self.check_local_let(next_scope, declaration)
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
-      Offer(declaration) =>
-        next_scope.offer_reference(self, declaration.reference, declaration.loc)
+      Offer(declaration) => self.check_local_offer(next_scope, declaration)
     }
   }
   self.check_expr(next_scope, result, expected)
@@ -189,8 +188,7 @@ fn SemanticChecker::synthesize_block(
       Let(declaration) => self.check_local_let(next_scope, declaration)
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
-      Offer(declaration) =>
-        next_scope.offer_reference(self, declaration.reference, declaration.loc)
+      Offer(declaration) => self.check_local_offer(next_scope, declaration)
     }
   }
   self.synthesize_expr(next_scope, result)

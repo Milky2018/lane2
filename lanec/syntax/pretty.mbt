@@ -223,9 +223,7 @@ fn LetDeclaration::to_doc(self : LetDeclaration) -> Document {
     Some(type_) => space + text(":") + space + type_.to_doc()
     None => empty
   }
-  let offer_doc = if self.is_offered { space + keyword("offer") } else { empty }
   keyword("let") +
-  offer_doc +
   name_doc +
   type_doc +
   space +
@@ -243,7 +241,17 @@ pub impl @prettyprinter.Pretty for OfferDeclaration with fn pretty(
 
 ///|
 fn OfferDeclaration::to_doc(self : OfferDeclaration) -> Document {
-  keyword("offer") + space + text(self.name)
+  keyword("offer") +
+  space +
+  text(self.name) +
+  space +
+  text(":") +
+  space +
+  self.type_annotation.to_doc() +
+  space +
+  text("=") +
+  space +
+  self.initializer.to_doc()
 }
 
 ///|

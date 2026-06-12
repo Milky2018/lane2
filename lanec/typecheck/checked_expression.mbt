@@ -120,7 +120,10 @@ fn SemanticChecker::check_checked_block(
           None => complete = false
         }
       Offer(declaration) =>
-        next_scope.offer_reference(self, declaration.reference, declaration.loc)
+        match self.check_checked_local_offer(next_scope, declaration) {
+          Some(declaration) => checked_items.push(Let(declaration))
+          None => complete = false
+        }
     }
   }
   let checked_result = self.check_checked_expr(next_scope, result, expected)

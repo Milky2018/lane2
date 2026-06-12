@@ -76,7 +76,6 @@ pub(all) struct ParameterModifiers {
 
 ///|
 pub(all) struct LetDeclaration {
-  is_offered : Bool
   name : String?
   type_annotation : Type?
   initializer : Expr
@@ -86,6 +85,8 @@ pub(all) struct LetDeclaration {
 ///|
 pub(all) struct OfferDeclaration {
   name : String
+  type_annotation : Type
+  initializer : Expr
   loc : SourceSpan
 } derive(Debug, Eq)
 

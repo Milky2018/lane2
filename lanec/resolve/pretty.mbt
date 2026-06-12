@@ -217,9 +217,17 @@ pub impl @prettyprinter.Pretty for ResolvedOfferDeclaration with fn pretty(
 ) {
   text("offer") +
   space +
-  declaration.reference.pretty() +
+  declaration.symbol.pretty() +
   space +
-  text(declaration.name)
+  text(declaration.name) +
+  space +
+  text(":") +
+  space +
+  declaration.type_annotation.pretty() +
+  space +
+  text("=") +
+  space +
+  declaration.initializer.pretty()
 }
 
 ///|

@@ -89,7 +89,7 @@ test "parse function literal and pipeline" {
 }
 
 ///|
-test "parse offer declarations and contextual parameter syntax" {
+test "parse offered value definitions and contextual parameter syntax" {
   let file = expect_parse_ok(
     (
       #|struct Equal[A] {
@@ -102,8 +102,7 @@ test "parse offer declarations and contextual parameter syntax" {
       #|fn[A] op_equal(a : A, b : A, auto op : Equal[A]) -> Bool {
       #|  op.equal(a, b)
       #|}
-      #|let offer int_equal_ops : Equal[Int] = Equal::{ equal: int_equal }
-      #|offer int_equal_ops
+      #|offer int_equal_ops : Equal[Int] = Equal::{ equal: int_equal }
       #|fn use(a : Int, b : Int) -> Bool {
       #|  op_equal(a, b, op=int_equal_ops)
       #|}
@@ -125,11 +124,9 @@ test "parse offer declarations and contextual parameter syntax" {
       #|  op.equal(a, b)
       #|}
       #|
-      #|let offer int_equal_ops : Equal[Int] = Equal::{
+      #|offer int_equal_ops : Equal[Int] = Equal::{
       #|  equal: int_equal
       #|}
-      #|
-      #|offer int_equal_ops
       #|
       #|fn use(a : Int, b : Int) -> Bool {
       #|  op_equal(a, b, op=int_equal_ops)

@@ -74,31 +74,6 @@ fn TypeScope::copy(self : TypeScope) -> TypeScope {
 }
 
 ///|
-fn TypeScope::offer_reference(
-  self : TypeScope,
-  checker : SemanticChecker,
-  reference : @resolve.ResolvedValueReference,
-  loc : SourceSpan,
-) -> Unit {
-  match reference {
-    Symbol(symbol) =>
-      match self.lookup(symbol) {
-        Some(type_) => checker.offer_symbol(self.offers, symbol, type_, loc)
-        None =>
-          checker.diagnostics.push({
-            kind: CannotInferExpression("offer value has no checked type"),
-            loc,
-          })
-      }
-    _ =>
-      checker.diagnostics.push({
-        kind: CannotInferExpression("offer requires a resolved value"),
-        loc,
-      })
-  }
-}
-
-///|
 fn SemanticChecker::offer_symbol(
   self : SemanticChecker,
   offers : Array[ContextualOffer],
@@ -208,9 +183,18 @@ fn SemanticChecker::check_local_let(
     self.synthesize_expr(scope, declaration.initializer)
   }
   scope.bind(declaration.symbol, type_)
-  if declaration.is_offered {
-    self.offer_symbol(scope.offers, declaration.symbol, type_, declaration.loc)
-  }
+}
+
+///|
+fn SemanticChecker::check_local_offer(
+  self : SemanticChecker,
+  scope : TypeScope,
+  declaration : @desugar.DesugaredOfferDeclaration,
+) -> Unit {
+  let type_ = self.check_type(declaration.type_annotation)
+  self.check_expr(scope, declaration.initializer, type_)
+  scope.bind(declaration.symbol, type_)
+  self.offer_symbol(scope.offers, declaration.symbol, type_, declaration.loc)
 }
 
 ///|

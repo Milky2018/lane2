@@ -159,14 +159,13 @@ test "elaborate reports unimplemented checked expression shape" {
 }
 
 ///|
-test "elaborate skips top level offer declarations" {
+test "elaborate top level offer value declarations" {
   let result = elaborate_source(
     (
       #|struct Box {
       #|  value : Int
       #|}
-      #|let box : Box = builtin("%box")
-      #|offer box
+      #|offer box : Box = builtin("%box")
       #|fn use() -> Box {
       #|  box
       #|}

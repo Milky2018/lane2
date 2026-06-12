@@ -36,8 +36,7 @@ module tasks should live in issues or implementation notes.
   matches.
 - [x] Remove `open` and `let open` from syntax, resolution, desugaring,
   typechecking, and tests.
-- [x] Resolve `offer` declarations and `let offer` value definitions into a
-  contextual offer environment.
+- [x] Resolve offered value definitions into a contextual offer environment.
 - [x] Resolve field access into field symbol identities after enough type
   information is available.
 - [x] Resolve contextual forwarding fields declared with `offer field : Type`

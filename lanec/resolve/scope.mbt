@@ -52,20 +52,6 @@ fn ResolveScope::value_reference(
 }
 
 ///|
-fn ResolveScope::value_binding(
-  self : ResolveScope,
-  name : String,
-) -> ValueBinding? {
-  for index = self.values.length(); index > 0; index = index - 1 {
-    let binding = self.values[index - 1]
-    if binding.name == name && binding.kind == Plain {
-      return Some(binding)
-    }
-  }
-  None
-}
-
-///|
 fn ResolveScope::value_type(
   self : ResolveScope,
   reference : ResolvedValueReference,
