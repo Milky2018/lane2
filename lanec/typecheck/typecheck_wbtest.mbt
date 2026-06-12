@@ -1416,6 +1416,165 @@ test "typecheck existential enum variant construction infers witness" {
 }
 
 ///|
+test "typecheck existential enum pattern opens witness" {
+  let pattern = expect_first_checked_match_pattern(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn use(p : Packed) -> Int {
+      #|  match p {
+      #|    Packed::hide[T](value) => 1
+      #|  }
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(pattern, width=100),
+    content=(
+      #|variant_pattern : type#0 variant#0[tparam#1] {
+      #|  binding : tparam#1 value#2 value
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck existential enum pattern checks payload under opened witness" {
+  let result = expect_typecheck_result(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn bad(p : Packed) -> Int {
+      #|  match p {
+      #|    Packed::hide[T](value) => value
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0], width=100),
+    content="type_mismatch expected=Int actual=tparam#1 @ 6:31-6:36",
+  )
+}
+
+///|
+test "typecheck existential struct pattern opens type binder" {
+  let pattern = expect_first_checked_match_pattern(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|fn use(h : Hide) -> Int {
+      #|  match h {
+      #|    Hide::{ T, val } => 1
+      #|  }
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(pattern, width=100),
+    content=(
+      #|struct_pattern : type#0 type#0 {
+      #|  type_pattern tmember#0 tparam#1 T
+      #|  field_pattern field#0 val {
+      #|    binding : tparam#1 value#2 val
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck existential struct pattern opens wildcard witness" {
+  let pattern = expect_first_checked_match_pattern(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|fn use(h : Hide) -> Int {
+      #|  match h {
+      #|    Hide::{ _, val } => 1
+      #|  }
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(pattern, width=100),
+    content=(
+      #|struct_pattern : type#0 type#0 {
+      #|  type_pattern tmember#0 _
+      #|  field_pattern field#0 val {
+      #|    binding : tparam#1 value#2 val
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck existential struct pattern assigns multiple wildcards by order" {
+  let pattern = expect_first_checked_match_pattern(
+    (
+      #|struct PairHide {
+      #|  type A : Type
+      #|  type B : Type
+      #|  left : A
+      #|  right : B
+      #|}
+      #|fn use(h : PairHide) -> Int {
+      #|  match h {
+      #|    PairHide::{ _, _, left, right } => 1
+      #|  }
+      #|}
+    ),
+    "use",
+  )
+  inspect(
+    @prettyprinter.render(pattern, width=100),
+    content=(
+      #|struct_pattern : type#0 type#0 {
+      #|  type_pattern tmember#0 _
+      #|  type_pattern tmember#1 _
+      #|  field_pattern field#0 left {
+      #|    binding : tparam#2 value#2 left
+      #|  }
+      #|  field_pattern field#1 right {
+      #|    binding : tparam#3 value#3 right
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck existential struct pattern checks field under opened witness" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|fn bad(h : Hide) -> Int {
+      #|  match h {
+      #|    Hide::{ T, val } => val
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result.diagnostics[0], width=100),
+    content="type_mismatch expected=Int actual=tparam#1 @ 7:25-7:28",
+  )
+}
+
+///|
 test "typecheck unqualified enum variant construction" {
   let result = expect_typecheck_result(
     (

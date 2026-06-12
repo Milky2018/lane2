@@ -242,7 +242,7 @@ pub(all) enum ResolvedStructPatternField {
     type_parameter~ : ResolvedTypeParameter,
     loc~ : SourceSpan
   )
-  TypeWildcard(loc~ : SourceSpan)
+  TypeWildcard(type_parameter~ : ResolvedTypeParameter, loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|

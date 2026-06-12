@@ -222,16 +222,26 @@ pub(all) enum CheckedPattern {
   Literal(literal~ : CheckedLiteral, type_~ : @types.Type, loc~ : SourceSpan)
   Variant(
     symbol~ : VariantSymbolId,
+    type_arguments~ : Array[@types.Type],
     arguments~ : Array[CheckedPattern],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   Struct(
     symbol~ : TypeSymbolId,
+    type_binders~ : Array[CheckedStructTypeBinder],
     fields~ : Array[CheckedStructPatternField],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedStructTypeBinder {
+  symbol : TypeMemberSymbolId
+  type_parameter : @types.TypeParameter?
+  name : String?
+  loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|

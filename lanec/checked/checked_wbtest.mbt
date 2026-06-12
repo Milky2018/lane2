@@ -149,9 +149,11 @@ test "pretty prints checked match with resolved patterns" {
   let option_box = @types.Type::Nominal(option, [box_int])
   let pattern = CheckedPattern::Variant(
     symbol=some,
+    type_arguments=[],
     arguments=[
       Struct(
         symbol=box,
+        type_binders=[],
         fields=[
           {
             symbol: field,

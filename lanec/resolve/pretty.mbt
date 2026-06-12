@@ -479,7 +479,8 @@ pub impl @prettyprinter.Pretty for ResolvedStructPatternField with fn pretty(
       text(name) + text(":") + space + pattern.pretty()
     TypeBinder(name~, type_parameter~, ..) =>
       text("type") + space + type_parameter.symbol.pretty() + space + text(name)
-    TypeWildcard(..) => text("type _")
+    TypeWildcard(type_parameter~, ..) =>
+      text("type") + space + type_parameter.symbol.pretty() + space + text("_")
   }
 }
 

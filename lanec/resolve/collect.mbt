@@ -1108,7 +1108,7 @@ fn @syntax.StructPatternField::resolve_struct_pattern_field(
     }
     TypeBinder(name~, loc~) =>
       resolver.resolve_pattern_type_binder(scope, name, loc)
-    TypeWildcard(loc~) => TypeWildcard(loc~)
+    TypeWildcard(loc~) => resolver.resolve_pattern_type_wildcard(scope, loc)
   }
 }
 
@@ -1123,6 +1123,18 @@ fn Resolver::resolve_pattern_type_binder(
   let type_parameter = { symbol, name, loc }
   scope.type_parameters.push(type_parameter)
   TypeBinder(name~, type_parameter~, loc~)
+}
+
+///|
+fn Resolver::resolve_pattern_type_wildcard(
+  self : Resolver,
+  scope : ResolveScope,
+  loc : SourceSpan,
+) -> ResolvedStructPatternField {
+  let symbol = self.registry.define_type_parameter("_", loc)
+  let type_parameter : ResolvedTypeParameter = { symbol, name: "_", loc }
+  scope.type_parameters.push(type_parameter)
+  TypeWildcard(type_parameter~, loc~)
 }
 
 ///|

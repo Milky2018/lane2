@@ -122,7 +122,7 @@ ordinary local typing has determined their target types.
     fields, declaration-order struct fields, and typed binders.
   - [x] Keep checked patterns available for typed core.
   - [x] Defer decision tree generation to later lowered IR or VM work.
-  - [ ] Existential: type check enum and struct pattern elimination by
+  - [x] Existential: type check enum and struct pattern elimination by
     introducing fresh abstract type binders into the arm or remaining local
     scope.
 - [x] Produce stable diagnostics with origin spans.

@@ -101,8 +101,8 @@ pub(all) enum CheckedPattern {
   Wildcard(type_~ : @types.Type, loc~ : @basic.SourceSpan)
   Binding(name~ : String, symbol~ : @symbol.ValueSymbolId, type_~ : @types.Type, loc~ : @basic.SourceSpan)
   Literal(literal~ : CheckedLiteral, type_~ : @types.Type, loc~ : @basic.SourceSpan)
-  Variant(symbol~ : @symbol.VariantSymbolId, arguments~ : Array[CheckedPattern], type_~ : @types.Type, loc~ : @basic.SourceSpan)
-  Struct(symbol~ : @symbol.TypeSymbolId, fields~ : Array[CheckedStructPatternField], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Variant(symbol~ : @symbol.VariantSymbolId, type_arguments~ : Array[@types.Type], arguments~ : Array[CheckedPattern], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Struct(symbol~ : @symbol.TypeSymbolId, type_binders~ : Array[CheckedStructTypeBinder], fields~ : Array[CheckedStructPatternField], type_~ : @types.Type, loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub fn CheckedPattern::loc(Self) -> @basic.SourceSpan
 pub fn CheckedPattern::type_(Self) -> @types.Type
@@ -139,6 +139,14 @@ pub(all) struct CheckedStructPatternField {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedStructPatternField
+
+pub(all) struct CheckedStructTypeBinder {
+  symbol : @symbol.TypeMemberSymbolId
+  type_parameter : @types.TypeParameter?
+  name : String?
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedStructTypeBinder
 
 pub(all) struct CheckedStructTypeWitness {
   symbol : @symbol.TypeMemberSymbolId

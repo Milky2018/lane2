@@ -218,7 +218,7 @@ pub impl @prettyprinter.Pretty for ResolvedStructMember
 pub(all) enum ResolvedStructPatternField {
   Value(name~ : String, pattern~ : ResolvedPattern, loc~ : @basic.SourceSpan)
   TypeBinder(name~ : String, type_parameter~ : ResolvedTypeParameter, loc~ : @basic.SourceSpan)
-  TypeWildcard(loc~ : @basic.SourceSpan)
+  TypeWildcard(type_parameter~ : ResolvedTypeParameter, loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructPatternField
 

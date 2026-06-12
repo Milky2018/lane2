@@ -327,19 +327,34 @@ pub impl @prettyprinter.Pretty for CheckedPattern with fn pretty(
       text(name)
     Literal(literal~, type_~, ..) =>
       typed_named_doc(literal.pattern_label(), type_)
-    Variant(symbol~, arguments~, type_~, ..) =>
+    Variant(symbol~, type_arguments~, arguments~, type_~, ..) =>
       typed_header("variant_pattern", type_) +
       space +
       symbol.pretty() +
+      type_arguments_doc(type_arguments) +
       space +
       @pretty.braced_block(arguments.map(CheckedPattern::pretty))
-    Struct(symbol~, fields~, type_~, ..) =>
+    Struct(symbol~, type_binders~, fields~, type_~, ..) =>
       typed_header("struct_pattern", type_) +
       space +
       symbol.pretty() +
       space +
-      @pretty.braced_block(fields.map(CheckedStructPatternField::pretty))
+      @pretty.braced_block(
+        type_binders.map(CheckedStructTypeBinder::pretty) +
+        fields.map(CheckedStructPatternField::pretty),
+      )
   }
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedStructTypeBinder with fn pretty(
+  binder : CheckedStructTypeBinder,
+) {
+  let binder_doc = match (binder.type_parameter, binder.name) {
+    (Some(parameter), Some(name)) => parameter.id.pretty() + space + text(name)
+    _ => text("_")
+  }
+  text("type_pattern") + space + binder.symbol.pretty() + space + binder_doc
 }
 
 ///|

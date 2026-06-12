@@ -176,6 +176,7 @@ test "resolve existential surface metadata" {
       #|      tparam#1 T
       #|      tparam#2 T
       #|      tparam#3 U
+      #|      tparam#4 _
       #|    }
       #|    type_members {
       #|      tmember#0 owner=type#0 parameter=tparam#0 T index=0
@@ -227,7 +228,7 @@ test "resolve existential surface metadata" {
       #|    fn value#2 ignore_hidden(value#8 h : type#0 Hide) -> Int {
       #|      {
       #|        let Hide{
-      #|          type _
+      #|          type tparam#4 _
       #|          val: bind value#9 val
       #|        } = var value#8 h
       #|        1

@@ -121,7 +121,7 @@ fn SemanticChecker::check_match_pattern(
   // synthesize the scrutinee type and do not create non-local type variables.
   // The binder set is per-pattern and rejects repeated names before the arm
   // body is checked under the extended scope.
-  let binders = []
+  let binders : Array[String] = []
   self.check_pattern(scope, pattern, expected, binders)
 }
 
@@ -160,9 +160,17 @@ fn SemanticChecker::check_pattern(
       self.expect_type(expected, Primitive(Bool), loc)
       Literal(literal=Bool(value), type_=expected, loc~)
     }
-    QualifiedVariant(type_name~, variant~, reference~, arguments~, loc~, ..) =>
+    QualifiedVariant(
+      type_name~,
+      variant~,
+      type_binders~,
+      reference~,
+      arguments~,
+      loc~
+    ) =>
       self.check_variant_pattern(
-        scope, type_name, variant, reference, arguments, expected, binders, loc,
+        scope, type_name, variant, type_binders, reference, arguments, expected,
+        binders, loc,
       )
     Struct(type_name~, fields~, loc~) =>
       self.check_struct_pattern(
@@ -177,6 +185,7 @@ fn SemanticChecker::check_variant_pattern(
   scope : TypeScope,
   type_name : String,
   variant : String,
+  type_binders : Array[@resolve.ResolvedTypeParameter],
   reference : @resolve.ResolvedVariantReference,
   arguments : Array[@resolve.ResolvedPattern],
   expected : @types.Type,
@@ -186,7 +195,8 @@ fn SemanticChecker::check_variant_pattern(
   match reference {
     Symbol(symbol) =>
       self.check_variant_symbol_pattern(
-        scope, type_name, variant, symbol, arguments, expected, binders, loc,
+        scope, type_name, variant, symbol, type_binders, arguments, expected, binders,
+        loc,
       )
     Ambiguous(name~, ..) => {
       self.report_ambiguous_variant_reference(name, loc)
@@ -218,6 +228,7 @@ fn SemanticChecker::check_variant_symbol_pattern(
   type_name : String,
   variant : String,
   symbol : VariantSymbolId,
+  type_binders : Array[@resolve.ResolvedTypeParameter],
   arguments : Array[@resolve.ResolvedPattern],
   expected : @types.Type,
   binders : Array[String],
@@ -288,6 +299,23 @@ fn SemanticChecker::check_variant_symbol_pattern(
     declaration.type_parameters,
     type_arguments,
   )
+  if type_binders.length() != variant_declaration.type_parameters.length() {
+    self.diagnostics.push({
+      kind: TypeArgumentArityMismatch(
+        name=type_name + "::" + variant,
+        expected=variant_declaration.type_parameters.length(),
+        actual=type_binders.length(),
+      ),
+      loc,
+    })
+  }
+  let hidden_type_arguments = type_binders.map(fn(parameter) {
+    @types.Type::Parameter(parameter.symbol)
+  })
+  let hidden_substitution = variant_type_substitution(
+    variant_declaration.type_parameters,
+    hidden_type_arguments,
+  )
   let checked_arguments = []
   let length = if variant_declaration.payload.length() < arguments.length() {
     variant_declaration.payload.length()
@@ -299,12 +327,20 @@ fn SemanticChecker::check_variant_symbol_pattern(
       self.check_pattern(
         scope,
         arguments[index],
-        variant_declaration.payload[index].substitute(substitution),
+        variant_declaration.payload[index]
+        .substitute(substitution)
+        .substitute(hidden_substitution),
         binders,
       ),
     )
   }
-  Variant(symbol~, arguments=checked_arguments, type_=expected, loc~)
+  Variant(
+    symbol~,
+    type_arguments=hidden_type_arguments,
+    arguments=checked_arguments,
+    type_=expected,
+    loc~,
+  )
 }
 
 ///|
@@ -359,6 +395,12 @@ fn SemanticChecker::check_struct_pattern(
     }
   }
   let substitution = declaration.nominal_substitution(type_arguments)
+  let type_member_result = self.check_struct_pattern_type_binders(
+    declaration, fields, loc,
+  )
+  let existential_substitution = declaration.pattern_existential_substitution(
+    type_member_result.binders,
+  )
   let checked_fields = []
   for declaration_field in declaration.fields {
     match fields.find_by_name(declaration_field.name) {
@@ -367,7 +409,9 @@ fn SemanticChecker::check_struct_pattern(
         let checked = self.check_pattern(
           scope,
           pattern,
-          declaration_field.type_.substitute(substitution),
+          declaration_field.type_
+          .substitute(substitution)
+          .substitute(existential_substitution),
           binders,
         )
         let checked_field : @checked.CheckedStructPatternField = {
@@ -385,7 +429,119 @@ fn SemanticChecker::check_struct_pattern(
         })
     }
   }
-  Struct(symbol~, fields=checked_fields, type_=expected, loc~)
+  Struct(
+    symbol~,
+    type_binders=type_member_result.binders,
+    fields=checked_fields,
+    type_=expected,
+    loc~,
+  )
+}
+
+///|
+priv struct CheckedStructPatternTypeBinders {
+  binders : Array[@checked.CheckedStructTypeBinder]
+}
+
+///|
+fn SemanticChecker::check_struct_pattern_type_binders(
+  self : SemanticChecker,
+  declaration : CheckedStructDeclaration,
+  fields : Array[@resolve.ResolvedStructPatternField],
+  loc : SourceSpan,
+) -> CheckedStructPatternTypeBinders {
+  let binders : Array[@checked.CheckedStructTypeBinder] = []
+  let used_field_indices : Array[Int] = []
+  self.check_struct_pattern_type_binder_names(declaration, fields)
+  for type_member in declaration.type_members {
+    let mut found = false
+    for index in 0..<fields.length() {
+      let field = fields[index]
+      if !used_field_indices.contains(index) {
+        match field {
+          TypeBinder(name~, type_parameter~, loc=field_loc) =>
+            if name == type_member.name {
+              used_field_indices.push(index)
+              found = true
+              binders.push({
+                symbol: type_member.symbol,
+                type_parameter: Some(
+                  checked_type_parameter_with_kind(
+                    type_parameter,
+                    type_member.kind,
+                  ),
+                ),
+                name: Some(name),
+                loc: field_loc,
+              })
+            }
+          TypeWildcard(type_parameter~, loc=field_loc) =>
+            if !found {
+              used_field_indices.push(index)
+              found = true
+              binders.push({
+                symbol: type_member.symbol,
+                type_parameter: Some(
+                  checked_type_parameter_with_kind(
+                    type_parameter,
+                    type_member.kind,
+                  ),
+                ),
+                name: None,
+                loc: field_loc,
+              })
+            }
+          _ => ()
+        }
+      }
+    }
+    if !found {
+      self.diagnostics.push({
+        kind: MissingTypeMember(name=type_member.name),
+        loc,
+      })
+    }
+  }
+  { binders, }
+}
+
+///|
+fn SemanticChecker::check_struct_pattern_type_binder_names(
+  self : SemanticChecker,
+  declaration : CheckedStructDeclaration,
+  fields : Array[@resolve.ResolvedStructPatternField],
+) -> Unit {
+  let seen = []
+  for field in fields {
+    if field is TypeBinder(name~, loc~, ..) {
+      if seen.contains(name) {
+        self.diagnostics.push({ kind: DuplicateTypeMember(name~), loc })
+      } else {
+        seen.push(name)
+      }
+      if declaration.type_member_named(name) is None {
+        self.diagnostics.push({ kind: UnknownTypeMember(name~), loc })
+      }
+    }
+  }
+}
+
+///|
+fn CheckedStructDeclaration::pattern_existential_substitution(
+  self : CheckedStructDeclaration,
+  binders : Array[@checked.CheckedStructTypeBinder],
+) -> @types.TypeSubstitution {
+  let substitution = @types.TypeSubstitution::TypeSubstitution()
+  for binder in binders {
+    if binder.type_parameter is Some(parameter) &&
+      self.type_member(binder.symbol) is Some(type_member) {
+      substitution.insert(
+        type_member.type_parameter.id,
+        Parameter(parameter.id),
+      )
+    }
+  }
+  substitution
 }
 
 ///|
