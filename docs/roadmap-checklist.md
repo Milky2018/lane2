@@ -1,15 +1,28 @@
 # Lane2 Compiler Roadmap Checklist
 
-This checklist tracks the main implementation phases after the lexer, parser,
-syntax AST, and syntax pretty printer. It is intentionally high-level; detailed
-module tasks should live in issues or implementation notes.
+This checklist tracks the main compiler pipeline phases. It is intentionally
+high-level; detailed module tasks should live in issues or implementation
+notes.
 
-## Baseline
+Cross-cutting language features are tracked inside the pipeline phases they
+affect. Items prefixed with `Existential:` refer to the design note in
+`docs/existential-types.md`.
+
+## 0. Source Surface And Specification
 
 - [x] Workspace layout for `spec`, `lanec`, `lane-tools`, and `lane-std`.
 - [x] Lexer and parser.
 - [x] Syntax AST and syntax pretty printer.
 - [x] Parser tests based on pretty-printed output.
+- [ ] Existential: promote the design into the language specification,
+  including formation, introduction, elimination, scope, and escape rules.
+- [ ] Existential: extend syntax, parser, and pretty printers for enum variant
+  type binders such as `hide[T](T)`.
+- [ ] Existential: extend syntax, parser, and pretty printers for struct type
+  members such as `type T : Type`, struct literal type witnesses such as
+  `T = Int`, and struct patterns such as `Hide::{ T, val }`.
+- [ ] Existential: decide and implement the wildcard spelling for ignored
+  hidden type binders in struct patterns.
 
 ## 1. Compiler Identity And Types
 
@@ -22,6 +35,9 @@ module tasks should live in issues or implementation notes.
 - [x] Provide pretty printers and tests for symbols and checked types.
 - [x] Keep compiler identity and substitution internals behind public APIs
   instead of exposing raw indices or backing arrays.
+- [ ] Existential: extend type objects and kind checking so existential
+  packages can carry explicit hidden type members while preserving nominal
+  struct and enum identity.
 
 ## 2. Name Resolution
 
@@ -50,6 +66,9 @@ module tasks should live in issues or implementation notes.
   contextual arguments.
 - [x] Extend resolved IR pretty tests to cover expression and pattern
   resolution once those nodes carry symbols.
+- [ ] Existential: add symbol and resolved IR support for existential type
+  binders, struct type members, type witness fields, and pattern-opened hidden
+  type binders.
 
 ## 3. Type Checking
 
@@ -89,6 +108,12 @@ ordinary local typing has determined their target types.
   primitive operations, nominal construction, and field access.
 - [x] Check enum variant construction and unqualified variant calls after type
   information is available.
+- [ ] Existential: type check enum construction by choosing witness types and
+  checking payloads under the instantiated variant payload type.
+- [ ] Existential: type check struct construction by checking type-member
+  witnesses and value fields against the declared member types.
+- [ ] Existential: reject hidden type escape from opened scopes unless the
+  value is repacked into another existential before leaving the scope.
 - Pattern analysis:
   - [x] Use a pattern matrix model for exhaustiveness and usefulness checking.
   - [x] Check primitive literal patterns, enum patterns, struct patterns,
@@ -97,6 +122,9 @@ ordinary local typing has determined their target types.
     fields, declaration-order struct fields, and typed binders.
   - [x] Keep checked patterns available for typed core.
   - [x] Defer decision tree generation to later lowered IR or VM work.
+  - [ ] Existential: type check enum and struct pattern elimination by
+    introducing fresh abstract type binders into the arm or remaining local
+    scope.
 - [x] Produce stable diagnostics with origin spans.
 
 ## 4. Source Elaboration
@@ -131,44 +159,10 @@ and unresolved or ambiguous states before typed core lowering.
   elaboration pipeline.
 - [ ] Produce a typed source-level result that contains no unresolved names,
   omitted contextual arguments, or source-only ambiguity states.
-
-## 5. Existential Types
-
-Existential types add hidden type witnesses chosen by constructors or providers
-and opened only by pattern-based elimination. The implementation should follow
-`docs/existential-types.md` and keep hidden types out of ordinary value-field
-lookup and expression-dependent type projection.
-
-- [ ] Promote the existential type design into the language specification,
-  including formation, introduction, elimination, scope, and escape rules.
-- [ ] Extend syntax, parser, and pretty printers for existential enum variant
-  type binders such as `hide[T](T)`.
-- [ ] Extend syntax, parser, and pretty printers for struct type members such
-  as `type T : Type`, struct literal type witnesses such as `T = Int`, and
-  struct patterns such as `Hide::{ T, val }`.
-- [ ] Add symbol and resolved IR support for existential type binders, struct
-  type members, type witness fields, and pattern-opened hidden type binders.
-- [ ] Extend type objects and kind checking so existential packages can carry
-  explicit hidden type members while preserving nominal struct and enum
-  identity.
-- [ ] Type check existential enum construction by choosing witness types and
-  checking payloads under the instantiated variant payload type.
-- [ ] Type check existential struct construction by checking type-member
-  witnesses and value fields against the declared member types.
-- [ ] Type check existential elimination in enum and struct patterns by
-  introducing fresh abstract type binders into the arm or remaining local
-  scope.
-- [ ] Reject hidden type escape from opened existential scopes unless the value
-  is repacked into another existential before leaving the scope.
-- [ ] Decide and implement the wildcard spelling for ignored hidden type
-  binders in struct patterns.
-- [ ] Preserve existential witness and opened-type information in Checked
+- [ ] Existential: preserve witness and opened-type information in Checked
   Source so later typed core lowering does not need source syntax.
-- [ ] Add valid and invalid parser, resolver, type checker, elaborator, and
-  spec fixture coverage for existential enums, structs, higher-kind-ready type
-  members, and escape diagnostics.
 
-## 6. Typed Core ANF
+## 5. Typed Core ANF
 
 - [ ] Define the typed core program representation after the source-level
   elaborator has a closed typed result.
@@ -177,11 +171,13 @@ lookup and expression-dependent type projection.
 - [ ] Preserve nominal data, first-class functions, type lambdas, type
   applications, existential packages, checked patterns, and typed unsafe
   builtins.
+- [ ] Existential: lower checked existential packages and unpack/opened-type
+  scopes without depending on source syntax.
 - [ ] Remove source-only constructs such as pipeline, contextual offer lookup,
   omitted contextual arguments, and ordinary operator aliases.
 - [ ] Provide a typed core pretty printer and tests based on typed core output.
 
-## 7. Reference Interpreter
+## 6. Reference Interpreter
 
 - [ ] Evaluate whole typed core programs without hard-coding `main`.
 - [ ] Use uniform interpreter values, global environments, call frames, and
@@ -189,10 +185,12 @@ lookup and expression-dependent type projection.
 - [ ] Evaluate first-class calls, type lambdas/applications with runtime type
   erasure, existential packages, nominal data, checked patterns, conditionals,
   and matches.
+- [ ] Existential: evaluate packages and unpacking with runtime type erasure
+  while preserving the checked scope discipline.
 - [ ] Define the builtin runtime plugin contract and runtime error reports.
 - [ ] Use the interpreter as the semantic oracle for later execution targets.
 
-## 8. Prelude And Conformance
+## 7. Prelude And Conformance
 
 - [ ] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial contextual offer environment from prelude-provided
@@ -200,6 +198,9 @@ lookup and expression-dependent type projection.
 - [ ] Provide required intrinsic implementations through builtin runtime
   plugins.
 - [ ] Expand valid and invalid conformance fixtures under `spec/examples`.
+- [ ] Existential: add valid and invalid parser, resolver, type checker,
+  elaborator, typed core, and interpreter fixture coverage for existential
+  enums, structs, higher-kind-ready type members, and escape diagnostics.
 - [ ] Run parser, type checker, elaborator, and interpreter tests over shared
   fixtures where practical.
 
