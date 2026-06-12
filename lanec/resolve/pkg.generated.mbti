@@ -29,9 +29,7 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedValue(String)
   UnresolvedField(type_name~ : String, field~ : String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
-  UnresolvedOpenValue(String)
-  CannotOpenValue(String)
-  ConflictingOpenExposure(name~ : String, existing~ : String, incoming~ : String)
+  ConflictingTopLevelValue(name~ : String, existing~ : String, incoming~ : String)
   AmbiguousUnqualifiedVariant(name~ : String, candidates~ : Array[ResolveVariantCandidate])
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolveDiagnosticKind
@@ -47,6 +45,12 @@ pub(all) struct ResolveVariantCandidate {
   variant : String
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolveVariantCandidate
+
+pub(all) enum ResolvedCallArgument {
+  Positional(ResolvedExpr)
+  Named(name~ : String, value~ : ResolvedExpr, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for ResolvedCallArgument
 
 pub(all) struct ResolvedEnumDeclaration {
   symbol : @symbol.TypeSymbolId
@@ -80,7 +84,7 @@ pub(all) enum ResolvedExpr {
   Block(items~ : Array[ResolvedLocalItem], result~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   If(condition~ : ResolvedExpr, then_branch~ : ResolvedExpr, else_branch~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   Match(scrutinee~ : ResolvedExpr, arms~ : Array[ResolvedMatchArm], loc~ : @basic.SourceSpan)
-  Call(callee~ : ResolvedExpr, arguments~ : Array[ResolvedExpr], loc~ : @basic.SourceSpan)
+  Call(callee~ : ResolvedExpr, arguments~ : Array[ResolvedCallArgument], loc~ : @basic.SourceSpan)
   Field(base~ : ResolvedExpr, name~ : String, reference~ : ResolvedFieldReference, loc~ : @basic.SourceSpan)
   Unary(operator~ : @syntax.UnaryOperator, reference~ : ResolvedValueReference, operand~ : ResolvedExpr, loc~ : @basic.SourceSpan)
   Binary(operator~ : @syntax.BinaryOperator, reference~ : ResolvedValueReference, left~ : ResolvedExpr, right~ : ResolvedExpr, loc~ : @basic.SourceSpan)
@@ -90,6 +94,7 @@ pub impl @prettyprinter.Pretty for ResolvedExpr
 
 pub(all) struct ResolvedFieldDeclaration {
   symbol : @symbol.FieldSymbolId
+  is_offered : Bool
   name : String
   type_ : ResolvedType
   index : Int
@@ -117,6 +122,7 @@ pub impl @prettyprinter.Pretty for ResolvedFunctionDeclaration
 
 pub(all) struct ResolvedFunctionLiteralParameter {
   symbol : @symbol.ValueSymbolId
+  is_offered : Bool
   name : String
   type_annotation : ResolvedType?
   loc : @basic.SourceSpan
@@ -135,7 +141,7 @@ pub impl @prettyprinter.Pretty for ResolvedLetDeclaration
 pub(all) enum ResolvedLocalItem {
   Let(ResolvedLetDeclaration)
   Function(ResolvedFunctionDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedLocalItem
 
@@ -146,11 +152,14 @@ pub(all) struct ResolvedMatchArm {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedMatchArm
 
-pub(all) struct ResolvedOpenDeclaration {
+pub(all) struct ResolvedOfferDeclaration {
+  symbol : @symbol.ValueSymbolId
   name : String
+  type_annotation : ResolvedType
+  initializer : ResolvedExpr
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for ResolvedOpenDeclaration
+pub impl @prettyprinter.Pretty for ResolvedOfferDeclaration
 
 pub(all) enum ResolvedPattern {
   Wildcard(@basic.SourceSpan)
@@ -189,7 +198,6 @@ pub impl @prettyprinter.Pretty for ResolvedStructLiteralField
 
 pub(all) enum ResolvedStructMember {
   Field(ResolvedFieldDeclaration)
-  Open(ResolvedOpenDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedStructMember
 
@@ -205,7 +213,7 @@ pub(all) enum ResolvedTopLevelDeclaration {
   Enum(ResolvedEnumDeclaration)
   Function(ResolvedFunctionDeclaration)
   Let(ResolvedLetDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedTopLevelDeclaration
 
@@ -227,6 +235,8 @@ pub impl @prettyprinter.Pretty for ResolvedTypeParameter
 
 pub(all) struct ResolvedValueParameter {
   symbol : @symbol.ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : ResolvedType
   loc : @basic.SourceSpan

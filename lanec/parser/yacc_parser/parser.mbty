@@ -18,7 +18,8 @@
 %token ENUM "enum"
 %token FN "fn"
 %token LET "let"
-%token OPEN "open"
+%token OFFER "offer"
+%token AUTO "auto"
 %token IF "if"
 %token ELSE "else"
 %token MATCH "match"
@@ -81,7 +82,7 @@ top_level_declaration -> TopLevelDeclaration
   | enum_declaration { Enum($1) }
   | function_declaration { Function($1) }
   | top_level_let_declaration { Let($1) }
-  | open_declaration { Open($1) }
+  | offer_value_declaration { Offer($1) }
   ;
 
 struct_declaration -> StructDeclaration
@@ -97,13 +98,17 @@ struct_members -> Array[StructMember]
 
 struct_member -> StructMember
   : field_declaration { Field($1) }
-  | open_declaration { Open($1) }
   ;
 
 field_declaration -> FieldDeclaration
-  : IDENT ":" type {
-    { name: $1, type_: $3, loc: span($sloc) }
+  : field_offer_modifier IDENT ":" type {
+    { is_offered: $1, name: $2, type_: $4, loc: span($sloc) }
   }
+  ;
+
+field_offer_modifier -> Bool
+  : { false }
+  | "offer" { true }
   ;
 
 enum_declaration -> EnumDeclaration
@@ -150,17 +155,22 @@ non_empty_parameter_list -> Array[Parameter]
   ;
 
 parameter -> Parameter
-  : IDENT ":" type {
-    { name: $1, type_: $3, loc: span($sloc) }
+  : parameter_modifiers IDENT ":" type {
+    { is_auto: $1.is_auto, is_offered: $1.is_offered, name: $2, type_: $4, loc: span($sloc) }
   }
+  ;
+
+parameter_modifiers -> ParameterModifiers
+  : { { is_auto: false, is_offered: false } }
+  | "auto" { { is_auto: true, is_offered: false } }
+  | "offer" { { is_auto: false, is_offered: true } }
+  | "auto" "offer" { { is_auto: true, is_offered: true } }
+  | "offer" "auto" { { is_auto: true, is_offered: true } }
   ;
 
 top_level_let_declaration -> LetDeclaration
   : "let" IDENT ":" type "=" expression {
     { name: Some($2), type_annotation: Some($4), initializer: $6, loc: span($sloc) }
-  }
-  | "let" ":" type "=" expression {
-    { name: None, type_annotation: Some($3), initializer: $5, loc: span($sloc) }
   }
   ;
 
@@ -175,9 +185,9 @@ local_type_annotation -> Type?
   | ":" type { Some($2) }
   ;
 
-open_declaration -> OpenDeclaration
-  : "open" IDENT {
-    { name: $2, loc: span($sloc) }
+offer_value_declaration -> OfferDeclaration
+  : "offer" IDENT ":" type "=" expression {
+    { name: $2, type_annotation: $4, initializer: $6, loc: span($sloc) }
   }
   ;
 
@@ -335,18 +345,29 @@ struct_literal_field -> StructLiteralField
 
 variant_arguments -> Array[Expr]
   : { [] }
-  | "(" non_empty_argument_list ")" { $2 }
+  | "(" non_empty_positional_argument_list ")" { $2 }
   ;
 
-argument_list -> Array[Expr]
+argument_list -> Array[CallArgument]
   : { [] }
   | non_empty_argument_list { $1 }
   ;
 
-non_empty_argument_list -> Array[Expr]
-  : expression { [ $1 ] }
-  | non_empty_argument_list "," expression { comma_push($1, $3) }
+non_empty_argument_list -> Array[CallArgument]
+  : call_argument { [ $1 ] }
+  | non_empty_argument_list "," call_argument { comma_push($1, $3) }
   | non_empty_argument_list "," { $1 }
+  ;
+
+call_argument -> CallArgument
+  : expression { Positional($1) }
+  | IDENT "=" expression { Named(name=$1, value=$3, loc=span($sloc)) }
+  ;
+
+non_empty_positional_argument_list -> Array[Expr]
+  : expression { [ $1 ] }
+  | non_empty_positional_argument_list "," expression { comma_push($1, $3) }
+  | non_empty_positional_argument_list "," { $1 }
   ;
 
 block_expression -> Expr
@@ -363,7 +384,7 @@ local_items -> Array[LocalItem]
 local_item -> LocalItem
   : local_let_declaration { Let($1) }
   | function_declaration { Function($1) }
-  | open_declaration { Open($1) }
+  | offer_value_declaration { Offer($1) }
   ;
 
 if_expression -> Expr
@@ -406,9 +427,14 @@ non_empty_function_literal_parameters -> Array[FunctionLiteralParameter]
   ;
 
 function_literal_parameter -> FunctionLiteralParameter
-  : IDENT local_type_annotation {
-    { name: $1, type_annotation: $2, loc: span($sloc) }
+  : function_literal_parameter_modifiers IDENT local_type_annotation {
+    { is_offered: $1, name: $2, type_annotation: $3, loc: span($sloc) }
   }
+  ;
+
+function_literal_parameter_modifiers -> Bool
+  : { false }
+  | "offer" { true }
   ;
 
 return_type_annotation -> Type?

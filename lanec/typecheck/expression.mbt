@@ -99,12 +99,13 @@ fn SemanticChecker::check_block(
   //
   // Only the block result receives the expected type. Local items are processed
   // sequentially and extend a block-local scope.
-  let next_scope : TypeScope = { values: scope.values.copy() }
+  let next_scope = scope.copy()
   for item in items {
     match item {
       Let(declaration) => self.check_local_let(next_scope, declaration)
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
+      Offer(declaration) => self.check_local_offer(next_scope, declaration)
     }
   }
   self.check_expr(next_scope, result, expected)
@@ -181,12 +182,13 @@ fn SemanticChecker::synthesize_block(
   items : Array[@desugar.DesugaredLocalItem],
   result : @desugar.DesugaredExpr,
 ) -> @types.Type {
-  let next_scope : TypeScope = { values: scope.values.copy() }
+  let next_scope = scope.copy()
   for item in items {
     match item {
       Let(declaration) => self.check_local_let(next_scope, declaration)
       Function(declaration) =>
         self.check_local_function(next_scope, declaration)
+      Offer(declaration) => self.check_local_offer(next_scope, declaration)
     }
   }
   self.synthesize_expr(next_scope, result)

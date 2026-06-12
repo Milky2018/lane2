@@ -24,6 +24,7 @@ pub(all) struct CheckedStructDeclaration {
 ///|
 pub(all) struct CheckedFieldDeclaration {
   symbol : FieldSymbolId
+  is_offered : Bool
   name : String
   index : Int
   type_ : @types.Type
@@ -72,6 +73,8 @@ pub(all) struct CheckedLetDeclaration {
 ///|
 pub(all) struct CheckedValueParameter {
   symbol : ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : @types.Type
   loc : SourceSpan

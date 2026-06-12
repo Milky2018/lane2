@@ -11,7 +11,8 @@ pub(all) enum Token {
   ENUM
   FN
   LET
-  OPEN
+  OFFER
+  AUTO
   IF
   ELSE
   MATCH

@@ -219,19 +219,19 @@ fn[T] make_compare(
   }
 }
 
-let offer int_add_ops : Add[Int] = Add::{ add: int_add }
-let offer int_sub_ops : Sub[Int] = Sub::{ sub: int_sub }
-let offer int_mul_ops : Mul[Int] = Mul::{ mul: int_mul }
-let offer int_div_ops : Div[Int] = Div::{ div: int_div }
-let offer int_rem_ops : Rem[Int] = Rem::{ rem: int_rem }
-let offer int_neg_ops : Neg[Int] = Neg::{ neg: int_neg }
+offer int_add_ops : Add[Int] = Add::{ add: int_add }
+offer int_sub_ops : Sub[Int] = Sub::{ sub: int_sub }
+offer int_mul_ops : Mul[Int] = Mul::{ mul: int_mul }
+offer int_div_ops : Div[Int] = Div::{ div: int_div }
+offer int_rem_ops : Rem[Int] = Rem::{ rem: int_rem }
+offer int_neg_ops : Neg[Int] = Neg::{ neg: int_neg }
 
 let int_equal_ops : Equal[Int] = make_equal(int_equal)
-let offer int_compare_ops : Compare[Int] = make_compare(int_equal_ops, int_less)
+offer int_compare_ops : Compare[Int] = make_compare(int_equal_ops, int_less)
 
-let offer bool_and_ops : And = And::{ and: bool_and }
-let offer bool_or_ops : Or = Or::{ or: bool_or }
-let offer bool_not_ops : Not = Not::{ not: bool_not }
-let offer bool_equal_ops : Equal[Bool] = make_equal(bool_equal)
+offer bool_and_ops : And = And::{ and: bool_and }
+offer bool_or_ops : Or = Or::{ or: bool_or }
+offer bool_not_ops : Not = Not::{ not: bool_not }
+offer bool_equal_ops : Equal[Bool] = make_equal(bool_equal)
 
-let offer string_equal_ops : Equal[String] = make_equal(string_equal)
+offer string_equal_ops : Equal[String] = make_equal(string_equal)

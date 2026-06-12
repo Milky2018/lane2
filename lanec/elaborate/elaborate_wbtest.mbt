@@ -159,16 +159,15 @@ test "elaborate reports unimplemented checked expression shape" {
 }
 
 ///|
-test "elaborate skips top level open declarations" {
+test "elaborate top level offer value declarations" {
   let result = elaborate_source(
     (
       #|struct Box {
       #|  value : Int
       #|}
-      #|let box : Box = builtin("%box")
-      #|open box
-      #|fn use() -> Int {
-      #|  value
+      #|offer box : Box = builtin("%box")
+      #|fn use() -> Box {
+      #|  box
       #|}
     ),
   )
@@ -183,17 +182,13 @@ test "elaborate skips top level open declarations" {
       #|    let : type#0 value#1 box {
       #|      unsafe_builtin "%box" : type#0
       #|    }
-      #|    fn : () -> Int value#0 use {
+      #|    fn : () -> type#0 value#0 use {
       #|      parameters {}
-      #|      return : Int
+      #|      return : type#0
       #|      body {
-      #|        block : Int {
+      #|        block : type#0 {
       #|          result {
-      #|            field : Int field#0 value {
-      #|              base {
-      #|                value : type#0 value#1 box
-      #|              }
-      #|            }
+      #|            value : type#0 value#1 box
       #|          }
       #|        }
       #|      }
@@ -361,78 +356,6 @@ test "elaborate direct unary operator alias into checked call" {
       #|              }
       #|              arguments {
       #|                int 1 : Int
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
-      #|    }
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "elaborate opened binary operator candidate into checked call" {
-  let result = elaborate_source(
-    (
-      #|struct Ops {
-      #|  op_add : (Int, Int) -> Int
-      #|}
-      #|fn int_add(a : Int, b : Int) -> Int {
-      #|  a
-      #|}
-      #|let ops : Ops = builtin("%ops")
-      #|open ops
-      #|fn use() -> Int {
-      #|  1 + 2
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|elaborate_result {
-      #|  checked_source {
-      #|    struct type#0 Ops {
-      #|      field field#0 op_add : (Int, Int) -> Int index=0
-      #|    }
-      #|    fn : (Int, Int) -> Int value#0 int_add {
-      #|      parameters {
-      #|        param : Int value#2 a
-      #|        param : Int value#3 b
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            value : Int value#2 a
-      #|          }
-      #|        }
-      #|      }
-      #|    }
-      #|    let : type#0 value#4 ops {
-      #|      unsafe_builtin "%ops" : type#0
-      #|    }
-      #|    fn : () -> Int value#1 use {
-      #|      parameters {}
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            call : Int {
-      #|              callee {
-      #|                field : (Int, Int) -> Int field#0 op_add {
-      #|                  base {
-      #|                    value : type#0 value#4 ops
-      #|                  }
-      #|                }
-      #|              }
-      #|              arguments {
-      #|                int 1 : Int
-      #|                int 2 : Int
       #|              }
       #|            }
       #|          }

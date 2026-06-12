@@ -11,6 +11,7 @@ pub(all) enum DesugaredTopLevelDeclaration {
   Enum(@resolve.ResolvedEnumDeclaration)
   Function(DesugaredFunctionDeclaration)
   Let(DesugaredLetDeclaration)
+  Offer(DesugaredOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -34,9 +35,19 @@ pub(all) struct DesugaredLetDeclaration {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct DesugaredOfferDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String
+  type_annotation : @resolve.ResolvedType
+  initializer : DesugaredExpr
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
 pub(all) enum DesugaredLocalItem {
   Let(DesugaredLetDeclaration)
   Function(DesugaredFunctionDeclaration)
+  Offer(DesugaredOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -51,6 +62,12 @@ pub(all) struct DesugaredMatchArm {
   pattern : @resolve.ResolvedPattern
   body : DesugaredExpr
   loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) enum DesugaredCallArgument {
+  Positional(DesugaredExpr)
+  Named(name~ : String, value~ : DesugaredExpr, loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|
@@ -109,7 +126,7 @@ pub(all) enum DesugaredExpr {
   )
   Call(
     callee~ : DesugaredExpr,
-    arguments~ : Array[DesugaredExpr],
+    arguments~ : Array[DesugaredCallArgument],
     loc~ : SourceSpan
   )
   Field(

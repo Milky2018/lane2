@@ -43,6 +43,7 @@ pub impl @prettyprinter.Pretty for CheckedExpr
 
 pub(all) struct CheckedFieldDeclaration {
   symbol : @symbol.FieldSymbolId
+  is_offered : Bool
   name : String
   index : Int
   type_ : @types.Type
@@ -148,6 +149,8 @@ pub impl @prettyprinter.Pretty for CheckedTopLevelDeclaration
 
 pub(all) struct CheckedValueParameter {
   symbol : @symbol.ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : @types.Type
   loc : @basic.SourceSpan

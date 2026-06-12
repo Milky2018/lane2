@@ -12,6 +12,7 @@ pub fn typecheck_checked_source_file(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    offers: [],
   }
   checker.collect_top_level_function_types()
   let checked_declarations : Array[@checked.CheckedTopLevelDeclaration] = []
@@ -43,6 +44,7 @@ fn SemanticChecker::check_checked_top_level_declaration(
     Enum(declaration) => self.checked_top_level_enum(declaration)
     Function(declaration) => self.checked_top_level_function(declaration)
     Let(declaration) => self.checked_top_level_let(declaration)
+    Offer(declaration) => self.checked_top_level_offer(declaration)
   }
 }
 
@@ -87,6 +89,14 @@ fn SemanticChecker::checked_top_level_function(
   })
   for parameter in parameters {
     body_scope.bind(parameter.symbol, parameter.type_)
+    if parameter.is_offered {
+      self.offer_symbol(
+        body_scope.offers,
+        parameter.symbol,
+        parameter.type_,
+        parameter.loc,
+      )
+    }
   }
   let return_type = self.check_type(declaration.return_type)
   let checked_body = self.check_checked_expr(
@@ -139,7 +149,7 @@ fn SemanticChecker::checked_top_level_let(
     declaration.initializer,
     type_,
   )
-  self.value_types.push({ symbol: declaration.symbol, type_ })
+  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
   self.values.push(
     Let({
       symbol: declaration.symbol,
@@ -160,6 +170,46 @@ fn SemanticChecker::checked_top_level_let(
     Let({
       symbol: declaration.symbol,
       name: declaration.name,
+      initializer,
+      type_,
+      loc: declaration.loc,
+    }),
+  )
+}
+
+///|
+fn SemanticChecker::checked_top_level_offer(
+  self : SemanticChecker,
+  declaration : @desugar.DesugaredOfferDeclaration,
+) -> @checked.CheckedTopLevelDeclaration? {
+  let type_ = self.check_type(declaration.type_annotation)
+  let checked_initializer = self.check_checked_expr(
+    self.root_scope(),
+    declaration.initializer,
+    type_,
+  )
+  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
+  self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
+  self.values.push(
+    Let({
+      symbol: declaration.symbol,
+      name: Some(declaration.name),
+      type_,
+      loc: declaration.loc,
+    }),
+  )
+  guard self.require_checked_expression(
+      checked_initializer,
+      declaration.initializer.loc(),
+      "offer initializer",
+    )
+    is Some(initializer) else {
+    return None
+  }
+  Some(
+    Let({
+      symbol: declaration.symbol,
+      name: Some(declaration.name),
       initializer,
       type_,
       loc: declaration.loc,
@@ -202,6 +252,37 @@ fn SemanticChecker::check_checked_local_let(
 }
 
 ///|
+fn SemanticChecker::check_checked_local_offer(
+  self : SemanticChecker,
+  scope : TypeScope,
+  declaration : @desugar.DesugaredOfferDeclaration,
+) -> @checked.CheckedLetDeclaration? {
+  let type_ = self.check_type(declaration.type_annotation)
+  let checked_initializer = self.check_checked_expr(
+    scope,
+    declaration.initializer,
+    type_,
+  )
+  scope.bind(declaration.symbol, type_)
+  self.offer_symbol(scope.offers, declaration.symbol, type_, declaration.loc)
+  guard self.require_checked_expression(
+      checked_initializer,
+      declaration.initializer.loc(),
+      "local offer initializer",
+    )
+    is Some(initializer) else {
+    return None
+  }
+  Some({
+    symbol: declaration.symbol,
+    name: Some(declaration.name),
+    initializer,
+    type_,
+    loc: declaration.loc,
+  })
+}
+
+///|
 fn SemanticChecker::check_checked_local_function(
   self : SemanticChecker,
   scope : TypeScope,
@@ -212,13 +293,27 @@ fn SemanticChecker::check_checked_local_function(
     declaration.parameters,
     declaration.return_type,
   )
-  scope.bind(declaration.symbol, type_)
-  let body_scope : TypeScope = { values: scope.values.copy() }
+  scope.bind_function(
+    declaration.symbol,
+    type_,
+    declaration.parameters.map(fn(parameter) {
+      self.checked_value_parameter(parameter)
+    }),
+  )
+  let body_scope = scope.copy()
   let parameters = declaration.parameters.map(fn(parameter) {
     self.checked_value_parameter(parameter)
   })
   for parameter in parameters {
     body_scope.bind(parameter.symbol, parameter.type_)
+    if parameter.is_offered {
+      self.offer_symbol(
+        body_scope.offers,
+        parameter.symbol,
+        parameter.type_,
+        parameter.loc,
+      )
+    }
   }
   let return_type = self.check_type(declaration.return_type)
   let checked_body = self.check_checked_expr(
@@ -253,6 +348,8 @@ fn SemanticChecker::checked_value_parameter(
 ) -> @checked.CheckedValueParameter {
   {
     symbol: parameter.symbol,
+    is_auto: parameter.is_auto,
+    is_offered: parameter.is_offered,
     name: parameter.name,
     type_: self.check_type(parameter.type_),
     loc: parameter.loc,
@@ -280,6 +377,7 @@ fn CheckedFieldDeclaration::to_checked_field_declaration(
 ) -> @checked.CheckedFieldDeclaration {
   {
     symbol: self.symbol,
+    is_offered: self.is_offered,
     name: self.name,
     index: self.index,
     type_: self.type_,

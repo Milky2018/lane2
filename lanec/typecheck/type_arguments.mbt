@@ -158,7 +158,7 @@ fn SemanticChecker::instantiate_generic_callable(
   scope : TypeScope,
   type_parameters : Array[@types.TypeParameter],
   body : @types.Type,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
   report_failure : Bool,
@@ -186,7 +186,10 @@ fn SemanticChecker::instantiate_generic_callable(
   }
   let inference = TypeArgumentInference::TypeArgumentInference(type_parameters)
   for index in 0..<parameters.length() {
-    if self.synthesize_argument_for_type_arguments(scope, arguments[index])
+    if self.synthesize_argument_for_type_arguments(
+        scope,
+        arguments[index].value_expr(),
+      )
       is Some(actual) {
       inference.collect(parameters[index], actual)
     }
@@ -219,4 +222,13 @@ fn SemanticChecker::instantiate_generic_callable(
     }),
     result: result.substitute(substitution),
   })
+}
+
+///|
+fn @desugar.DesugaredCallArgument::value_expr(
+  self : @desugar.DesugaredCallArgument,
+) -> @desugar.DesugaredExpr {
+  match self {
+    Positional(expression) | Named(value=expression, ..) => expression
+  }
 }

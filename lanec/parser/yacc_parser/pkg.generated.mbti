@@ -29,7 +29,8 @@ pub(all) enum Token {
   ENUM
   FN
   LET
-  OPEN
+  OFFER
+  AUTO
   IF
   ELSE
   MATCH
@@ -78,7 +79,8 @@ pub(all) enum TokenKind {
   TK_ENUM
   TK_FN
   TK_LET
-  TK_OPEN
+  TK_OFFER
+  TK_AUTO
   TK_IF
   TK_ELSE
   TK_MATCH

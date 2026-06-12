@@ -31,6 +31,13 @@ pub fn BinaryOperator::minimum_precedence() -> Int
 pub fn BinaryOperator::precedence(Self) -> Int
 pub impl @prettyprinter.Pretty for BinaryOperator
 
+pub(all) enum CallArgument {
+  Positional(Expr)
+  Named(name~ : String, value~ : Expr, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub fn CallArgument::loc(Self) -> @basic.SourceSpan
+pub impl @prettyprinter.Pretty for CallArgument
+
 pub(all) struct EnumDeclaration {
   name : String
   type_parameters : Array[String]
@@ -59,7 +66,7 @@ pub(all) enum Expr {
   Block(items~ : Array[LocalItem], result~ : Expr, loc~ : @basic.SourceSpan)
   If(condition~ : Expr, then_branch~ : Expr, else_branch~ : Expr, loc~ : @basic.SourceSpan)
   Match(scrutinee~ : Expr, arms~ : Array[MatchArm], loc~ : @basic.SourceSpan)
-  Call(callee~ : Expr, arguments~ : Array[Expr], loc~ : @basic.SourceSpan)
+  Call(callee~ : Expr, arguments~ : Array[CallArgument], loc~ : @basic.SourceSpan)
   Field(base~ : Expr, name~ : String, loc~ : @basic.SourceSpan)
   Unary(operator~ : UnaryOperator, operand~ : Expr, loc~ : @basic.SourceSpan)
   Binary(operator~ : BinaryOperator, left~ : Expr, right~ : Expr, loc~ : @basic.SourceSpan)
@@ -69,6 +76,7 @@ pub fn Expr::loc(Self) -> @basic.SourceSpan
 pub impl @prettyprinter.Pretty for Expr
 
 pub(all) struct FieldDeclaration {
+  is_offered : Bool
   name : String
   type_ : Type
   loc : @basic.SourceSpan
@@ -86,6 +94,7 @@ pub(all) struct FunctionDeclaration {
 pub impl @prettyprinter.Pretty for FunctionDeclaration
 
 pub(all) struct FunctionLiteralParameter {
+  is_offered : Bool
   name : String
   type_annotation : Type?
   loc : @basic.SourceSpan
@@ -103,7 +112,7 @@ pub impl @prettyprinter.Pretty for LetDeclaration
 pub(all) enum LocalItem {
   Let(LetDeclaration)
   Function(FunctionDeclaration)
-  Open(OpenDeclaration)
+  Offer(OfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for LocalItem
 
@@ -114,18 +123,27 @@ pub(all) struct MatchArm {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for MatchArm
 
-pub(all) struct OpenDeclaration {
+pub(all) struct OfferDeclaration {
   name : String
+  type_annotation : Type
+  initializer : Expr
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
-pub impl @prettyprinter.Pretty for OpenDeclaration
+pub impl @prettyprinter.Pretty for OfferDeclaration
 
 pub(all) struct Parameter {
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : Type
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for Parameter
+
+pub(all) struct ParameterModifiers {
+  is_auto : Bool
+  is_offered : Bool
+} derive(Eq, @debug.Debug)
 
 pub(all) enum Pattern {
   Wildcard(@basic.SourceSpan)
@@ -162,7 +180,6 @@ pub impl @prettyprinter.Pretty for StructLiteralField
 
 pub(all) enum StructMember {
   Field(FieldDeclaration)
-  Open(OpenDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for StructMember
 
@@ -178,7 +195,7 @@ pub(all) enum TopLevelDeclaration {
   Enum(EnumDeclaration)
   Function(FunctionDeclaration)
   Let(LetDeclaration)
-  Open(OpenDeclaration)
+  Offer(OfferDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for TopLevelDeclaration
 

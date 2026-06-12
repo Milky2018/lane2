@@ -40,23 +40,27 @@ fn expect_checked_let_initializer(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    offers: [],
   }
   checker.collect_top_level_function_types()
   for declaration in source.declarations {
-    if declaration is Let(declaration) {
-      if declaration.name == Some(name) {
-        let checked = checker.check_checked_expr(
-          checker.root_scope(),
-          declaration.initializer,
-          expected,
-        )
-        guard checked.expression is Some(expression) else {
-          abort("expected checked expression")
+    match declaration {
+      Let(declaration) =>
+        if declaration.name == Some(name) {
+          let checked = checker.check_checked_expr(
+            checker.root_scope(),
+            declaration.initializer,
+            expected,
+          )
+          guard checked.expression is Some(expression) else {
+            abort(@prettyprinter.render(checker.diagnostics, width=100))
+          }
+          return expression
+        } else {
+          checker.check_top_level_let(declaration)
         }
-        return expression
-      } else {
-        checker.check_top_level_let(declaration)
-      }
+      Offer(declaration) => checker.check_top_level_offer(declaration)
+      _ => ()
     }
   }
   abort("expected named let")
@@ -77,6 +81,7 @@ fn expect_first_checked_match_pattern(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    offers: [],
   }
   checker.collect_top_level_function_types()
   for declaration in source.declarations {
@@ -94,7 +99,7 @@ fn expect_first_checked_match_pattern(
       }
       guard !arms.is_empty() else { abort("expected match arm") }
       let scrutinee_type = checker.synthesize_expr(scope, scrutinee)
-      let arm_scope : TypeScope = { values: scope.values.copy() }
+      let arm_scope = scope.copy()
       return checker.check_match_pattern(
         arm_scope,
         arms[0].pattern,
@@ -201,30 +206,334 @@ test "typecheck reports out of range int literal" {
 }
 
 ///|
-test "typecheck builds checked opened field candidate by expected type" {
+test "typecheck inserts contextual auto argument" {
   let expression = expect_checked_let_initializer(
     (
-      #|struct IntSource {
-      #|  value : Int
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
       #|}
-      #|struct BoolSource {
-      #|  value : Bool
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
       #|}
-      #|let int_source : IntSource = IntSource::{ value: 1 }
-      #|let bool_source : BoolSource = BoolSource::{ value: true }
-      #|open int_source
-      #|open bool_source
-      #|let selected : Int = value
+      #|offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|let answer : Int = 1 + 2
     ),
-    "selected",
+    "answer",
     Primitive(Int),
   )
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|field : Int field#0 value {
-      #|  base {
-      #|    value : type#0 value#0 int_source
+      #|call : Int {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|      callee {
+      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    value : type#0[Int] value#4 int_add_ops
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck accepts explicit named contextual argument" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let custom_add : Add[Int] = builtin("%custom_add")
+      #|let answer : Int = op_add(1, 2, op=custom_add)
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Int {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|      callee {
+      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    value : type#0[Int] value#4 custom_add
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck offer value declaration supplies contextual argument" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|let answer : Int = 1 + 2
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Int {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|      callee {
+      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    value : type#0[Int] value#4 int_add_ops
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck auto offer parameter is visible in function body" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|fn[A] twice(x : A, auto offer op : Add[A]) -> A {
+      #|  x + x
+      #|}
+      #|offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|let answer : Int = twice(1)
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Add[tparam#0 A : Type] {
+      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_add : forall [
+      #|      tparam#1 A : Type
+      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    fn value#1 twice : forall [tparam#2 A : Type]. (tparam#2, type#0[tparam#2]) -> tparam#2
+      #|    let value#7 int_add_ops : type#0[Int]
+      #|    let value#8 answer : Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck forwards offered struct fields" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Equal[A] {
+      #|  equal : (A, A) -> Bool
+      #|}
+      #|struct Compare[A] {
+      #|  offer equal_impl : Equal[A]
+      #|}
+      #|fn[A] op_equal(a : A, b : A, auto op : Equal[A]) -> Bool {
+      #|  op.equal(a, b)
+      #|}
+      #|offer int_compare_ops : Compare[Int] = builtin("%int_compare_ops")
+      #|let answer : Bool = 1 == 2
+    ),
+    "answer",
+    Primitive(Bool),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Bool {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Bool[Int] {
+      #|      callee {
+      #|        value : forall [tparam#2 A : Type]. (tparam#2, tparam#2, type#0[tparam#2]) -> Bool value#0 op_equal
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    field : type#0[Int] field#1 equal_impl {
+      #|      base {
+      #|        value : type#1[Int] value#4 int_compare_ops
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck local offer value declaration supplies contextual argument" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let answer : Int = {
+      #|  offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|  1 + 2
+      #|}
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|block : Int {
+      #|  let : type#0[Int] value#4 int_add_ops {
+      #|    unsafe_builtin "%int_add_ops" : type#0[Int]
+      #|  }
+      #|  result {
+      #|    call : Int {
+      #|      callee {
+      #|        type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|          callee {
+      #|            value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|          }
+      #|        }
+      #|      }
+      #|      arguments {
+      #|        int 1 : Int
+      #|        int 2 : Int
+      #|        value : type#0[Int] value#4 int_add_ops
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck reports missing contextual offer" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let answer : Int = 1 + 2
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Add[tparam#0 A : Type] {
+      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_add : forall [
+      #|      tparam#1 A : Type
+      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    let value#4 answer : Int
+      #|  }
+      #|  diagnostics {
+      #|    cannot_infer missing contextual offer @ 7:24-7:25
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck reports ambiguous contextual offer" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|offer add_a : Add[Int] = builtin("%add_a")
+      #|offer add_b : Add[Int] = builtin("%add_b")
+      #|let answer : Int = 1 + 2
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Add[tparam#0 A : Type] {
+      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_add : forall [
+      #|      tparam#1 A : Type
+      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    let value#4 add_a : type#0[Int]
+      #|    let value#5 add_b : type#0[Int]
+      #|    let value#6 answer : Int
+      #|  }
+      #|  diagnostics {
+      #|    cannot_infer ambiguous contextual offer @ 9:24-9:25
       #|  }
       #|}
     ),
@@ -314,48 +623,6 @@ test "typecheck reports forward top level value use" {
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
     content="unresolved_value second @ 1:19-1:25",
-  )
-}
-
-///|
-test "typecheck local let inference and opened field reference" {
-  let result = expect_typecheck_result(
-    (
-      #|struct Box {
-      #|  value : Int
-      #|}
-      #|let box : Box = Box::{ value: 1 }
-      #|open box
-      #|fn use() -> Int {
-      #|  {
-      #|    let local = value
-      #|    local
-      #|  }
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 Box {
-      #|        field field#0 value : Int index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 value : Int index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 use : () -> Int
-      #|    let value#1 box : type#0
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
   )
 }
 
@@ -478,137 +745,6 @@ test "typecheck local generic function after declaration" {
 }
 
 ///|
-test "typecheck selects open candidate by expected type" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntSource {
-      #|  value : Int
-      #|}
-      #|struct BoolSource {
-      #|  value : Bool
-      #|}
-      #|let int_source : IntSource = IntSource::{ value: 1 }
-      #|let bool_source : BoolSource = BoolSource::{ value: true }
-      #|open int_source
-      #|open bool_source
-      #|fn use() -> Int {
-      #|  value
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IntSource {
-      #|        field field#0 value : Int index=0
-      #|      }
-      #|      struct type#1 BoolSource {
-      #|        field field#1 value : Bool index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 value : Int index=0
-      #|      field field#1 value : Bool index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 use : () -> Int
-      #|    let value#1 int_source : type#0
-      #|    let value#2 bool_source : type#1
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "typecheck keeps same typed open candidates ambiguous" {
-  let result = expect_typecheck_result(
-    (
-      #|struct Left {
-      #|  value : Int
-      #|}
-      #|struct Right {
-      #|  value : Int
-      #|}
-      #|let left : Left = Left::{ value: 1 }
-      #|let right : Right = Right::{ value: 2 }
-      #|open left
-      #|open right
-      #|fn use() -> Int {
-      #|  value
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference value @ 12:3-12:8",
-  )
-}
-
-///|
-test "typecheck selects callable open candidate by argument types" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntOps {
-      #|  op_add : (Int, Int) -> Int
-      #|}
-      #|struct BoolOps {
-      #|  op_add : (Bool, Bool) -> Bool
-      #|}
-      #|fn int_add(a : Int, b : Int) -> Int {
-      #|  a
-      #|}
-      #|fn bool_add(a : Bool, b : Bool) -> Bool {
-      #|  a
-      #|}
-      #|let int_ops : IntOps = IntOps::{ op_add: int_add }
-      #|let bool_ops : BoolOps = BoolOps::{ op_add: bool_add }
-      #|open int_ops
-      #|open bool_ops
-      #|fn use() -> Int {
-      #|  op_add(1, 2)
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IntOps {
-      #|        field field#0 op_add : (Int, Int) -> Int index=0
-      #|      }
-      #|      struct type#1 BoolOps {
-      #|        field field#1 op_add : (Bool, Bool) -> Bool index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 op_add : (Int, Int) -> Int index=0
-      #|      field field#1 op_add : (Bool, Bool) -> Bool index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 int_add : (Int, Int) -> Int
-      #|    fn value#1 bool_add : (Bool, Bool) -> Bool
-      #|    fn value#2 use : () -> Int
-      #|    let value#7 int_ops : type#0
-      #|    let value#8 bool_ops : type#1
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
 test "typecheck direct binary operator alias" {
   let result = expect_typecheck_result(
     (
@@ -685,393 +821,6 @@ test "typecheck direct unary operator alias" {
       #|  diagnostics {}
       #|}
     ),
-  )
-}
-
-///|
-test "typecheck selects open binary operator candidate by argument types" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntOps {
-      #|  op_add : (Int, Int) -> Int
-      #|}
-      #|struct BoolOps {
-      #|  op_add : (Bool, Bool) -> Bool
-      #|}
-      #|fn int_add(a : Int, b : Int) -> Int {
-      #|  a
-      #|}
-      #|fn bool_add(a : Bool, b : Bool) -> Bool {
-      #|  a
-      #|}
-      #|let int_ops : IntOps = IntOps::{ op_add: int_add }
-      #|let bool_ops : BoolOps = BoolOps::{ op_add: bool_add }
-      #|open int_ops
-      #|open bool_ops
-      #|fn use() -> Int {
-      #|  1 + 2
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IntOps {
-      #|        field field#0 op_add : (Int, Int) -> Int index=0
-      #|      }
-      #|      struct type#1 BoolOps {
-      #|        field field#1 op_add : (Bool, Bool) -> Bool index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 op_add : (Int, Int) -> Int index=0
-      #|      field field#1 op_add : (Bool, Bool) -> Bool index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 int_add : (Int, Int) -> Int
-      #|    fn value#1 bool_add : (Bool, Bool) -> Bool
-      #|    fn value#2 use : () -> Int
-      #|    let value#7 int_ops : type#0
-      #|    let value#8 bool_ops : type#1
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "typecheck keeps same typed binary operator candidates ambiguous" {
-  let result = expect_typecheck_result(
-    (
-      #|struct LeftOps {
-      #|  op_add : (Int, Int) -> Int
-      #|}
-      #|struct RightOps {
-      #|  op_add : (Int, Int) -> Int
-      #|}
-      #|fn left_add(a : Int, b : Int) -> Int {
-      #|  a
-      #|}
-      #|fn right_add(a : Int, b : Int) -> Int {
-      #|  b
-      #|}
-      #|let left_ops : LeftOps = LeftOps::{ op_add: left_add }
-      #|let right_ops : RightOps = RightOps::{ op_add: right_add }
-      #|open left_ops
-      #|open right_ops
-      #|fn use() -> Int {
-      #|  1 + 2
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference op_add @ 18:7-18:8",
-  )
-}
-
-///|
-test "typecheck selects open candidate in if branches by expected type" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntSource {
-      #|  value : Int
-      #|}
-      #|struct BoolSource {
-      #|  value : Bool
-      #|}
-      #|let int_source : IntSource = IntSource::{ value: 1 }
-      #|let bool_source : BoolSource = BoolSource::{ value: true }
-      #|open int_source
-      #|open bool_source
-      #|fn use(flag : Bool) -> Int {
-      #|  if flag {
-      #|    value
-      #|  } else {
-      #|    value
-      #|  }
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IntSource {
-      #|        field field#0 value : Int index=0
-      #|      }
-      #|      struct type#1 BoolSource {
-      #|        field field#1 value : Bool index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 value : Int index=0
-      #|      field field#1 value : Bool index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 use : (Bool) -> Int
-      #|    let value#1 int_source : type#0
-      #|    let value#2 bool_source : type#1
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "typecheck selects argument candidate from known function parameter type" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntSource {
-      #|  value : Int
-      #|}
-      #|struct BoolSource {
-      #|  value : Bool
-      #|}
-      #|fn take_int(value : Int) -> Int {
-      #|  value
-      #|}
-      #|let int_source : IntSource = IntSource::{ value: 1 }
-      #|let bool_source : BoolSource = BoolSource::{ value: true }
-      #|open int_source
-      #|open bool_source
-      #|fn use() -> Int {
-      #|  take_int(value)
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IntSource {
-      #|        field field#0 value : Int index=0
-      #|      }
-      #|      struct type#1 BoolSource {
-      #|        field field#1 value : Bool index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 value : Int index=0
-      #|      field field#1 value : Bool index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 take_int : (Int) -> Int
-      #|    fn value#1 use : () -> Int
-      #|    let value#3 int_source : type#0
-      #|    let value#4 bool_source : type#1
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "typecheck selects callable open candidate by expected result type" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntFactory {
-      #|  make : () -> Int
-      #|}
-      #|struct BoolFactory {
-      #|  make : () -> Bool
-      #|}
-      #|fn make_int() -> Int {
-      #|  1
-      #|}
-      #|fn make_bool() -> Bool {
-      #|  true
-      #|}
-      #|let int_factory : IntFactory = IntFactory::{ make: make_int }
-      #|let bool_factory : BoolFactory = BoolFactory::{ make: make_bool }
-      #|open int_factory
-      #|open bool_factory
-      #|fn use() -> Int {
-      #|  make()
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IntFactory {
-      #|        field field#0 make : () -> Int index=0
-      #|      }
-      #|      struct type#1 BoolFactory {
-      #|        field field#1 make : () -> Bool index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 make : () -> Int index=0
-      #|      field field#1 make : () -> Bool index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 make_int : () -> Int
-      #|    fn value#1 make_bool : () -> Bool
-      #|    fn value#2 use : () -> Int
-      #|    let value#3 int_factory : type#0
-      #|    let value#4 bool_factory : type#1
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "typecheck selects callable candidate by checking argument candidates" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntSource {
-      #|  value : Int
-      #|}
-      #|struct BoolSource {
-      #|  value : Bool
-      #|}
-      #|struct IntApply {
-      #|  apply : (Int) -> Int
-      #|}
-      #|struct BoolApply {
-      #|  apply : (Bool) -> Bool
-      #|}
-      #|fn apply_int(value : Int) -> Int {
-      #|  value
-      #|}
-      #|fn apply_bool(value : Bool) -> Bool {
-      #|  value
-      #|}
-      #|let int_source : IntSource = IntSource::{ value: 1 }
-      #|let bool_source : BoolSource = BoolSource::{ value: true }
-      #|let int_apply : IntApply = IntApply::{ apply: apply_int }
-      #|let bool_apply : BoolApply = BoolApply::{ apply: apply_bool }
-      #|open int_source
-      #|open bool_source
-      #|open int_apply
-      #|open bool_apply
-      #|fn use() -> Int {
-      #|  apply(value)
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IntSource {
-      #|        field field#0 value : Int index=0
-      #|      }
-      #|      struct type#1 BoolSource {
-      #|        field field#1 value : Bool index=0
-      #|      }
-      #|      struct type#2 IntApply {
-      #|        field field#2 apply : (Int) -> Int index=0
-      #|      }
-      #|      struct type#3 BoolApply {
-      #|        field field#3 apply : (Bool) -> Bool index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 value : Int index=0
-      #|      field field#1 value : Bool index=0
-      #|      field field#2 apply : (Int) -> Int index=0
-      #|      field field#3 apply : (Bool) -> Bool index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 apply_int : (Int) -> Int
-      #|    fn value#1 apply_bool : (Bool) -> Bool
-      #|    fn value#2 use : () -> Int
-      #|    let value#5 int_source : type#0
-      #|    let value#6 bool_source : type#1
-      #|    let value#7 int_apply : type#2
-      #|    let value#8 bool_apply : type#3
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "typecheck reports ambiguous candidate without expected type" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntSource {
-      #|  value : Int
-      #|}
-      #|struct BoolSource {
-      #|  value : Bool
-      #|}
-      #|let int_source : IntSource = IntSource::{ value: 1 }
-      #|let bool_source : BoolSource = BoolSource::{ value: true }
-      #|open int_source
-      #|open bool_source
-      #|fn use() -> Bool {
-      #|  {
-      #|    let local = value
-      #|    true
-      #|  }
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference value @ 13:17-13:22",
-  )
-}
-
-///|
-test "typecheck reports no callable candidate when arguments reject all candidates" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IntApply {
-      #|  apply : (Int) -> Int
-      #|}
-      #|struct BoolApply {
-      #|  apply : (Bool) -> Bool
-      #|}
-      #|fn apply_int(value : Int) -> Int {
-      #|  value
-      #|}
-      #|fn apply_bool(value : Bool) -> Bool {
-      #|  value
-      #|}
-      #|let int_apply : IntApply = IntApply::{ apply: apply_int }
-      #|let bool_apply : BoolApply = BoolApply::{ apply: apply_bool }
-      #|open int_apply
-      #|open bool_apply
-      #|fn use() -> Int {
-      #|  apply("text")
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer no matching callable value reference apply @ 18:3-18:8",
   )
 }
 
@@ -1210,7 +959,7 @@ test "typecheck reports generic function literal arity mismatch" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer generic function arity @ 1:34-3:2",
+    content="cannot_infer generic function arity @ 1:26-3:2",
   )
 }
 
@@ -1358,80 +1107,6 @@ test "typecheck polymorphic function parameter instantiation" {
       #|  diagnostics {}
       #|}
     ),
-  )
-}
-
-///|
-test "typecheck selects generic open callable candidate by argument type" {
-  let result = expect_typecheck_result(
-    (
-      #|struct IdOps {
-      #|  id : [A](A) -> A
-      #|}
-      #|fn[A] identity(value : A) -> A {
-      #|  value
-      #|}
-      #|let ops : IdOps = IdOps::{ id: identity }
-      #|open ops
-      #|fn use() -> Int {
-      #|  id(1)
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result, width=100),
-    content=(
-      #|typecheck_result {
-      #|  checked_declarations {
-      #|    types {
-      #|      struct type#0 IdOps {
-      #|        field field#0 id : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 index=0
-      #|      }
-      #|    }
-      #|    fields {
-      #|      field field#0 id : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 index=0
-      #|    }
-      #|    variants {}
-      #|  }
-      #|  checked_values {
-      #|    fn value#0 identity : forall [tparam#1 A : Type]. (tparam#1) -> tparam#1
-      #|    fn value#1 use : () -> Int
-      #|    let value#3 ops : type#0
-      #|  }
-      #|  diagnostics {}
-      #|}
-    ),
-  )
-}
-
-///|
-test "typecheck keeps generic callable candidates ambiguous" {
-  let result = expect_typecheck_result(
-    (
-      #|struct LeftOps {
-      #|  id : [A](A) -> A
-      #|}
-      #|struct RightOps {
-      #|  id : [A](A) -> A
-      #|}
-      #|fn[A] left_id(value : A) -> A {
-      #|  value
-      #|}
-      #|fn[A] right_id(value : A) -> A {
-      #|  value
-      #|}
-      #|let left_ops : LeftOps = LeftOps::{ id: left_id }
-      #|let right_ops : RightOps = RightOps::{ id: right_id }
-      #|open left_ops
-      #|open right_ops
-      #|fn use() -> Int {
-      #|  id(1)
-      #|}
-    ),
-  )
-  inspect(
-    @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer ambiguous value reference id @ 18:3-18:5",
   )
 }
 

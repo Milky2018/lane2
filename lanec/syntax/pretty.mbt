@@ -86,7 +86,7 @@ fn TopLevelDeclaration::to_doc(self : TopLevelDeclaration) -> Document {
     Enum(declaration) => declaration.to_doc()
     Function(declaration) => declaration.to_doc()
     Let(declaration) => declaration.to_doc()
-    Open(declaration) => declaration.to_doc()
+    Offer(declaration) => declaration.to_doc()
   }
 }
 
@@ -111,7 +111,6 @@ fn StructDeclaration::to_doc(self : StructDeclaration) -> Document {
 fn StructMember::to_doc(self : StructMember) -> Document {
   match self {
     Field(field) => field.to_doc()
-    Open(declaration) => declaration.to_doc()
   }
 }
 
@@ -131,7 +130,8 @@ pub impl @prettyprinter.Pretty for FieldDeclaration with fn pretty(
 
 ///|
 fn FieldDeclaration::to_doc(self : FieldDeclaration) -> Document {
-  text(self.name) + space + text(":") + space + self.type_.to_doc()
+  let prefix = if self.is_offered { keyword("offer") + space } else { empty }
+  prefix + text(self.name) + space + text(":") + space + self.type_.to_doc()
 }
 
 ///|
@@ -191,7 +191,12 @@ fn FunctionDeclaration::to_doc(self : FunctionDeclaration) -> Document {
 
 ///|
 fn Parameter::to_doc(self : Parameter) -> Document {
-  text(self.name) + space + text(":") + space + self.type_.to_doc()
+  parameter_modifiers(self.is_auto, self.is_offered) +
+  text(self.name) +
+  space +
+  text(":") +
+  space +
+  self.type_.to_doc()
 }
 
 ///|
@@ -228,15 +233,25 @@ fn LetDeclaration::to_doc(self : LetDeclaration) -> Document {
 }
 
 ///|
-pub impl @prettyprinter.Pretty for OpenDeclaration with fn pretty(
-  declaration : OpenDeclaration,
+pub impl @prettyprinter.Pretty for OfferDeclaration with fn pretty(
+  declaration : OfferDeclaration,
 ) {
   declaration.to_doc()
 }
 
 ///|
-fn OpenDeclaration::to_doc(self : OpenDeclaration) -> Document {
-  keyword("open") + space + text(self.name)
+fn OfferDeclaration::to_doc(self : OfferDeclaration) -> Document {
+  keyword("offer") +
+  space +
+  text(self.name) +
+  space +
+  text(":") +
+  space +
+  self.type_annotation.to_doc() +
+  space +
+  text("=") +
+  space +
+  self.initializer.to_doc()
 }
 
 ///|
@@ -347,7 +362,7 @@ fn Expr::to_doc_with_precedence(
       (
         9,
         callee.to_doc_with_precedence(9) +
-        parenthesized(arguments.map(Expr::to_doc)),
+        parenthesized(arguments.map(CallArgument::to_doc)),
       )
     Field(base~, name~, ..) =>
       (9, base.to_doc_with_precedence(9) + text(".") + text(name))
@@ -401,7 +416,7 @@ fn LocalItem::to_doc(self : LocalItem) -> Document {
   match self {
     Let(declaration) => declaration.to_doc()
     Function(declaration) => declaration.to_doc()
-    Open(declaration) => declaration.to_doc()
+    Offer(declaration) => declaration.to_doc()
   }
 }
 
@@ -414,9 +429,11 @@ pub impl @prettyprinter.Pretty for LocalItem with fn pretty(item : LocalItem) {
 fn FunctionLiteralParameter::to_doc(
   self : FunctionLiteralParameter,
 ) -> Document {
+  let prefix = if self.is_offered { keyword("offer") + space } else { empty }
   match self.type_annotation {
-    Some(type_) => text(self.name) + space + text(":") + space + type_.to_doc()
-    None => text(self.name)
+    Some(type_) =>
+      prefix + text(self.name) + space + text(":") + space + type_.to_doc()
+    None => prefix + text(self.name)
   }
 }
 
@@ -425,6 +442,37 @@ pub impl @prettyprinter.Pretty for FunctionLiteralParameter with fn pretty(
   parameter : FunctionLiteralParameter,
 ) {
   parameter.to_doc()
+}
+
+///|
+fn CallArgument::to_doc(self : CallArgument) -> Document {
+  match self {
+    Positional(expression) => expression.to_doc()
+    Named(name~, value~, ..) => text(name) + text("=") + value.to_doc()
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for CallArgument with fn pretty(
+  argument : CallArgument,
+) {
+  argument.to_doc()
+}
+
+///|
+fn parameter_modifiers(is_auto : Bool, is_offered : Bool) -> Document {
+  let docs = []
+  if is_auto {
+    docs.push(keyword("auto"))
+  }
+  if is_offered {
+    docs.push(keyword("offer"))
+  }
+  if docs.is_empty() {
+    empty
+  } else {
+    separate(space, docs) + space
+  }
 }
 
 ///|

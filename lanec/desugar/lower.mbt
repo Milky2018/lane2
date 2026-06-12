@@ -22,7 +22,7 @@ fn desugar_top_level_declaration(
     Function(declaration) =>
       Some(Function(desugar_function_declaration(declaration)))
     Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
-    Open(_) => None
+    Offer(declaration) => Some(Offer(desugar_offer_declaration(declaration)))
   }
 }
 
@@ -55,12 +55,25 @@ fn desugar_let_declaration(
 }
 
 ///|
+fn desugar_offer_declaration(
+  declaration : @resolve.ResolvedOfferDeclaration,
+) -> DesugaredOfferDeclaration {
+  {
+    symbol: declaration.symbol,
+    name: declaration.name,
+    type_annotation: declaration.type_annotation,
+    initializer: desugar_expr(declaration.initializer),
+    loc: declaration.loc,
+  }
+}
+
+///|
 fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem? {
   match item {
     Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
     Function(declaration) =>
       Some(Function(desugar_function_declaration(declaration)))
-    Open(_) => None
+    Offer(declaration) => Some(Offer(desugar_offer_declaration(declaration)))
   }
 }
 
@@ -152,7 +165,7 @@ fn desugar_expr(expr : @resolve.ResolvedExpr) -> DesugaredExpr {
     Call(callee~, arguments~, loc~) =>
       Call(
         callee=desugar_expr(callee),
-        arguments=arguments.map(desugar_expr),
+        arguments=arguments.map(desugar_call_argument),
         loc~,
       )
     Field(base~, name~, reference~, loc~) =>
@@ -205,7 +218,11 @@ fn desugar_operator_call(
   arguments : Array[DesugaredExpr],
   loc : SourceSpan,
 ) -> DesugaredExpr {
-  Call(callee=Var(name~, reference~, loc~), arguments~, loc~)
+  Call(
+    callee=Var(name~, reference~, loc~),
+    arguments=arguments.map(fn(argument) { Positional(argument) }),
+    loc~,
+  )
 }
 
 ///|
@@ -215,22 +232,32 @@ fn desugar_pipeline(
   loc : SourceSpan,
 ) -> DesugaredExpr {
   if right is Call(callee~, arguments~, ..) {
-    Call(callee~, arguments=prepend_argument(left, arguments), loc~)
+    Call(callee~, arguments=prepend_argument(Positional(left), arguments), loc~)
   } else {
-    Call(callee=right, arguments=[left], loc~)
+    Call(callee=right, arguments=[Positional(left)], loc~)
   }
 }
 
 ///|
 fn prepend_argument(
-  first : DesugaredExpr,
-  rest : Array[DesugaredExpr],
-) -> Array[DesugaredExpr] {
+  first : DesugaredCallArgument,
+  rest : Array[DesugaredCallArgument],
+) -> Array[DesugaredCallArgument] {
   let result = [first]
   for argument in rest {
     result.push(argument)
   }
   result
+}
+
+///|
+fn desugar_call_argument(
+  argument : @resolve.ResolvedCallArgument,
+) -> DesugaredCallArgument {
+  match argument {
+    Positional(expression) => Positional(desugar_expr(expression))
+    Named(name~, value~, loc~) => Named(name~, value=desugar_expr(value), loc~)
+  }
 }
 
 ///|

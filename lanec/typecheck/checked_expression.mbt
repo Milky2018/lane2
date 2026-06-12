@@ -24,7 +24,7 @@ fn SemanticChecker::check_checked_expr(
       // `builtin` is unsafe and opaque to the checker. The adjacent expected
       // type is the whole type of the resulting checked node.
       checked_expression(UnsafeBuiltin(name~, type_=expected, loc~), expected)
-    Literal(..) => {
+    Literal(..) | Field(..) => {
       let checked = self.synthesize_checked_expr(scope, expression)
       self.expect_type(expected, checked.type_, expression.loc())
       checked
@@ -83,6 +83,8 @@ fn SemanticChecker::synthesize_checked_expr(
       )
     Var(name~, reference~, loc~) =>
       self.synthesize_checked_value_reference(scope, reference, name, loc)
+    Field(base~, name~, reference~, loc~) =>
+      self.synthesize_checked_field(scope, base, name, reference, loc)
     Call(callee~, arguments~, loc~) =>
       self.synthesize_checked_call(scope, callee, arguments, loc)
     Builtin(_, loc~) => {
@@ -102,7 +104,7 @@ fn SemanticChecker::check_checked_block(
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
-  let next_scope : TypeScope = { values: scope.values.copy() }
+  let next_scope = scope.copy()
   let checked_items : Array[@checked.CheckedLocalItem] = []
   let mut complete = true
   for item in items {
@@ -115,6 +117,11 @@ fn SemanticChecker::check_checked_block(
       Function(declaration) =>
         match self.check_checked_local_function(next_scope, declaration) {
           Some(declaration) => checked_items.push(Function(declaration))
+          None => complete = false
+        }
+      Offer(declaration) =>
+        match self.check_checked_local_offer(next_scope, declaration) {
+          Some(declaration) => checked_items.push(Let(declaration))
           None => complete = false
         }
     }
@@ -143,7 +150,7 @@ fn SemanticChecker::synthesize_checked_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
   self.synthesize_checked_call_with_expected(
@@ -160,7 +167,7 @@ fn SemanticChecker::synthesize_checked_call_with_expected(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
@@ -176,16 +183,27 @@ fn SemanticChecker::synthesize_checked_call_with_expected(
       callee.loc(),
       "call callee",
     )
-    is Some(callee) else {
+    is Some(checked_callee_expr) else {
     return checked_expression_none_reported(Error)
   }
+  let arguments = self.prepare_direct_call_arguments(
+    scope,
+    callee,
+    checked_callee.type_,
+    arguments,
+    expected_result,
+    loc,
+  )
   match checked_callee.type_ {
     Function(parameters, result) => {
       guard self.check_checked_call_arguments(scope, parameters, arguments, loc)
         is Some(arguments) else {
         return checked_expression_none_reported(result)
       }
-      checked_expression(Call(callee~, arguments~, type_=result, loc~), result)
+      checked_expression(
+        Call(callee=checked_callee_expr, arguments~, type_=result, loc~),
+        result,
+      )
     }
     Forall(type_parameters, body) => {
       guard self.instantiate_generic_callable(
@@ -204,7 +222,7 @@ fn SemanticChecker::synthesize_checked_call_with_expected(
         return checked_expression_none_reported(instantiated.result)
       }
       let callee = type_applied_callee(
-        callee,
+        checked_callee_expr,
         instantiated.type_arguments,
         Function(instantiated.parameters, instantiated.result),
         loc,
@@ -227,7 +245,7 @@ fn SemanticChecker::check_checked_call(
   self : SemanticChecker,
   scope : TypeScope,
   callee : @desugar.DesugaredExpr,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
@@ -248,7 +266,7 @@ fn SemanticChecker::synthesize_checked_resolved_callable_call(
   scope : TypeScope,
   reference : @resolve.ResolvedValueReference,
   name : String,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   expected_result : @types.Type?,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
@@ -293,7 +311,7 @@ fn SemanticChecker::synthesize_checked_callable_candidate(
   scope : TypeScope,
   name : String,
   candidate : @candidates.CallableCandidate,
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
   let checked_callee = self.synthesize_checked_value_reference(
@@ -348,7 +366,7 @@ fn SemanticChecker::check_checked_call_arguments(
   self : SemanticChecker,
   scope : TypeScope,
   parameters : Array[@types.Type],
-  arguments : Array[@desugar.DesugaredExpr],
+  arguments : Array[@desugar.DesugaredCallArgument],
   loc : SourceSpan,
 ) -> Array[@checked.CheckedExpr]? {
   if parameters.length() != arguments.length() {
@@ -358,7 +376,7 @@ fn SemanticChecker::check_checked_call_arguments(
   let checked_arguments = []
   let mut complete = true
   for index in 0..<parameters.length() {
-    let checked = self.check_checked_expr(
+    let checked = self.check_checked_call_argument(
       scope,
       arguments[index],
       parameters[index],
@@ -366,7 +384,7 @@ fn SemanticChecker::check_checked_call_arguments(
     match
       self.require_checked_expression(
         checked,
-        arguments[index].loc(),
+        arguments[index].value_expr().loc(),
         "call argument",
       ) {
       Some(argument) => checked_arguments.push(argument)
@@ -377,6 +395,26 @@ fn SemanticChecker::check_checked_call_arguments(
     Some(checked_arguments)
   } else {
     None
+  }
+}
+
+///|
+fn SemanticChecker::check_checked_call_argument(
+  self : SemanticChecker,
+  scope : TypeScope,
+  argument : @desugar.DesugaredCallArgument,
+  parameter : @types.Type,
+) -> CheckedExpressionSynthesis {
+  match argument {
+    Positional(expression) =>
+      self.check_checked_expr(scope, expression, parameter)
+    Named(name~, value~, loc~) => {
+      self.diagnostics.push({
+        kind: CannotInferExpression("invalid named argument " + name),
+        loc,
+      })
+      self.check_checked_expr(scope, value, parameter)
+    }
   }
 }
 
@@ -392,14 +430,24 @@ fn SemanticChecker::synthesize_checked_function_literal(
 ) -> CheckedExpressionSynthesis {
   let parameter_types = []
   let checked_parameters : Array[@checked.CheckedValueParameter] = []
-  let body_scope : TypeScope = { values: scope.values.copy() }
+  let body_scope = scope.copy()
   for parameter in parameters {
     if parameter.type_annotation is Some(type_annotation) {
       let type_ = self.check_type(type_annotation)
       body_scope.bind(parameter.symbol, type_)
+      if parameter.is_offered {
+        self.offer_symbol(
+          body_scope.offers,
+          parameter.symbol,
+          type_,
+          parameter.loc,
+        )
+      }
       parameter_types.push(type_)
       checked_parameters.push({
         symbol: parameter.symbol,
+        is_auto: false,
+        is_offered: parameter.is_offered,
         name: parameter.name,
         type_,
         loc: parameter.loc,
@@ -411,9 +459,19 @@ fn SemanticChecker::synthesize_checked_function_literal(
         loc: parameter.loc,
       })
       body_scope.bind(parameter.symbol, type_)
+      if parameter.is_offered {
+        self.offer_symbol(
+          body_scope.offers,
+          parameter.symbol,
+          type_,
+          parameter.loc,
+        )
+      }
       parameter_types.push(type_)
       checked_parameters.push({
         symbol: parameter.symbol,
+        is_auto: false,
+        is_offered: parameter.is_offered,
         name: parameter.name,
         type_,
         loc: parameter.loc,
@@ -561,6 +619,68 @@ fn SemanticChecker::synthesize_checked_symbol_value(
     return checked_expression_none(Error)
   }
   checked_expression(Value(name~, symbol~, type_~, loc~), type_)
+}
+
+///|
+fn SemanticChecker::synthesize_checked_field(
+  self : SemanticChecker,
+  scope : TypeScope,
+  base : @desugar.DesugaredExpr,
+  name : String,
+  reference : @resolve.ResolvedFieldReference,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let checked_base = self.synthesize_checked_expr(scope, base)
+  guard self.require_checked_expression(checked_base, base.loc(), "field base")
+    is Some(base) else {
+    return checked_expression_none_reported(Error)
+  }
+  match reference {
+    Symbol(field) =>
+      self.checked_field_from_symbol(base, checked_base.type_, field, name, loc)
+    Deferred(_) =>
+      if checked_base.type_ is Nominal(symbol, _) {
+        guard self.source.symbols.field_named(symbol, name) is Some(field) else {
+          self.diagnostics.push({ kind: UnknownField(name~), loc })
+          return checked_expression_none_reported(Error)
+        }
+        self.checked_field_from_symbol(
+          base,
+          checked_base.type_,
+          field,
+          name,
+          loc,
+        )
+      } else if checked_base.type_ is Error {
+        checked_expression_none_reported(Error)
+      } else {
+        self.diagnostics.push({ kind: NotAStruct(checked_base.type_), loc })
+        checked_expression_none_reported(Error)
+      }
+    Unresolved(..) => {
+      self.diagnostics.push({ kind: UnknownField(name~), loc })
+      checked_expression_none_reported(Error)
+    }
+  }
+}
+
+///|
+fn SemanticChecker::checked_field_from_symbol(
+  self : SemanticChecker,
+  base : @checked.CheckedExpr,
+  base_type : @types.Type,
+  field : FieldSymbolId,
+  name : String,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let type_ = self.declarations.field_type(
+    self.diagnostics,
+    base_type,
+    field,
+    name,
+    loc,
+  )
+  checked_expression(Field(base~, field~, name~, type_~, loc~), type_)
 }
 
 ///|

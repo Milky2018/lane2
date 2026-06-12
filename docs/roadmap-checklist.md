@@ -34,13 +34,12 @@ module tasks should live in issues or implementation notes.
   patterns, function bodies, and expression-local binders into resolved IR.
 - [x] Resolve unqualified variant calls when exactly one visible variant
   matches.
-- [ ] Remove `open` and `let open` from syntax, resolution, desugaring,
+- [x] Remove `open` and `let open` from syntax, resolution, desugaring,
   typechecking, and tests.
-- [ ] Resolve `offer` declarations and `let offer` value definitions into a
-  contextual offer environment.
+- [x] Resolve offered value definitions into a contextual offer environment.
 - [x] Resolve field access into field symbol identities after enough type
   information is available.
-- [ ] Resolve contextual forwarding fields declared with `offer field : Type`
+- [x] Resolve contextual forwarding fields declared with `offer field : Type`
   after checked field types are available.
 - [ ] Resolve operator aliases through ordinary operation names while
   preserving call origin metadata for diagnostics.
@@ -66,7 +65,7 @@ ordinary local typing has determined their target types.
   struct field types and enum variant payload types.
 - [x] Introduce the first source-level type checker slice for annotated
   values, direct calls, blocks, struct literals, and field access.
-- [ ] Replace open candidate selection with Contextual Resolution for omitted
+- [x] Replace open candidate selection with Contextual Resolution for omitted
   `auto` parameters.
 - [x] Propagate expected types through function bodies, block results, `if`
   branches, and known call parameters to drive local checking.
@@ -77,12 +76,12 @@ ordinary local typing has determined their target types.
 - [x] Implement non-generic bidirectional local checking for function literals,
   calls, blocks, `if` branches, struct literals, field access, and non-thunked
   operator aliases.
-- [ ] Check direct named calls with trailing `auto` parameters, explicit
+- [x] Check direct named calls with trailing `auto` parameters, explicit
   contextual arguments, and contextually resolved omitted arguments.
 - [x] Implement local type argument synthesis for generic applications,
   including constraints from argument types and expected result types in
   checking mode.
-- [ ] Ensure checked source contains no omitted contextual arguments and no
+- [x] Ensure checked source contains no omitted contextual arguments and no
   contextual offer ambiguity states.
 - [x] Check top-level recursive groups, ordered top-level values, local
   sequential bindings, and local generic functions.

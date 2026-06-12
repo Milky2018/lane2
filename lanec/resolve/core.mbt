@@ -29,9 +29,7 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedValue(String)
   UnresolvedField(type_name~ : String, field~ : String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
-  UnresolvedOpenValue(String)
-  CannotOpenValue(String)
-  ConflictingOpenExposure(
+  ConflictingTopLevelValue(
     name~ : String,
     existing~ : String,
     incoming~ : String
@@ -48,7 +46,7 @@ pub(all) enum ResolvedTopLevelDeclaration {
   Enum(ResolvedEnumDeclaration)
   Function(ResolvedFunctionDeclaration)
   Let(ResolvedLetDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -63,12 +61,12 @@ pub(all) struct ResolvedStructDeclaration {
 ///|
 pub(all) enum ResolvedStructMember {
   Field(ResolvedFieldDeclaration)
-  Open(ResolvedOpenDeclaration)
 } derive(Debug, Eq)
 
 ///|
 pub(all) struct ResolvedFieldDeclaration {
   symbol : FieldSymbolId
+  is_offered : Bool
   name : String
   type_ : ResolvedType
   index : Int
@@ -114,8 +112,11 @@ pub(all) struct ResolvedLetDeclaration {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct ResolvedOpenDeclaration {
+pub(all) struct ResolvedOfferDeclaration {
+  symbol : ValueSymbolId
   name : String
+  type_annotation : ResolvedType
+  initializer : ResolvedExpr
   loc : SourceSpan
 } derive(Debug, Eq)
 
@@ -129,6 +130,8 @@ pub(all) struct ResolvedTypeParameter {
 ///|
 pub(all) struct ResolvedValueParameter {
   symbol : ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : ResolvedType
   loc : SourceSpan
@@ -183,9 +186,16 @@ pub(all) enum ResolvedVariantReference {
 ///|
 pub(all) struct ResolvedFunctionLiteralParameter {
   symbol : ValueSymbolId
+  is_offered : Bool
   name : String
   type_annotation : ResolvedType?
   loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) enum ResolvedCallArgument {
+  Positional(ResolvedExpr)
+  Named(name~ : String, value~ : ResolvedExpr, loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|
@@ -214,7 +224,7 @@ pub(all) struct ResolvedStructPatternField {
 pub(all) enum ResolvedLocalItem {
   Let(ResolvedLetDeclaration)
   Function(ResolvedFunctionDeclaration)
-  Open(ResolvedOpenDeclaration)
+  Offer(ResolvedOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -270,7 +280,7 @@ pub(all) enum ResolvedExpr {
   )
   Call(
     callee~ : ResolvedExpr,
-    arguments~ : Array[ResolvedExpr],
+    arguments~ : Array[ResolvedCallArgument],
     loc~ : SourceSpan
   )
   Field(

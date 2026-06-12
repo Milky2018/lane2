@@ -39,6 +39,7 @@ pub impl @prettyprinter.Pretty for CheckedEnumDeclaration
 
 pub(all) struct CheckedFieldDeclaration {
   symbol : @symbol.FieldSymbolId
+  is_offered : Bool
   name : String
   index : Int
   type_ : @types.Type
@@ -50,6 +51,7 @@ pub(all) struct CheckedFunctionDeclaration {
   symbol : @symbol.ValueSymbolId
   name : String
   type_ : @types.Type
+  parameters : Array[@checked.CheckedValueParameter]
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedFunctionDeclaration

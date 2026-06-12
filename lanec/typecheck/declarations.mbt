@@ -65,6 +65,7 @@ fn DeclarationChecker::check_field(
 ) -> CheckedFieldDeclaration {
   {
     symbol: field.symbol,
+    is_offered: field.is_offered,
     name: field.name,
     index: field.index,
     type_: self.check_type(field.type_),
