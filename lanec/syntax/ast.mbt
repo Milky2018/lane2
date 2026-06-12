@@ -23,8 +23,30 @@ pub(all) struct StructDeclaration {
 
 ///|
 pub(all) enum StructMember {
+  TypeMember(TypeMemberDeclaration)
   Field(FieldDeclaration)
 } derive(Debug, Eq)
+
+///|
+pub(all) struct TypeMemberDeclaration {
+  name : String
+  kind : Kind
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) enum Kind {
+  Type(loc~ : SourceSpan)
+  Arrow(parameter~ : Kind, result~ : Kind, loc~ : SourceSpan)
+} derive(Debug, Eq)
+
+///|
+/// Returns the source span covered by this kind syntax node.
+pub fn Kind::loc(self : Kind) -> SourceSpan {
+  match self {
+    Type(loc~) | Arrow(loc~, ..) => loc
+  }
+}
 
 ///|
 pub(all) struct FieldDeclaration {
@@ -45,6 +67,7 @@ pub(all) struct EnumDeclaration {
 ///|
 pub(all) struct EnumVariant {
   name : String
+  type_parameters : Array[String]
   payload : Array[Type]
   loc : SourceSpan
 } derive(Debug, Eq)
@@ -120,6 +143,7 @@ pub(all) enum Expr {
     type_name~ : String,
     type_arguments~ : Array[Type],
     variant~ : String,
+    variant_type_arguments~ : Array[Type],
     arguments~ : Array[Expr],
     loc~ : SourceSpan
   )
@@ -184,8 +208,16 @@ pub fn Expr::loc(self : Expr) -> SourceSpan {
 ///|
 pub(all) enum LocalItem {
   Let(LetDeclaration)
+  PatternLet(PatternLetDeclaration)
   Function(FunctionDeclaration)
   Offer(OfferDeclaration)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct PatternLetDeclaration {
+  pattern : Pattern
+  initializer : Expr
+  loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
@@ -212,10 +244,9 @@ pub fn CallArgument::loc(self : CallArgument) -> SourceSpan {
 }
 
 ///|
-pub(all) struct StructLiteralField {
-  name : String
-  value : Expr?
-  loc : SourceSpan
+pub(all) enum StructLiteralField {
+  Value(name~ : String, value~ : Expr?, loc~ : SourceSpan)
+  TypeWitness(name~ : String, witness~ : Type, loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|
@@ -235,6 +266,7 @@ pub(all) enum Pattern {
   QualifiedVariant(
     type_name~ : String,
     variant~ : String,
+    type_binders~ : Array[String],
     arguments~ : Array[Pattern],
     loc~ : SourceSpan
   )
@@ -260,10 +292,10 @@ pub fn Pattern::loc(self : Pattern) -> SourceSpan {
 }
 
 ///|
-pub(all) struct StructPatternField {
-  name : String
-  pattern : Pattern?
-  loc : SourceSpan
+pub(all) enum StructPatternField {
+  Value(name~ : String, pattern~ : Pattern?, loc~ : SourceSpan)
+  TypeBinder(name~ : String, loc~ : SourceSpan)
+  TypeWildcard(loc~ : SourceSpan)
 } derive(Debug, Eq)
 
 ///|

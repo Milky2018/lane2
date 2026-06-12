@@ -11,6 +11,7 @@ pub(all) enum Token {
   ENUM
   FN
   LET
+  TYPE
   OFFER
   AUTO
   IF

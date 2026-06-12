@@ -4,6 +4,7 @@ let keyword_table : @hashmap.HashMap[String, Token] = [
     ("enum", ENUM),
     ("fn", FN),
     ("let", LET),
+    ("type", TYPE),
     ("offer", OFFER),
     ("auto", AUTO),
     ("if", IF),
@@ -18,6 +19,6 @@ let keyword_table : @hashmap.HashMap[String, Token] = [
 
 ///|
 let reserved_word_table : @hashset.HashSet[String] = [
-    "effect", "handler", "module", "import", "pub", "type", "return",
+    "effect", "handler", "module", "import", "pub", "return",
   ]
   |> @hashset.from_array()

@@ -18,6 +18,7 @@
 %token ENUM "enum"
 %token FN "fn"
 %token LET "let"
+%token TYPE "type"
 %token OFFER "offer"
 %token AUTO "auto"
 %token IF "if"
@@ -97,7 +98,24 @@ struct_members -> Array[StructMember]
   ;
 
 struct_member -> StructMember
-  : field_declaration { Field($1) }
+  : type_member_declaration { TypeMember($1) }
+  | field_declaration { Field($1) }
+  ;
+
+type_member_declaration -> TypeMemberDeclaration
+  : "type" IDENT ":" kind {
+    { name: $2, kind: $4, loc: span($sloc) }
+  }
+  ;
+
+kind -> Kind
+  : IDENT {
+    Type(loc=span($sloc))
+  }
+  | IDENT "->" kind {
+    Arrow(parameter=Type(loc=$sloc.0), result=$3, loc=span($sloc))
+  }
+  | "(" kind ")" { $2 }
   ;
 
 field_declaration -> FieldDeclaration
@@ -124,10 +142,16 @@ enum_variants -> Array[EnumVariant]
 
 enum_variant -> EnumVariant
   : IDENT {
-    { name: $1, payload: [], loc: span($sloc) }
+    { name: $1, type_parameters: [], payload: [], loc: span($sloc) }
+  }
+  | IDENT type_parameters {
+    { name: $1, type_parameters: $2, payload: [], loc: span($sloc) }
   }
   | IDENT "(" non_empty_type_list ")" {
-    { name: $1, payload: $3, loc: span($sloc) }
+    { name: $1, type_parameters: [], payload: $3, loc: span($sloc) }
+  }
+  | IDENT type_parameters "(" non_empty_type_list ")" {
+    { name: $1, type_parameters: $2, payload: $4, loc: span($sloc) }
   }
   ;
 
@@ -177,6 +201,12 @@ top_level_let_declaration -> LetDeclaration
 local_let_declaration -> LetDeclaration
   : "let" IDENT local_type_annotation "=" expression {
     { name: Some($2), type_annotation: $3, initializer: $5, loc: span($sloc) }
+  }
+  ;
+
+local_pattern_let_declaration -> PatternLetDeclaration
+  : "let" struct_pattern "=" expression {
+    { pattern: $2, initializer: $4, loc: span($sloc) }
   }
   ;
 
@@ -313,12 +343,17 @@ qualified_expression -> Expr
   : IDENT type_arguments "::" "{" struct_literal_fields "}" {
     StructLiteral(type_name=$1, type_arguments=$2, fields=$5, loc=span($sloc))
   }
-  | IDENT type_arguments "::" IDENT variant_arguments {
-    QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, arguments=$5, loc=span($sloc))
+  | IDENT type_arguments "::" IDENT variant_type_arguments variant_arguments {
+    QualifiedVariant(type_name=$1, type_arguments=$2, variant=$4, variant_type_arguments=$5, arguments=$6, loc=span($sloc))
   }
   ;
 
 type_arguments -> Array[Type]
+  : { [] }
+  | "[" type_list "]" { $2 }
+  ;
+
+variant_type_arguments -> Array[Type]
   : { [] }
   | "[" type_list "]" { $2 }
   ;
@@ -336,10 +371,13 @@ non_empty_struct_literal_fields -> Array[StructLiteralField]
 
 struct_literal_field -> StructLiteralField
   : IDENT {
-    { name: $1, value: None, loc: span($sloc) }
+    Value(name=$1, value=None, loc=span($sloc))
   }
   | IDENT ":" expression {
-    { name: $1, value: Some($3), loc: span($sloc) }
+    Value(name=$1, value=Some($3), loc=span($sloc))
+  }
+  | IDENT "=" type {
+    TypeWitness(name=$1, witness=$3, loc=span($sloc))
   }
   ;
 
@@ -383,6 +421,7 @@ local_items -> Array[LocalItem]
 
 local_item -> LocalItem
   : local_let_declaration { Let($1) }
+  | local_pattern_let_declaration { PatternLet($1) }
   | function_declaration { Function($1) }
   | offer_value_declaration { Offer($1) }
   ;
@@ -455,12 +494,21 @@ pattern -> Pattern
   | "true" { BoolLiteral(true, loc=span($sloc)) }
   | "false" { BoolLiteral(false, loc=span($sloc)) }
   | IDENT { Binding($1, loc=span($sloc)) }
-  | IDENT "::" "{" struct_pattern_fields "}" {
+  | struct_pattern { $1 }
+  | IDENT "::" IDENT variant_type_binders pattern_arguments {
+    QualifiedVariant(type_name=$1, variant=$3, type_binders=$4, arguments=$5, loc=span($sloc))
+  }
+  ;
+
+struct_pattern -> Pattern
+  : IDENT "::" "{" struct_pattern_fields "}" {
     Struct(type_name=$1, fields=$4, loc=span($sloc))
   }
-  | IDENT "::" IDENT pattern_arguments {
-    QualifiedVariant(type_name=$1, variant=$3, arguments=$4, loc=span($sloc))
-  }
+  ;
+
+variant_type_binders -> Array[String]
+  : { [] }
+  | "[" non_empty_ident_list "]" { $2 }
   ;
 
 pattern_arguments -> Array[Pattern]
@@ -492,9 +540,12 @@ non_empty_struct_pattern_fields -> Array[StructPatternField]
 
 struct_pattern_field -> StructPatternField
   : IDENT {
-    { name: $1, pattern: None, loc: span($sloc) }
+    Value(name=$1, pattern=None, loc=span($sloc))
+  }
+  | "_" {
+    TypeWildcard(loc=span($sloc))
   }
   | IDENT ":" pattern {
-    { name: $1, pattern: Some($3), loc: span($sloc) }
+    Value(name=$1, pattern=Some($3), loc=span($sloc))
   }
   ;

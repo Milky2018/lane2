@@ -81,6 +81,7 @@ fn token_label(token : @yacc_parser.Token) -> String {
     ENUM => "`enum`"
     FN => "`fn`"
     LET => "`let`"
+    TYPE => "`type`"
     OFFER => "`offer`"
     AUTO => "`auto`"
     IF => "`if`"
@@ -133,6 +134,7 @@ fn token_kind_label(kind : @yacc_parser.TokenKind) -> String {
     TK_ENUM => "`enum`"
     TK_FN => "`fn`"
     TK_LET => "`let`"
+    TK_TYPE => "`type`"
     TK_OFFER => "`offer`"
     TK_AUTO => "`auto`"
     TK_IF => "`if`"
@@ -185,6 +187,7 @@ fn @lexer.Token::to_yacc_token(self : @lexer.Token) -> @yacc_parser.Token {
     ENUM => ENUM
     FN => FN
     LET => LET
+    TYPE => TYPE
     OFFER => OFFER
     AUTO => AUTO
     IF => IF

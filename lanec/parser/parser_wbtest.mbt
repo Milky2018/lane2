@@ -136,6 +136,63 @@ test "parse offered value definitions and contextual parameter syntax" {
 }
 
 ///|
+test "parse existential surface syntax" {
+  let file = expect_parse_ok(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|enum Any {
+      #|  hide[T](T)
+      #|}
+      #|let h : Hide = Hide::{ T = Int, val: 5 }
+      #|let e : Any = Any::hide[Int](5)
+      #|fn use(h : Hide, e : Any) -> Int {
+      #|  match e {
+      #|    Any::hide[T](value) => {
+      #|      let Hide::{ _, val } = h
+      #|      1
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(file),
+    content=(
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|
+      #|enum Any {
+      #|  hide[T](T)
+      #|}
+      #|
+      #|let h : Hide = Hide::{
+      #|  T = Int
+      #|  val: 5
+      #|}
+      #|
+      #|let e : Any = Any::hide[Int](5)
+      #|
+      #|fn use(h : Hide, e : Any) -> Int {
+      #|  match e {
+      #|    Any::hide[T](value) => {
+      #|      let Hide::{
+      #|        _
+      #|        val
+      #|      } = h
+      #|      1
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
 test "parse rejects equals function body syntax" {
   debug_inspect(
     parse_error_kinds("fn add(a : Int, b : Int) -> Int = a + b"),

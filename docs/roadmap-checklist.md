@@ -16,12 +16,12 @@ affect. Items prefixed with `Existential:` refer to the design note in
 - [x] Parser tests based on pretty-printed output.
 - [x] Existential: promote the design into the language specification,
   including formation, introduction, elimination, scope, and escape rules.
-- [ ] Existential: extend syntax, parser, and pretty printers for enum variant
+- [x] Existential: extend syntax, parser, and pretty printers for enum variant
   type binders such as `hide[T](T)`.
-- [ ] Existential: extend syntax, parser, and pretty printers for struct type
+- [x] Existential: extend syntax, parser, and pretty printers for struct type
   members such as `type T : Type`, struct literal type witnesses such as
   `T = Int`, and struct patterns such as `Hide::{ T, val }`.
-- [ ] Existential: decide and implement the wildcard spelling for ignored
+- [x] Existential: decide and implement the wildcard spelling for ignored
   hidden type binders in struct patterns.
 
 ## 1. Compiler Identity And Types

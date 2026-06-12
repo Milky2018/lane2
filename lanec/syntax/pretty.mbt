@@ -110,6 +110,7 @@ fn StructDeclaration::to_doc(self : StructDeclaration) -> Document {
 ///|
 fn StructMember::to_doc(self : StructMember) -> Document {
   match self {
+    TypeMember(declaration) => declaration.to_doc()
     Field(field) => field.to_doc()
   }
 }
@@ -119,6 +120,38 @@ pub impl @prettyprinter.Pretty for StructMember with fn pretty(
   struct_member : StructMember,
 ) {
   struct_member.to_doc()
+}
+
+///|
+pub impl @prettyprinter.Pretty for TypeMemberDeclaration with fn pretty(
+  declaration : TypeMemberDeclaration,
+) {
+  declaration.to_doc()
+}
+
+///|
+fn TypeMemberDeclaration::to_doc(self : TypeMemberDeclaration) -> Document {
+  keyword("type") +
+  space +
+  text(self.name) +
+  space +
+  text(":") +
+  space +
+  self.kind.to_doc()
+}
+
+///|
+pub impl @prettyprinter.Pretty for Kind with fn pretty(kind : Kind) {
+  kind.to_doc()
+}
+
+///|
+fn Kind::to_doc(self : Kind) -> Document {
+  match self {
+    Type(..) => text("Type")
+    Arrow(parameter~, result~, ..) =>
+      parameter.to_doc() + space + text("->") + space + result.to_doc()
+  }
 }
 
 ///|
@@ -153,10 +186,13 @@ fn EnumDeclaration::to_doc(self : EnumDeclaration) -> Document {
 
 ///|
 fn EnumVariant::to_doc(self : EnumVariant) -> Document {
+  let type_parameters = bracketed_type_parameters(self.type_parameters)
   if self.payload.is_empty() {
-    text(self.name)
+    text(self.name) + type_parameters
   } else {
-    text(self.name) + parenthesized(self.payload.map(Type::to_doc))
+    text(self.name) +
+    type_parameters +
+    parenthesized(self.payload.map(Type::to_doc))
   }
 }
 
@@ -295,11 +331,19 @@ fn Expr::to_doc_with_precedence(
     BoolLiteral(value, ..) => (10, text(value.to_string()))
     UnitLiteral(..) => (10, text("()"))
     Var(name, ..) => (10, text(name))
-    QualifiedVariant(type_name~, type_arguments~, variant~, arguments~, ..) => {
+    QualifiedVariant(
+      type_name~,
+      type_arguments~,
+      variant~,
+      variant_type_arguments~,
+      arguments~,
+      ..
+    ) => {
       let head = text(type_name) +
         bracketed_type_arguments(type_arguments) +
         text("::") +
-        text(variant)
+        text(variant) +
+        bracketed_type_arguments(variant_type_arguments)
       let doc = if arguments.is_empty() {
         head
       } else {
@@ -398,9 +442,14 @@ fn Expr::to_doc_with_precedence(
 
 ///|
 fn StructLiteralField::to_doc(self : StructLiteralField) -> Document {
-  match self.value {
-    Some(value) => text(self.name) + text(":") + space + value.to_doc()
-    None => text(self.name)
+  match self {
+    Value(name~, value~, ..) =>
+      match value {
+        Some(value) => text(name) + text(":") + space + value.to_doc()
+        None => text(name)
+      }
+    TypeWitness(name~, witness~, ..) =>
+      text(name) + space + text("=") + space + witness.to_doc()
   }
 }
 
@@ -415,6 +464,7 @@ pub impl @prettyprinter.Pretty for StructLiteralField with fn pretty(
 fn LocalItem::to_doc(self : LocalItem) -> Document {
   match self {
     Let(declaration) => declaration.to_doc()
+    PatternLet(declaration) => declaration.to_doc()
     Function(declaration) => declaration.to_doc()
     Offer(declaration) => declaration.to_doc()
   }
@@ -423,6 +473,24 @@ fn LocalItem::to_doc(self : LocalItem) -> Document {
 ///|
 pub impl @prettyprinter.Pretty for LocalItem with fn pretty(item : LocalItem) {
   item.to_doc()
+}
+
+///|
+pub impl @prettyprinter.Pretty for PatternLetDeclaration with fn pretty(
+  declaration : PatternLetDeclaration,
+) {
+  declaration.to_doc()
+}
+
+///|
+fn PatternLetDeclaration::to_doc(self : PatternLetDeclaration) -> Document {
+  keyword("let") +
+  space +
+  self.pattern.to_doc() +
+  space +
+  text("=") +
+  space +
+  self.initializer.to_doc()
 }
 
 ///|
@@ -498,8 +566,11 @@ fn Pattern::to_doc(self : Pattern) -> Document {
     IntLiteral(value, ..) => text(value)
     StringLiteral(value, ..) => source_string(value)
     BoolLiteral(value, ..) => text(value.to_string())
-    QualifiedVariant(type_name~, variant~, arguments~, ..) => {
-      let head = text(type_name) + text("::") + text(variant)
+    QualifiedVariant(type_name~, variant~, type_binders~, arguments~, ..) => {
+      let head = text(type_name) +
+        text("::") +
+        text(variant) +
+        bracketed_type_parameters(type_binders)
       if arguments.is_empty() {
         head
       } else {
@@ -515,9 +586,14 @@ fn Pattern::to_doc(self : Pattern) -> Document {
 
 ///|
 fn StructPatternField::to_doc(self : StructPatternField) -> Document {
-  match self.pattern {
-    Some(pattern) => text(self.name) + text(":") + space + pattern.to_doc()
-    None => text(self.name)
+  match self {
+    Value(name~, pattern~, ..) =>
+      match pattern {
+        Some(pattern) => text(name) + text(":") + space + pattern.to_doc()
+        None => text(name)
+      }
+    TypeBinder(name~, ..) => text(name)
+    TypeWildcard(..) => text("_")
   }
 }
 

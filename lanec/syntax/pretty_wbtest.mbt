@@ -37,8 +37,13 @@ test "pretty print source file" {
         name: "Option",
         type_parameters: ["A"],
         variants: [
-          { name: "none", payload: [], loc: test_loc() },
-          { name: "some", payload: [test_type("A")], loc: test_loc() },
+          { name: "none", type_parameters: [], payload: [], loc: test_loc() },
+          {
+            name: "some",
+            type_parameters: [],
+            payload: [test_type("A")],
+            loc: test_loc(),
+          },
         ],
         loc: test_loc(),
       }),
@@ -71,6 +76,7 @@ test "pretty print source file" {
                 pattern: QualifiedVariant(
                   type_name="Option",
                   variant="none",
+                  type_binders=[],
                   arguments=[],
                   loc=test_loc(),
                 ),
@@ -81,6 +87,7 @@ test "pretty print source file" {
                 pattern: QualifiedVariant(
                   type_name="Option",
                   variant="some",
+                  type_binders=[],
                   arguments=[Binding("x", loc=test_loc())],
                   loc=test_loc(),
                 ),

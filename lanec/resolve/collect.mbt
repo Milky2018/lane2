@@ -151,12 +151,14 @@ fn @syntax.StructDeclaration::resolve_struct(
   )
   let scope = resolver.scope(type_parameters)
   let mut field_index = 0
-  let members = self.members.map(fn(item) {
-    guard item is Field(field) else { abort("unexpected struct member") }
-    let resolved = field.resolve_field(resolver, scope, symbol, field_index)
-    field_index += 1
-    ResolvedStructMember::Field(resolved)
-  })
+  let members = []
+  for item in self.members {
+    if item is Field(field) {
+      let resolved = field.resolve_field(resolver, scope, symbol, field_index)
+      field_index += 1
+      members.push(ResolvedStructMember::Field(resolved))
+    }
+  }
   { symbol, name: self.name, type_parameters, members, loc: self.loc }
 }
 
@@ -234,11 +236,21 @@ fn @syntax.EnumVariant::resolve_variant(
   index : Int,
 ) -> ResolvedEnumVariant {
   let symbol = resolver.registry.variant_named(owner, self.name).unwrap()
+  let variant_parameters = resolver.resolve_type_parameters(
+    self.type_parameters,
+    self.loc,
+  )
+  let variant_scope = {
+    values: scope.values.copy(),
+    type_parameters: scope.type_parameters + variant_parameters,
+  }
   {
     symbol,
     name: self.name,
     index,
-    payload: self.payload.map(fn(type_) { type_.resolve_type(resolver, scope) }),
+    payload: self.payload.map(fn(type_) {
+      type_.resolve_type(resolver, variant_scope)
+    }),
     loc: self.loc,
   }
 }
@@ -494,7 +506,14 @@ fn @syntax.Expr::resolve_expr(
       resolver.report_unresolved_value(reference, loc)
       Var(name~, reference~, loc~)
     }
-    QualifiedVariant(type_name~, type_arguments~, variant~, arguments~, loc~) =>
+    QualifiedVariant(
+      type_name~,
+      type_arguments~,
+      variant~,
+      arguments~,
+      loc~,
+      ..
+    ) =>
       QualifiedVariant(
         type_name~,
         type_arguments=type_arguments.map(fn(type_) {
@@ -513,9 +532,7 @@ fn @syntax.Expr::resolve_expr(
         type_arguments=type_arguments.map(fn(type_) {
           type_.resolve_type(resolver, scope)
         }),
-        fields=fields.map(fn(field) {
-          field.resolve_struct_literal_field(resolver, scope)
-        }),
+        fields=resolve_struct_literal_fields(fields, resolver, scope),
         loc~,
       )
     Builtin(name, loc~) => Builtin(name, loc~)
@@ -813,21 +830,44 @@ fn @syntax.StructLiteralField::resolve_struct_literal_field(
   self : @syntax.StructLiteralField,
   resolver : Resolver,
   scope : ResolveScope,
-) -> ResolvedStructLiteralField {
-  let punned_reference = match self.value {
-    Some(_) => None
-    None => {
-      let reference = scope.value_reference(self.name)
-      resolver.report_unresolved_value(reference, self.loc)
-      Some(reference)
+) -> ResolvedStructLiteralField? {
+  match self {
+    Value(name~, value~, loc~) => {
+      let punned_reference = match value {
+        Some(_) => None
+        None => {
+          let reference = scope.value_reference(name)
+          resolver.report_unresolved_value(reference, loc)
+          Some(reference)
+        }
+      }
+      Some({
+        name,
+        value: value.map(fn(value) { value.resolve_expr(resolver, scope) }),
+        punned_reference,
+        loc,
+      })
+    }
+    TypeWitness(witness~, ..) => {
+      witness.resolve_type(resolver, scope) |> ignore
+      None
     }
   }
-  {
-    name: self.name,
-    value: self.value.map(fn(value) { value.resolve_expr(resolver, scope) }),
-    punned_reference,
-    loc: self.loc,
+}
+
+///|
+fn resolve_struct_literal_fields(
+  fields : Array[@syntax.StructLiteralField],
+  resolver : Resolver,
+  scope : ResolveScope,
+) -> Array[ResolvedStructLiteralField] {
+  let resolved = []
+  for field in fields {
+    if field.resolve_struct_literal_field(resolver, scope) is Some(field) {
+      resolved.push(field)
+    }
   }
+  resolved
 }
 
 ///|
@@ -867,6 +907,8 @@ fn @syntax.LocalItem::resolve_local_item(
   match self {
     Let(declaration) =>
       Let(declaration.resolve_let(resolver, scope, LocalBinding))
+    PatternLet(declaration) =>
+      Let(declaration.resolve_pattern_let(resolver, scope))
     Function(declaration) => {
       let symbol = resolver.registry.define_value(
         declaration.name,
@@ -883,6 +925,22 @@ fn @syntax.LocalItem::resolve_local_item(
     Offer(declaration) =>
       Offer(declaration.resolve_local_offer(resolver, scope))
   }
+}
+
+///|
+fn @syntax.PatternLetDeclaration::resolve_pattern_let(
+  self : @syntax.PatternLetDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+) -> ResolvedLetDeclaration {
+  let initializer = self.initializer.resolve_expr(resolver, scope)
+  self.pattern.resolve_pattern(resolver, scope) |> ignore
+  let symbol = resolver.registry.define_value(
+    "<pattern>",
+    LocalBinding,
+    self.loc,
+  )
+  { symbol, name: None, type_annotation: None, initializer, loc: self.loc }
 }
 
 ///|
@@ -936,7 +994,7 @@ fn @syntax.Pattern::resolve_pattern(
     IntLiteral(value, loc~) => IntLiteral(value, loc~)
     StringLiteral(value, loc~) => StringLiteral(value, loc~)
     BoolLiteral(value, loc~) => BoolLiteral(value, loc~)
-    QualifiedVariant(type_name~, variant~, arguments~, loc~) =>
+    QualifiedVariant(type_name~, variant~, arguments~, loc~, ..) =>
       QualifiedVariant(
         type_name~,
         variant~,
@@ -949,9 +1007,7 @@ fn @syntax.Pattern::resolve_pattern(
     Struct(type_name~, fields~, loc~) =>
       Struct(
         type_name~,
-        fields=fields.map(fn(field) {
-          field.resolve_struct_pattern_field(resolver, scope)
-        }),
+        fields=resolve_struct_pattern_fields(fields, resolver, scope),
         loc~,
       )
   }
@@ -966,20 +1022,36 @@ fn @syntax.StructPatternField::resolve_struct_pattern_field(
   self : @syntax.StructPatternField,
   resolver : Resolver,
   scope : ResolveScope,
-) -> ResolvedStructPatternField {
-  let pattern = match self.pattern {
-    Some(pattern) => pattern.resolve_pattern(resolver, scope)
-    None => {
-      let symbol = resolver.registry.define_value(
-        self.name,
-        PatternBinder,
-        self.loc,
-      )
-      scope.define_value(self.name, symbol, None)
-      Binding(name=self.name, symbol~, loc=self.loc)
+) -> ResolvedStructPatternField? {
+  match self {
+    Value(name~, pattern~, loc~) => {
+      let pattern = match pattern {
+        Some(pattern) => pattern.resolve_pattern(resolver, scope)
+        None => {
+          let symbol = resolver.registry.define_value(name, PatternBinder, loc)
+          scope.define_value(name, symbol, None)
+          Binding(name~, symbol~, loc~)
+        }
+      }
+      Some({ name, pattern, loc })
+    }
+    TypeBinder(_) | TypeWildcard(_) => None
+  }
+}
+
+///|
+fn resolve_struct_pattern_fields(
+  fields : Array[@syntax.StructPatternField],
+  resolver : Resolver,
+  scope : ResolveScope,
+) -> Array[ResolvedStructPatternField] {
+  let resolved = []
+  for field in fields {
+    if field.resolve_struct_pattern_field(resolver, scope) is Some(field) {
+      resolved.push(field)
     }
   }
-  { name: self.name, pattern, loc: self.loc }
+  resolved
 }
 
 ///|

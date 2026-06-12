@@ -48,6 +48,7 @@ pub impl @prettyprinter.Pretty for EnumDeclaration
 
 pub(all) struct EnumVariant {
   name : String
+  type_parameters : Array[String]
   payload : Array[Type]
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
@@ -59,7 +60,7 @@ pub(all) enum Expr {
   BoolLiteral(Bool, loc~ : @basic.SourceSpan)
   UnitLiteral(loc~ : @basic.SourceSpan)
   Var(String, loc~ : @basic.SourceSpan)
-  QualifiedVariant(type_name~ : String, type_arguments~ : Array[Type], variant~ : String, arguments~ : Array[Expr], loc~ : @basic.SourceSpan)
+  QualifiedVariant(type_name~ : String, type_arguments~ : Array[Type], variant~ : String, variant_type_arguments~ : Array[Type], arguments~ : Array[Expr], loc~ : @basic.SourceSpan)
   StructLiteral(type_name~ : String, type_arguments~ : Array[Type], fields~ : Array[StructLiteralField], loc~ : @basic.SourceSpan)
   Builtin(String, loc~ : @basic.SourceSpan)
   FunctionLiteral(type_parameters~ : Array[String], parameters~ : Array[FunctionLiteralParameter], return_type~ : Type?, body~ : Expr, loc~ : @basic.SourceSpan)
@@ -101,6 +102,13 @@ pub(all) struct FunctionLiteralParameter {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for FunctionLiteralParameter
 
+pub(all) enum Kind {
+  Type(loc~ : @basic.SourceSpan)
+  Arrow(parameter~ : Kind, result~ : Kind, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub fn Kind::loc(Self) -> @basic.SourceSpan
+pub impl @prettyprinter.Pretty for Kind
+
 pub(all) struct LetDeclaration {
   name : String?
   type_annotation : Type?
@@ -111,6 +119,7 @@ pub impl @prettyprinter.Pretty for LetDeclaration
 
 pub(all) enum LocalItem {
   Let(LetDeclaration)
+  PatternLet(PatternLetDeclaration)
   Function(FunctionDeclaration)
   Offer(OfferDeclaration)
 } derive(Eq, @debug.Debug)
@@ -151,11 +160,18 @@ pub(all) enum Pattern {
   IntLiteral(String, loc~ : @basic.SourceSpan)
   StringLiteral(String, loc~ : @basic.SourceSpan)
   BoolLiteral(Bool, loc~ : @basic.SourceSpan)
-  QualifiedVariant(type_name~ : String, variant~ : String, arguments~ : Array[Pattern], loc~ : @basic.SourceSpan)
+  QualifiedVariant(type_name~ : String, variant~ : String, type_binders~ : Array[String], arguments~ : Array[Pattern], loc~ : @basic.SourceSpan)
   Struct(type_name~ : String, fields~ : Array[StructPatternField], loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub fn Pattern::loc(Self) -> @basic.SourceSpan
 pub impl @prettyprinter.Pretty for Pattern
+
+pub(all) struct PatternLetDeclaration {
+  pattern : Pattern
+  initializer : Expr
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for PatternLetDeclaration
 
 pub(all) struct SourceFile {
   declarations : Array[TopLevelDeclaration]
@@ -171,22 +187,22 @@ pub(all) struct StructDeclaration {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for StructDeclaration
 
-pub(all) struct StructLiteralField {
-  name : String
-  value : Expr?
-  loc : @basic.SourceSpan
+pub(all) enum StructLiteralField {
+  Value(name~ : String, value~ : Expr?, loc~ : @basic.SourceSpan)
+  TypeWitness(name~ : String, witness~ : Type, loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for StructLiteralField
 
 pub(all) enum StructMember {
+  TypeMember(TypeMemberDeclaration)
   Field(FieldDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for StructMember
 
-pub(all) struct StructPatternField {
-  name : String
-  pattern : Pattern?
-  loc : @basic.SourceSpan
+pub(all) enum StructPatternField {
+  Value(name~ : String, pattern~ : Pattern?, loc~ : @basic.SourceSpan)
+  TypeBinder(name~ : String, loc~ : @basic.SourceSpan)
+  TypeWildcard(loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for StructPatternField
 
@@ -205,6 +221,13 @@ pub(all) enum Type {
 } derive(Eq, @debug.Debug)
 pub fn Type::loc(Self) -> @basic.SourceSpan
 pub impl @prettyprinter.Pretty for Type
+
+pub(all) struct TypeMemberDeclaration {
+  name : String
+  kind : Kind
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for TypeMemberDeclaration
 
 pub(all) enum UnaryOperator {
   Neg
