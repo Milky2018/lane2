@@ -1,21 +1,21 @@
 ///|
-using @core {
-  type CoreAtom,
-  type CoreBinding,
-  type CoreExpr,
-  type CoreFunctionDeclaration,
-  type CoreProgram,
-  type CoreRhs,
+using @anf {
+  type AnfAtom,
+  type AnfBinding,
+  type AnfExpr,
+  type AnfFunctionDeclaration,
+  type AnfProgram,
+  type AnfRhs,
 }
 
 ///|
-/// Evaluates a typed core program into a runtime program.
+/// Evaluates an ANF program into a runtime program.
 ///
 /// The interpreter does not choose or hard-code an entrypoint. It evaluates
 /// top-level functions into the global environment first so functions are
 /// mutually recursive, then evaluates top-level values in declaration order.
-pub fn evaluate_core_program(
-  program : CoreProgram,
+pub fn evaluate_anf_program(
+  program : AnfProgram,
   builtins : BuiltinRuntime,
 ) -> RuntimeProgram raise RuntimeError {
   let globals = RuntimeEnvironment::RuntimeEnvironment()
@@ -37,9 +37,9 @@ pub fn evaluate_core_program(
 }
 
 ///|
-/// Evaluates a core expression under the current runtime environment.
+/// Evaluates an ANF expression under the current runtime environment.
 fn evaluate_expr(
-  expression : CoreExpr,
+  expression : AnfExpr,
   environment : RuntimeEnvironment,
   builtins : BuiltinRuntime,
 ) -> RuntimeValue raise RuntimeError {
@@ -78,7 +78,7 @@ fn evaluate_expr(
 ///|
 /// Evaluates one ANF binding and extends the supplied local environment.
 fn evaluate_binding(
-  binding : CoreBinding,
+  binding : AnfBinding,
   environment : RuntimeEnvironment,
   builtins : BuiltinRuntime,
 ) -> Unit raise RuntimeError {
@@ -103,7 +103,7 @@ fn evaluate_binding(
 ///|
 /// Evaluates the right-hand side of an ANF binding.
 fn evaluate_rhs(
-  rhs : CoreRhs,
+  rhs : AnfRhs,
   environment : RuntimeEnvironment,
   builtins : BuiltinRuntime,
 ) -> RuntimeValue raise RuntimeError {
@@ -139,9 +139,9 @@ fn evaluate_rhs(
 }
 
 ///|
-/// Evaluates an atomic core expression.
+/// Evaluates an atomic ANF expression.
 fn evaluate_atom(
-  atom : CoreAtom,
+  atom : AnfAtom,
   environment : RuntimeEnvironment,
   builtins : BuiltinRuntime,
 ) -> RuntimeValue raise RuntimeError {
@@ -171,8 +171,8 @@ fn evaluate_literal(literal : @checked.CheckedLiteral) -> RuntimeValue {
 /// Evaluates a call. Unsafe builtins are invoked directly with the evaluated
 /// arguments; all other calls must target a runtime function value.
 fn evaluate_call(
-  callee : CoreAtom,
-  arguments : Array[CoreAtom],
+  callee : AnfAtom,
+  arguments : Array[AnfAtom],
   environment : RuntimeEnvironment,
   builtins : BuiltinRuntime,
 ) -> RuntimeValue raise RuntimeError {
@@ -208,7 +208,7 @@ fn apply_function(
 ///|
 /// Applies a function atom captured from a local function literal.
 fn apply_function_atom(
-  function : CoreAtom,
+  function : AnfAtom,
   environment : RuntimeEnvironment,
   arguments : Array[RuntimeValue],
   builtins : BuiltinRuntime,
@@ -233,7 +233,7 @@ fn apply_function_atom(
 ///|
 /// Evaluates a top-level function declaration body in a fresh call frame.
 fn evaluate_function_body(
-  function : CoreFunctionDeclaration,
+  function : AnfFunctionDeclaration,
   environment : RuntimeEnvironment,
   arguments : Array[RuntimeValue],
   builtins : BuiltinRuntime,

@@ -5,8 +5,14 @@ pub(all) struct ElaborateResult {
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CoreElaborateResult {
-  program : @core.CoreProgram?
+pub(all) struct AnfElaborateResult {
+  program : @anf.AnfProgram?
+  diagnostics : Array[@typecheck.TypeCheckDiagnostic]
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BuslaneElaborateResult {
+  program : @buslane.BuslaneProgram?
   diagnostics : Array[@typecheck.TypeCheckDiagnostic]
 } derive(Debug, Eq)
 
@@ -21,14 +27,28 @@ pub fn elaborate_resolved_source_file(
 }
 
 ///|
-/// Elaborates a resolved source file into Typed Core when Checked Source
-/// construction succeeds.
-pub fn elaborate_resolved_source_file_to_core(
+/// Elaborates a resolved source file into Buslane Core Language when Checked
+/// Source construction succeeds.
+pub fn elaborate_resolved_source_file_to_buslane(
   source : @resolve.ResolvedSourceFile,
-) -> CoreElaborateResult {
+) -> BuslaneElaborateResult {
   let result = @typecheck.typecheck_checked_source_file(source)
   let program = match result.source {
-    Some(source) => Some(@core.lower_checked_source_file(source))
+    Some(source) => Some(@buslane.lower_checked_source_file_to_buslane(source))
+    None => None
+  }
+  { program, diagnostics: result.diagnostics }
+}
+
+///|
+/// Elaborates a resolved source file into ANF IR when Checked Source
+/// construction succeeds.
+pub fn elaborate_resolved_source_file_to_anf(
+  source : @resolve.ResolvedSourceFile,
+) -> AnfElaborateResult {
+  let result = @typecheck.typecheck_checked_source_file(source)
+  let program = match result.source {
+    Some(source) => Some(@anf.lower_checked_source_file_to_anf(source))
     None => None
   }
   { program, diagnostics: result.diagnostics }
@@ -54,14 +74,33 @@ pub impl @prettyprinter.Pretty for ElaborateResult with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CoreElaborateResult with fn pretty(
-  result : CoreElaborateResult,
+pub impl @prettyprinter.Pretty for BuslaneElaborateResult with fn pretty(
+  result : BuslaneElaborateResult,
 ) {
   let program = match result.program {
     Some(program) => program.pretty()
-    None => text("<no core program>")
+    None => text("<no buslane program>")
   }
-  text("core_elaborate_result") +
+  text("buslane_elaborate_result") +
+  space +
+  @pretty.braced_block([
+    program,
+    @pretty.section(
+      "diagnostics",
+      result.diagnostics.map(@typecheck.TypeCheckDiagnostic::pretty),
+    ),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for AnfElaborateResult with fn pretty(
+  result : AnfElaborateResult,
+) {
+  let program = match result.program {
+    Some(program) => program.pretty()
+    None => text("<no anf program>")
+  }
+  text("anf_elaborate_result") +
   space +
   @pretty.braced_block([
     program,

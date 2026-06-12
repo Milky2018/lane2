@@ -10,108 +10,108 @@ using @symbol {
 }
 
 ///|
-pub(all) struct CoreTempId {
+pub(all) struct AnfTempId {
   index : Int
 } derive(Debug, Eq, Compare)
 
 ///|
-pub(all) struct CoreProgram {
-  declarations : Array[CoreTopLevelDeclaration]
+pub(all) struct AnfProgram {
+  declarations : Array[AnfTopLevelDeclaration]
   loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
-pub(all) enum CoreTopLevelDeclaration {
+pub(all) enum AnfTopLevelDeclaration {
   Struct(@checked.CheckedStructDeclaration)
   Enum(@checked.CheckedEnumDeclaration)
-  Function(CoreFunctionDeclaration)
-  Let(CoreLetDeclaration)
+  Function(AnfFunctionDeclaration)
+  Let(AnfLetDeclaration)
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CoreFunctionDeclaration {
+pub(all) struct AnfFunctionDeclaration {
   symbol : ValueSymbolId
   name : String
   type_parameters : Array[@types.TypeParameter]
   parameters : Array[@checked.CheckedValueParameter]
   return_type : @types.Type
-  body : CoreExpr
+  body : AnfExpr
   type_ : @types.Type
   loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CoreLetDeclaration {
+pub(all) struct AnfLetDeclaration {
   symbol : ValueSymbolId
   name : String?
-  value : CoreExpr
+  value : AnfExpr
   type_ : @types.Type
   loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
-pub(all) enum CoreExpr {
-  Atom(atom~ : CoreAtom, type_~ : @types.Type, loc~ : SourceSpan)
+pub(all) enum AnfExpr {
+  Atom(atom~ : AnfAtom, type_~ : @types.Type, loc~ : SourceSpan)
   Let(
-    binding~ : CoreBinding,
-    body~ : CoreExpr,
+    binding~ : AnfBinding,
+    body~ : AnfExpr,
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   If(
-    condition~ : CoreAtom,
-    then_branch~ : CoreExpr,
-    else_branch~ : CoreExpr,
+    condition~ : AnfAtom,
+    then_branch~ : AnfExpr,
+    else_branch~ : AnfExpr,
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   Match(
-    scrutinee~ : CoreAtom,
-    arms~ : Array[CoreMatchArm],
+    scrutinee~ : AnfAtom,
+    arms~ : Array[AnfMatchArm],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
 } derive(Debug, Eq)
 
 ///|
-pub(all) enum CoreBinding {
+pub(all) enum AnfBinding {
   Value(
     symbol~ : ValueSymbolId,
     name~ : String?,
-    rhs~ : CoreRhs,
+    rhs~ : AnfRhs,
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   Temp(
-    temp~ : CoreTempId,
-    rhs~ : CoreRhs,
+    temp~ : AnfTempId,
+    rhs~ : AnfRhs,
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   Pattern(
     pattern~ : @checked.CheckedPattern,
-    initializer~ : CoreAtom,
+    initializer~ : AnfAtom,
     loc~ : SourceSpan
   )
 } derive(Debug, Eq)
 
 ///|
-pub(all) enum CoreRhs {
-  Atom(CoreAtom)
+pub(all) enum AnfRhs {
+  Atom(AnfAtom)
   Call(
-    callee~ : CoreAtom,
-    arguments~ : Array[CoreAtom],
+    callee~ : AnfAtom,
+    arguments~ : Array[AnfAtom],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   TypeApplication(
-    callee~ : CoreAtom,
+    callee~ : AnfAtom,
     arguments~ : Array[@types.Type],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   Field(
-    base~ : CoreAtom,
+    base~ : AnfAtom,
     field~ : FieldSymbolId,
     name~ : String,
     type_~ : @types.Type,
@@ -121,29 +121,29 @@ pub(all) enum CoreRhs {
     symbol~ : TypeSymbolId,
     type_arguments~ : Array[@types.Type],
     type_witnesses~ : Array[@checked.CheckedStructTypeWitness],
-    fields~ : Array[CoreStructField],
+    fields~ : Array[AnfStructField],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   Variant(
     symbol~ : VariantSymbolId,
     type_arguments~ : Array[@types.Type],
-    arguments~ : Array[CoreAtom],
+    arguments~ : Array[AnfAtom],
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CoreStructField {
+pub(all) struct AnfStructField {
   symbol : FieldSymbolId
   name : String
-  value : CoreAtom
+  value : AnfAtom
   loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
-pub(all) enum CoreAtom {
+pub(all) enum AnfAtom {
   Literal(
     literal~ : @checked.CheckedLiteral,
     type_~ : @types.Type,
@@ -155,32 +155,32 @@ pub(all) enum CoreAtom {
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
-  Temp(temp~ : CoreTempId, type_~ : @types.Type, loc~ : SourceSpan)
+  Temp(temp~ : AnfTempId, type_~ : @types.Type, loc~ : SourceSpan)
   UnsafeBuiltin(name~ : String, type_~ : @types.Type, loc~ : SourceSpan)
   Function(
     parameters~ : Array[@checked.CheckedValueParameter],
-    body~ : CoreExpr,
+    body~ : AnfExpr,
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
   TypeLambda(
     type_parameters~ : Array[@types.TypeParameter],
-    body~ : CoreAtom,
+    body~ : AnfAtom,
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CoreMatchArm {
+pub(all) struct AnfMatchArm {
   pattern : @checked.CheckedPattern
-  body : CoreExpr
+  body : AnfExpr
   loc : SourceSpan
 } derive(Debug, Eq)
 
 ///|
-/// Returns the type assigned to this core expression.
-pub fn CoreExpr::type_(self : CoreExpr) -> @types.Type {
+/// Returns the type assigned to this ANF expression.
+pub fn AnfExpr::type_(self : AnfExpr) -> @types.Type {
   match self {
     Atom(type_~, ..) | Let(type_~, ..) | If(type_~, ..) | Match(type_~, ..) =>
       type_
@@ -188,16 +188,16 @@ pub fn CoreExpr::type_(self : CoreExpr) -> @types.Type {
 }
 
 ///|
-/// Returns the source span that produced this core expression.
-pub fn CoreExpr::loc(self : CoreExpr) -> SourceSpan {
+/// Returns the source span that produced this ANF expression.
+pub fn AnfExpr::loc(self : AnfExpr) -> SourceSpan {
   match self {
     Atom(loc~, ..) | Let(loc~, ..) | If(loc~, ..) | Match(loc~, ..) => loc
   }
 }
 
 ///|
-/// Returns the type assigned to this core right-hand side.
-pub fn CoreRhs::type_(self : CoreRhs) -> @types.Type {
+/// Returns the type assigned to this ANF right-hand side.
+pub fn AnfRhs::type_(self : AnfRhs) -> @types.Type {
   match self {
     Atom(atom) => atom.type_()
     Call(type_~, ..)
@@ -209,8 +209,8 @@ pub fn CoreRhs::type_(self : CoreRhs) -> @types.Type {
 }
 
 ///|
-/// Returns the source span that produced this core right-hand side.
-pub fn CoreRhs::loc(self : CoreRhs) -> SourceSpan {
+/// Returns the source span that produced this ANF right-hand side.
+pub fn AnfRhs::loc(self : AnfRhs) -> SourceSpan {
   match self {
     Atom(atom) => atom.loc()
     Call(loc~, ..)
@@ -222,8 +222,8 @@ pub fn CoreRhs::loc(self : CoreRhs) -> SourceSpan {
 }
 
 ///|
-/// Returns the type assigned to this core atom.
-pub fn CoreAtom::type_(self : CoreAtom) -> @types.Type {
+/// Returns the type assigned to this ANF atom.
+pub fn AnfAtom::type_(self : AnfAtom) -> @types.Type {
   match self {
     Literal(type_~, ..)
     | Value(type_~, ..)
@@ -235,8 +235,8 @@ pub fn CoreAtom::type_(self : CoreAtom) -> @types.Type {
 }
 
 ///|
-/// Returns the source span that produced this core atom.
-pub fn CoreAtom::loc(self : CoreAtom) -> SourceSpan {
+/// Returns the source span that produced this ANF atom.
+pub fn AnfAtom::loc(self : AnfAtom) -> SourceSpan {
   match self {
     Literal(loc~, ..)
     | Value(loc~, ..)

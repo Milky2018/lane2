@@ -34,7 +34,7 @@ fn SemanticChecker::check_match(
   //
   // The scrutinee type is synthesized once, then every arm pattern is checked
   // against that type. Pattern binders extend only the copied arm scope. This
-  // pass records the checked patterns needed by later typed core, but it does
+  // pass records the checked patterns needed by later ANF, but it does
   // not build a decision tree; the tree is an execution lowering concern.
   let scrutinee_type = self.synthesize_expr(scope, scrutinee)
   let matrix = PatternMatrix::PatternMatrix()
@@ -365,7 +365,7 @@ fn SemanticChecker::check_struct_pattern(
   //   field_i[S][A_1, ..., A_n] checks pattern_i
   //
   // Source field order is ignored after checking. The checked struct pattern is
-  // emitted in declaration order so typed core and later execution lowering do
+  // emitted in declaration order so ANF and later execution lowering do
   // not depend on source spelling order.
   guard self.source.symbols.type_named(type_name) is Some(symbol) else {
     self.diagnostics.push({ kind: UnresolvedType(type_name), loc })

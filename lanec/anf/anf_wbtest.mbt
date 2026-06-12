@@ -9,7 +9,7 @@ fn hide_type(symbol : TypeSymbolId) -> @types.Type {
 }
 
 ///|
-fn expect_core_program(source : String) -> CoreProgram {
+fn expect_anf_program(source : String) -> AnfProgram {
   let parse_result = @parser.parse_string(source)
   if !parse_result.lexical_errors.is_empty() ||
     !parse_result.parse_errors.is_empty() {
@@ -21,11 +21,11 @@ fn expect_core_program(source : String) -> CoreProgram {
   guard checked.source is Some(source) else {
     abort(@prettyprinter.render(checked.diagnostics, width=100))
   }
-  lower_checked_source_file(source)
+  lower_checked_source_file_to_anf(source)
 }
 
 ///|
-test "pretty prints typed core existential package and opening" {
+test "pretty prints ANF existential package and opening" {
   let registry = @symbol.SymbolRegistry::SymbolRegistry()
   let hide = registry.define_type("Hide", Struct, 0, loc())
   let member_parameter = registry.define_type_parameter("T", loc())
@@ -70,13 +70,13 @@ test "pretty prints typed core existential package and opening" {
     type_=hide_type,
     loc=loc(),
   )
-  let initializer = CoreAtom::Value(
+  let initializer = AnfAtom::Value(
     name="h",
     symbol=input,
     type_=hide_type,
     loc=loc(),
   )
-  let packed_value = CoreRhs::Struct(
+  let packed_value = AnfRhs::Struct(
     symbol=hide,
     type_arguments=[],
     type_witnesses=[
@@ -93,7 +93,7 @@ test "pretty prints typed core existential package and opening" {
     type_=hide_type,
     loc=loc(),
   )
-  let body = CoreExpr::Let(
+  let body = AnfExpr::Let(
     binding=Pattern(pattern~, initializer~, loc=loc()),
     body=Let(
       binding=Value(
@@ -114,7 +114,7 @@ test "pretty prints typed core existential package and opening" {
     type_=hide_type,
     loc=loc(),
   )
-  let program = CoreProgram::{
+  let program = AnfProgram::{
     declarations: [
       Struct({
         symbol: hide,
@@ -167,7 +167,7 @@ test "pretty prints typed core existential package and opening" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|core_program {
+      #|anf_program {
       #|  struct type#0 Hide {
       #|    type tmember#0 tparam#0 T : Type index=0
       #|    field field#0 val : tparam#0 index=0
@@ -222,8 +222,8 @@ test "pretty prints typed core existential package and opening" {
 }
 
 ///|
-test "lower checked source existential struct opening to typed core" {
-  let program = expect_core_program(
+test "lower checked source existential struct opening to ANF" {
+  let program = expect_anf_program(
     (
       #|struct Hide {
       #|  type T : Type
@@ -240,7 +240,7 @@ test "lower checked source existential struct opening to typed core" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|core_program {
+      #|anf_program {
       #|  struct type#0 Hide {
       #|    type tmember#0 tparam#0 T : Type index=0
       #|    field field#0 val : tparam#0 index=0
@@ -295,8 +295,8 @@ test "lower checked source existential struct opening to typed core" {
 }
 
 ///|
-test "lower checked source existential enum opening to typed core" {
-  let program = expect_core_program(
+test "lower checked source existential enum opening to ANF" {
+  let program = expect_anf_program(
     (
       #|enum Packed {
       #|  hide[T](T)
@@ -311,7 +311,7 @@ test "lower checked source existential enum opening to typed core" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|core_program {
+      #|anf_program {
       #|  enum type#0 Packed {
       #|    variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
       #|  }
@@ -359,8 +359,8 @@ test "lower checked source existential enum opening to typed core" {
 }
 
 ///|
-test "lower checked source generic call and unsafe builtin to typed core" {
-  let program = expect_core_program(
+test "lower checked source generic call and unsafe builtin to ANF" {
+  let program = expect_anf_program(
     (
       #|fn[A] id(value : A) -> A {
       #|  value
@@ -371,7 +371,7 @@ test "lower checked source generic call and unsafe builtin to typed core" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|core_program {
+      #|anf_program {
       #|  fn : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 value#0 id[tparam#0 A : Type] {
       #|    parameters {
       #|      param : tparam#0 value#1 value

@@ -10,7 +10,7 @@ fn loc() -> SourceSpan {
 }
 
 ///|
-fn expect_core_program(source : String) -> @core.CoreProgram {
+fn expect_anf_program(source : String) -> @anf.AnfProgram {
   let parse_result = @parser.parse_string(source)
   if !parse_result.lexical_errors.is_empty() ||
     !parse_result.parse_errors.is_empty() {
@@ -22,12 +22,12 @@ fn expect_core_program(source : String) -> @core.CoreProgram {
   guard checked.source is Some(source) else {
     abort(@prettyprinter.render(checked.diagnostics, width=100))
   }
-  @core.lower_checked_source_file(source)
+  @anf.lower_checked_source_file_to_anf(source)
 }
 
 ///|
 fn expect_top_level_value(
-  program : @core.CoreProgram,
+  program : @anf.AnfProgram,
   name : String,
 ) -> ValueSymbolId {
   for declaration in program.declarations {
@@ -113,7 +113,7 @@ test "pretty runtime errors" {
 
 ///|
 test "evaluate source generic call and unsafe builtin" {
-  let program = expect_core_program(
+  let program = expect_anf_program(
     (
       #|fn[A] id(value : A) -> A {
       #|  value
@@ -122,7 +122,7 @@ test "evaluate source generic call and unsafe builtin" {
     ),
   )
   let answer = expect_top_level_value(program, "answer")
-  let runtime = evaluate_core_program(program, answer_builtins())
+  let runtime = evaluate_anf_program(program, answer_builtins())
   inspect(
     @prettyprinter.render(runtime.lookup_value(answer), width=80),
     content="int 42",
@@ -131,7 +131,7 @@ test "evaluate source generic call and unsafe builtin" {
 
 ///|
 test "evaluate existential struct package without runtime witnesses" {
-  let program = expect_core_program(
+  let program = expect_anf_program(
     (
       #|struct Hide {
       #|  type T : Type
@@ -141,7 +141,7 @@ test "evaluate existential struct package without runtime witnesses" {
     ),
   )
   let packed = expect_top_level_value(program, "packed")
-  let runtime = evaluate_core_program(program, answer_builtins())
+  let runtime = evaluate_anf_program(program, answer_builtins())
   inspect(
     @prettyprinter.render(runtime.lookup_value(packed), width=80),
     content=(
@@ -156,7 +156,7 @@ test "evaluate existential struct package without runtime witnesses" {
 
 ///|
 test "evaluate existential enum match and repack" {
-  let program = expect_core_program(
+  let program = expect_anf_program(
     (
       #|enum Packed {
       #|  hide[T](T)
@@ -170,7 +170,7 @@ test "evaluate existential enum match and repack" {
     ),
   )
   let packed = expect_top_level_value(program, "packed")
-  let runtime = evaluate_core_program(program, answer_builtins())
+  let runtime = evaluate_anf_program(program, answer_builtins())
   inspect(
     @prettyprinter.render(runtime.lookup_value(packed), width=80),
     content=(
@@ -183,7 +183,7 @@ test "evaluate existential enum match and repack" {
 
 ///|
 test "evaluate existential struct pattern opening and repack" {
-  let program = expect_core_program(
+  let program = expect_anf_program(
     (
       #|struct Hide {
       #|  type T : Type
@@ -199,7 +199,7 @@ test "evaluate existential struct pattern opening and repack" {
     ),
   )
   let packed = expect_top_level_value(program, "packed")
-  let runtime = evaluate_core_program(program, answer_builtins())
+  let runtime = evaluate_anf_program(program, answer_builtins())
   inspect(
     @prettyprinter.render(runtime.lookup_value(packed), width=80),
     content=(

@@ -17,7 +17,7 @@ The `lanec/` directory containing the MoonBit compiler implementation.
 _Avoid_: toolchain, standard library
 
 **Type Object**:
-A checked type representation shared by semantic analysis, typed core, and execution contracts.
+A checked type representation shared by semantic analysis, Buslane Core Language, and execution contracts.
 _Avoid_: source type syntax, parser type node
 
 **Nominal Type Symbol**:
@@ -37,7 +37,7 @@ A way to execute a checked Lane2 program, such as an interpreter or a bytecode v
 _Avoid_: host target, MoonBit target, backend platform
 
 **Reference Interpreter**:
-The first execution target that directly evaluates typed core to define observable Lane2/Core behavior.
+The first execution target, currently evaluating ANF IR, that defines observable Lane2/Core behavior.
 _Avoid_: source interpreter, bytecode VM
 
 **Interpreter Entry Selection**:
@@ -66,11 +66,15 @@ _Avoid_: typed tree, core IR
 
 **Resolved AST**:
 A source-shaped tree whose names, variants, and operator aliases have been resolved.
-_Avoid_: parsed AST, typed core
+_Avoid_: parsed AST, Buslane Core Language
 
 **Semantic Lowering**:
-The transformation from Checked Source AST into Typed Core IR.
+The transformation from Checked Source AST into Buslane Core Language.
 _Avoid_: source elaboration, parsing, bytecode generation
+
+**ANF Lowering**:
+The transformation from Buslane Core Language into ANF IR.
+_Avoid_: semantic lowering, source elaboration, bytecode generation
 
 **Symbol Identity**:
 A stable compiler identity for a resolved type, value, constructor, or local binding.
@@ -92,28 +96,36 @@ _Avoid_: function-only id, parameter-only id
 A diagnostic annotation that links resolved or core IR back to source text.
 _Avoid_: semantic location, runtime value
 
-**Typed Core IR**:
-The typed Structured ANF representation produced from Checked Source AST while preserving Lane2/Core semantics.
+**Buslane Core Language**:
+The typed expression-tree core language produced from Checked Source AST before ANF normalization.
+_Avoid_: source AST, checked source AST, ANF IR, bytecode, VM instruction format
+
+**Buslane Node**:
+A Buslane expression or declaration whose type is explicitly available after type checking.
+_Avoid_: ANF node, untyped expression, source syntax node
+
+**ANF IR**:
+The typed Structured ANF representation produced from Buslane Core Language while preserving Lane2/Core semantics.
 _Avoid_: source AST, checked source AST, bytecode, VM instruction format
 
-**Typed Core Node**:
-A typed core expression or binding whose type is explicitly available after type checking.
-_Avoid_: re-inferred core node, untyped core expression
+**ANF Node**:
+A typed ANF expression, binding, atom, or right-hand side whose type is explicitly available after type checking.
+_Avoid_: Buslane node, re-inferred node, untyped expression
 
 **IR Pretty Printer**:
 A stable human-readable printer for an intermediate representation used in diagnostics and tests.
 _Avoid_: debug dump, unstable snapshot
 
 **Nominal Core Data**:
-Typed core data that retains its struct or enum constructor identity.
+Buslane or ANF data that retains its struct or enum constructor identity.
 _Avoid_: anonymous tuple, raw tag
 
 **Dedicated Data Constructor**:
-A typed core construction form for nominal struct or enum data that is not a first-class function value.
+A Buslane or ANF construction form for nominal struct or enum data that is not a first-class function value.
 _Avoid_: constructor function, curried constructor
 
 **Declaration-Order Struct Construction**:
-A typed core struct construction whose field values are ordered by the struct declaration.
+A Buslane or ANF struct construction whose field values are ordered by the struct declaration.
 _Avoid_: source-order field construction, string-key record
 
 **Declaration-Order Struct Pattern**:
@@ -121,7 +133,7 @@ A checked struct pattern whose field patterns are ordered by the struct declarat
 _Avoid_: source-order struct pattern, partial record pattern
 
 **Resolved Variant Construction**:
-A typed core enum construction that references a variant by variant symbol identity and stores payloads in declaration order.
+A Buslane or ANF enum construction that references a variant by variant symbol identity and stores payloads in declaration order.
 _Avoid_: string variant lookup, raw tag only
 
 **Resolved Variant Pattern**:
@@ -136,8 +148,8 @@ _Avoid_: CPS, bytecode
 An **Administrative Normal Form** that keeps structured conditionals and matches while requiring their inputs and calls to use atomic values.
 _Avoid_: CFG, basic blocks, jump IR
 
-**Core Atom**:
-A typed core ANF value form that can be referenced without introducing additional evaluation order.
+**ANF Atom**:
+A typed ANF value form that can be referenced without introducing additional evaluation order.
 _Avoid_: arbitrary expression, computed RHS
 
 **Tools Project**:
@@ -213,15 +225,15 @@ A type object that binds type parameters over another type.
 _Avoid_: function-owned generic parameter list, implicit polymorphic wrapper
 
 **Type Application**:
-A typed core operation that instantiates a polymorphic value with type arguments.
+A Buslane operation that instantiates a polymorphic value with type arguments.
 _Avoid_: runtime type argument, erased substitution only
 
 **First-Class Type Application**:
-A typed core type application whose callee is any polymorphic atom rather than only a known generic function symbol.
+A Buslane type application whose callee is any polymorphic atom rather than only a known generic function symbol.
 _Avoid_: direct generic call only, runtime typecase
 
 **Type Lambda**:
-A typed core value form that abstracts over type parameters to create a polymorphic value.
+A Buslane value form that abstracts over type parameters to create a polymorphic value.
 _Avoid_: generic ordinary lambda, runtime type function
 
 **Type Alpha-Equivalence**:
@@ -269,7 +281,7 @@ A function that can be stored, passed, returned, and called as a value.
 _Avoid_: top-level-only function, method
 
 **First-Class Call**:
-A typed core call whose callee is any function-valued atom rather than only a known function symbol.
+A Buslane call whose callee is any function-valued atom rather than only a known function symbol.
 _Avoid_: direct-call-only core, method dispatch
 
 **Closure Conversion**:
@@ -309,7 +321,7 @@ Reading a named field from a struct value with dot syntax.
 _Avoid_: field update, copy update
 
 **Resolved Field Access**:
-A typed core field access that references a field by field symbol identity.
+A Buslane field access that references a field by field symbol identity.
 _Avoid_: string field lookup, raw field index only
 
 **Core Pattern**:
@@ -317,7 +329,7 @@ A pattern form limited to wildcard, variable, literal, enum variant, or struct d
 _Avoid_: guard pattern, or-pattern, as-pattern
 
 **Checked Pattern**:
-A pattern in typed core whose constructors, binders, and covered type have been checked.
+A pattern in Buslane or ANF whose constructors, binders, and covered type have been checked.
 _Avoid_: parse pattern, decision tree
 
 **Pattern Binder Uniqueness**:
@@ -358,11 +370,11 @@ _Avoid_: name resolution, source desugaring, runtime checking
 
 **Source Elaboration**:
 The source-level checking phase that turns resolved surface syntax into checked source syntax by removing source-only forms and selecting concrete symbols.
-_Avoid_: pure desugaring, typed core lowering
+_Avoid_: pure desugaring, Buslane lowering
 
 **Checked Source AST**:
-The typed, symbol-resolved source tree produced by Source Elaboration before lowering to Typed Core IR.
-_Avoid_: typed core ANF, resolved surface AST, environment-only check result
+The typed, symbol-resolved source tree produced by Source Elaboration before lowering to Buslane Core Language.
+_Avoid_: ANF IR, resolved surface AST, environment-only check result
 
 **Source-Level Structure**:
 The expression structure of the source language, such as blocks, conditionals, matches, calls, literals, and function literals, preserved before ANF lowering.
@@ -433,11 +445,11 @@ A boolean operation whose right-hand expression is delayed as a zero-argument fu
 _Avoid_: generic logical operation, ordinary strict binary function
 
 **Thunked Operator Call**:
-A typed core call to a resolved operation where a delayed operand is represented as a zero-argument function value.
+A Buslane call to a resolved operation where a delayed operand is represented as a zero-argument function value.
 _Avoid_: direct if lowering, strict binary call
 
 **Resolved Operator Call**:
-A typed core call produced from an operator alias after resolving the operation value.
+A Buslane call produced from an operator alias after resolving the operation value.
 _Avoid_: special operator node, primitive operator
 
 **Integer Undefined Behavior**:
@@ -521,7 +533,7 @@ An intrinsic expression whose meaning is supplied outside Lane2, whose type is t
 _Avoid_: typed intrinsic, safe primitive
 
 **Typed Unsafe Builtin**:
-A typed core representation of an unsafe builtin whose intrinsic name is uninterpreted but whose expected type is explicit.
+A Buslane representation of an unsafe builtin whose intrinsic name is uninterpreted but whose expected type is explicit.
 _Avoid_: intrinsic lookup during type checking, safe builtin
 
 **Builtin Runtime Plugin**:
@@ -529,7 +541,7 @@ An execution-time extension that supplies behavior for unsafe builtin intrinsic 
 _Avoid_: compiler intrinsic table, hard-coded primitive
 
 **Builtin Dispatch Key**:
-The intrinsic name and typed core expected type used to select or call a builtin runtime plugin entry.
+The intrinsic name and typed expected type used to select or call a builtin runtime plugin entry.
 _Avoid_: name-only builtin lookup, type-checked intrinsic
 
 **Runtime Error Report**:
@@ -567,21 +579,23 @@ _Avoid_: module system, imports
 - **Type Checking** assigns and verifies types over a **Resolved AST**.
 - **Source Elaboration** consumes type checking information and produces a **Checked Source AST**.
 - A **Checked Source AST** preserves **Source-Level Structure** while removing source-only syntax and unresolved or ambiguous references.
-- **Semantic Lowering** transforms a **Checked Source AST** into **Typed Core IR**.
+- **Semantic Lowering** transforms a **Checked Source AST** into **Buslane Core Language**.
+- **ANF Lowering** transforms **Buslane Core Language** into **ANF IR**.
 - Every compiler IR layer has an **IR Pretty Printer**.
-- **Typed Core IR** uses **Symbol Identity** for references.
-- Expressions and bindings in **Typed Core IR** are **Typed Core Nodes**.
-- **Typed Core IR** may carry **Origin Spans** for diagnostics, but spans do not affect semantics.
-- **Source Elaboration** removes **Pipeline Expressions** and **Operator Aliases** before **Typed Core IR**.
-- **Typed Core IR** uses **Administrative Normal Form**.
-- **Typed Core IR** uses **Structured ANF**, not basic blocks.
-- **Core Atoms** may include function values and **Type Lambdas**.
-- **Typed Core IR** represents structs and enums as **Nominal Core Data**.
+- **Buslane Core Language** uses **Symbol Identity** for references.
+- Expressions and declarations in **Buslane Core Language** are **Buslane Nodes**.
+- **Buslane Core Language** may carry **Origin Spans** for diagnostics, but spans do not affect semantics.
+- **Source Elaboration** removes **Pipeline Expressions** and **Operator Aliases** before **Buslane Core Language**.
+- **Buslane Core Language** preserves expression-tree structure and does not introduce ANF temporaries.
+- **ANF IR** uses **Administrative Normal Form**.
+- **ANF IR** uses **Structured ANF**, not basic blocks.
+- **ANF Atoms** may include function values and **Type Lambdas**.
+- **Buslane Core Language** and **ANF IR** represent structs and enums as **Nominal Core Data**.
 - **Nominal Core Data** is introduced through **Dedicated Data Constructors**.
-- Struct values in **Typed Core IR** use **Declaration-Order Struct Construction**.
-- Enum values in **Typed Core IR** use **Resolved Variant Construction**.
-- The first **Execution Target** is the **Reference Interpreter** for **Typed Core IR**.
-- The **Reference Interpreter** uses **Interpreter Entry Selection** over a whole typed core program.
+- Struct values in **Buslane Core Language** and **ANF IR** use **Declaration-Order Struct Construction**.
+- Enum values in **Buslane Core Language** and **ANF IR** use **Resolved Variant Construction**.
+- The first **Execution Target** currently evaluates **ANF IR**; Buslane is the semantic core before ANF normalization.
+- The **Reference Interpreter** uses **Interpreter Entry Selection** over a whole checked compiler program.
 - The **Reference Interpreter** separates the **Global Environment**, **Call Frame**, and **Closure Environment**.
 - Lane2 v1 does not require **Tail-Call Optimization**.
 - An **Execution Target** consumes checked compiler output rather than raw source syntax.
@@ -604,8 +618,8 @@ _Avoid_: module system, imports
 - A polymorphic function value uses **Generic Function Type** syntax such as `[A](A) -> A`.
 - **Generic Function Type** syntax elaborates to a **Forall Type** over a non-generic function type.
 - **Forall Types** use **Type Alpha-Equivalence** for equality.
-- **Typed Core IR** preserves **Type Application** before **Runtime Type Erasure**.
-- **Typed Core IR** uses **First-Class Type Application**.
+- **Buslane Core Language** and **ANF IR** preserve **Type Application** before **Runtime Type Erasure**.
+- **Buslane Core Language** and **ANF IR** use **First-Class Type Application**.
 - A **Generic Function Literal** elaborates to a **Type Lambda** over an ordinary function value.
 - Lane2 v1 has no **Runtime Typecase**.
 - Generic type arguments use **Runtime Type Erasure** before execution.
@@ -613,8 +627,8 @@ _Avoid_: module system, imports
 - The **Reference Interpreter** evaluates to **Interpreter Values**.
 - Lane2 functions are **Uncurried Functions**.
 - Lane2 has **First-Class Function Values**.
-- **Typed Core IR** uses **First-Class Calls**.
-- **Closure Conversion** happens after **Typed Core IR**.
+- **Buslane Core Language** and **ANF IR** use **First-Class Calls**.
+- **Closure Conversion** happens after **Buslane Core Language**, usually after ANF lowering.
 - Lane2 function types use **Parameter-List Function Type** syntax.
 - **Enum Type** and **Struct Type** declarations create **Nominal Types**.
 - A generic struct or enum uses **Generic Type Definition** syntax such as `struct Box[A]`.
@@ -630,21 +644,21 @@ _Avoid_: module system, imports
 - A **Struct Type** value is constructed with a **Qualified Struct Literal**.
 - `Type::member` syntax resolves `Type` in the type namespace.
 - A **Struct Type** supports **Field Access** but not field update syntax.
-- **Typed Core IR** represents **Field Access** as **Resolved Field Access**.
+- **Buslane Core Language** and **ANF IR** represent **Field Access** as **Resolved Field Access**.
 - A **Qualified Struct Literal** supports **Struct Field Punning** but not spread, update, or default fields.
 - Struct patterns support **Struct Pattern Punning** and explicit field renaming, but not rest or spread.
 - Struct patterns must list all fields of the matched struct.
-- **Typed Core IR** represents struct patterns as **Declaration-Order Struct Patterns**.
+- **Buslane Core Language** and **ANF IR** represent struct patterns as **Declaration-Order Struct Patterns**.
 - Struct fields have no visibility modifier in v1 and are accessible wherever the struct value is visible.
-- Pattern matching in v1 uses **Core Patterns**.
-- **Core Patterns** include **Primitive Inhabitants** as literal patterns.
+- Pattern matching in v1 uses **Checked Patterns**.
+- **Checked Patterns** include **Primitive Inhabitants** as literal patterns.
 - `Int` and `String` literal patterns require a wildcard or binding fallback for an **Exhaustive Match**.
 - `Bool` and `Unit` literal patterns can be exhaustive by covering all primitive inhabitants.
 - Enum variants in patterns use **Qualified Variant Pattern** syntax.
 - A payloadless **Qualified Variant Pattern** is written without parentheses.
-- **Typed Core IR** represents enum patterns as **Resolved Variant Patterns**.
+- **Buslane Core Language** and **ANF IR** represent enum patterns as **Resolved Variant Patterns**.
 - A match expression must be an **Exhaustive Match**.
-- **Typed Core IR** represents match arms with **Checked Patterns** rather than a **Decision Tree**.
+- **Buslane Core Language** and **ANF IR** represent match arms with **Checked Patterns** rather than a **Decision Tree**.
 - Semantic analysis uses a **Pattern Matrix** for match exhaustiveness and usefulness checking.
 - Every match arm must be a **Useful Match Arm**.
 - A wildcard or binding match arm makes later arms for the same remaining space unreachable.
@@ -654,12 +668,12 @@ _Avoid_: module system, imports
 - Pattern binders may shadow outer value names.
 - A pattern binder is scoped only over its match arm body.
 - Match evaluation uses **First-Match Arm Order**.
-- **Decision Trees** are a lowered execution model for pattern matching, not the typed core representation.
+- **Decision Trees** are a lowered execution model for pattern matching, not the Buslane representation.
 - Match expressions use **Arrow Match Arms**.
 - Pattern matching is expressed with `match`; v1 has no `is` pattern expression.
 - Lane2 supports **Pipeline Expressions** but not method calls.
 - A **Pipeline Expression** requires a call or function literal on its right-hand side.
-- **Pipeline Expressions** do not appear in **Typed Core IR**.
+- **Pipeline Expressions** do not appear in **Buslane Core Language** or **ANF IR**.
 - Comma-separated lists allow a **Trailing Comma**.
 - Lane2 uses **MoonBit-Like Syntax** without mutation or assignment.
 - Lane2 uses **Type Annotation Spacing** for type annotations; struct literal field assignment remains `field: expression`.
@@ -770,12 +784,12 @@ _Avoid_: module system, imports
 - Recognized operator mappings use operation names such as `op_add` for `+`, `op_sub` for `-`, `op_mul` for `*`, `op_div` for `/`, `op_rem` for `%`, `op_neg` for unary `-`, `op_equal` for `==`, `op_not_equal` for `!=`, `op_less` for `<`, `op_less_eq` for `<=`, `op_greater` for `>`, `op_greater_eq` for `>=`, `op_and` for `&&`, `op_or` for `||`, and `op_not` for `!`.
 - `&&` and `||` are recognized **Short-Circuit Boolean Operations** whose right operand is thunked before calling `op_and` or `op_or`.
 - `&&` and `||` still use **Contextual Resolution** through their thunked `op_and` and `op_or` calls.
-- In **Typed Core IR**, `&&` and `||` lower to **Thunked Operator Calls**, not direct `if` expressions.
+- In **Buslane Core Language** and **ANF IR**, `&&` and `||` lower to **Thunked Operator Calls**, not direct `if` expressions.
 - Ordinary calls to `op_and` and `op_or` do not thunk their arguments.
 - Other operator aliases lower to **Resolved Operator Calls**.
 - Primitive operators are not special-cased by source syntax.
 - An **Unsafe Builtin** is outside Lane2's safety guarantee and requires a direct expected type.
-- **Typed Core IR** represents an **Unsafe Builtin** as a **Typed Unsafe Builtin**.
+- **Buslane Core Language** and **ANF IR** represent an **Unsafe Builtin** as a **Typed Unsafe Builtin**.
 - **Builtin Runtime Plugins** provide execution behavior for unsafe builtins while the **Compiler Project** defines the core contract.
 - A **Builtin Runtime Plugin** receives a **Builtin Dispatch Key**.
 - A **Builtin Runtime Plugin** may produce a **Runtime Error Report**, but builtin misuse remains outside Lane2's safety guarantee.

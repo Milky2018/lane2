@@ -16,10 +16,17 @@ fn elaborate_source(source : String) -> ElaborateResult {
 }
 
 ///|
-fn elaborate_core_source(source : String) -> CoreElaborateResult {
+fn elaborate_buslane_source(source : String) -> BuslaneElaborateResult {
   let file = expect_parse_ok(source)
   let resolved = @resolve.resolve_source_file(file)
-  elaborate_resolved_source_file_to_core(resolved)
+  elaborate_resolved_source_file_to_buslane(resolved)
+}
+
+///|
+fn elaborate_anf_source(source : String) -> AnfElaborateResult {
+  let file = expect_parse_ok(source)
+  let resolved = @resolve.resolve_source_file(file)
+  elaborate_resolved_source_file_to_anf(resolved)
 }
 
 ///|
@@ -67,8 +74,8 @@ test "elaborate resolved source into checked source" {
 }
 
 ///|
-test "elaborate resolved source into typed core" {
-  let result = elaborate_core_source(
+test "elaborate resolved source into buslane core" {
+  let result = elaborate_buslane_source(
     (
       #|fn identity(x : Int) -> Int {
       #|  x
@@ -79,8 +86,49 @@ test "elaborate resolved source into typed core" {
   inspect(
     @prettyprinter.render(result, width=100),
     content=(
-      #|core_elaborate_result {
-      #|  core_program {
+      #|buslane_elaborate_result {
+      #|  buslane_program {
+      #|    fn : (Int) -> Int value#0 identity {
+      #|      parameters {
+      #|        param : Int value#1 x
+      #|      }
+      #|      return : Int
+      #|      body {
+      #|        value : Int value#1 x
+      #|      }
+      #|    }
+      #|    let : Int value#2 answer {
+      #|      call : Int {
+      #|        callee {
+      #|          value : (Int) -> Int value#0 identity
+      #|        }
+      #|        arguments {
+      #|          int 42 : Int
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "elaborate resolved source into anf" {
+  let result = elaborate_anf_source(
+    (
+      #|fn identity(x : Int) -> Int {
+      #|  x
+      #|}
+      #|let answer : Int = identity(42)
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|anf_elaborate_result {
+      #|  anf_program {
       #|    fn : (Int) -> Int value#0 identity {
       #|      parameters {
       #|        param : Int value#1 x

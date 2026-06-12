@@ -2,19 +2,19 @@
 using @prettyprinter {type Document, empty, space, text}
 
 ///|
-pub impl @prettyprinter.Pretty for CoreProgram with fn pretty(
-  program : CoreProgram,
+pub impl @prettyprinter.Pretty for BuslaneProgram with fn pretty(
+  program : BuslaneProgram,
 ) {
-  text("core_program") +
+  text("buslane_program") +
   space +
   @pretty.braced_block(
-    program.declarations.map(CoreTopLevelDeclaration::pretty),
+    program.declarations.map(BuslaneTopLevelDeclaration::pretty),
   )
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CoreTopLevelDeclaration with fn pretty(
-  declaration : CoreTopLevelDeclaration,
+pub impl @prettyprinter.Pretty for BuslaneTopLevelDeclaration with fn pretty(
+  declaration : BuslaneTopLevelDeclaration,
 ) {
   match declaration {
     Struct(declaration) => declaration.pretty()
@@ -25,8 +25,8 @@ pub impl @prettyprinter.Pretty for CoreTopLevelDeclaration with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CoreFunctionDeclaration with fn pretty(
-  declaration : CoreFunctionDeclaration,
+pub impl @prettyprinter.Pretty for BuslaneFunctionDeclaration with fn pretty(
+  declaration : BuslaneFunctionDeclaration,
 ) {
   typed_header("fn", declaration.type_) +
   space +
@@ -46,8 +46,8 @@ pub impl @prettyprinter.Pretty for CoreFunctionDeclaration with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CoreLetDeclaration with fn pretty(
-  declaration : CoreLetDeclaration,
+pub impl @prettyprinter.Pretty for BuslaneLetDeclaration with fn pretty(
+  declaration : BuslaneLetDeclaration,
 ) {
   let name = match declaration.name {
     Some(name) => text(name)
@@ -63,14 +63,70 @@ pub impl @prettyprinter.Pretty for CoreLetDeclaration with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CoreExpr with fn pretty(expr : CoreExpr) {
-  match expr {
-    Atom(atom~, type_~, ..) =>
-      typed_header("atom", type_) +
+pub impl @prettyprinter.Pretty for BuslaneBinding with fn pretty(
+  binding : BuslaneBinding,
+) {
+  match binding {
+    Value(symbol~, name~, value~, type_~, ..) => {
+      let name_doc = match name {
+        Some(name) => text(name)
+        None => text("<anonymous>")
+      }
+      typed_header("binding", type_) +
       space +
-      @pretty.braced_block([atom.pretty()])
+      symbol.pretty() +
+      space +
+      name_doc +
+      space +
+      @pretty.braced_block([value.pretty()])
+    }
+    Pattern(pattern~, initializer~, ..) =>
+      text("pattern_binding") +
+      space +
+      @pretty.braced_block([
+        @pretty.section("pattern", [pattern.pretty()]),
+        @pretty.section("initializer", [initializer.pretty()]),
+      ])
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneExpr with fn pretty(
+  expression : BuslaneExpr,
+) {
+  match expression {
+    Literal(literal~, type_~, ..) =>
+      typed_named_doc(literal_label(literal), type_)
+    Value(name~, symbol~, type_~, ..) =>
+      typed_header("value", type_) +
+      space +
+      symbol.pretty() +
+      space +
+      text(name)
+    UnsafeBuiltin(name~, type_~, ..) =>
+      typed_named_doc("unsafe_builtin " + quoted(name), type_)
+    Function(parameters~, body~, type_~, ..) =>
+      typed_header("fn_value", type_) +
+      space +
+      @pretty.braced_block([
+        @pretty.section(
+          "parameters",
+          parameters.map(@checked.CheckedValueParameter::pretty),
+        ),
+        @pretty.section("body", [body.pretty()]),
+      ])
+    TypeLambda(type_parameters~, body~, type_~, ..) =>
+      typed_header("type_lambda", type_) +
+      type_parameters_doc(type_parameters) +
+      space +
+      @pretty.braced_block([@pretty.section("body", [body.pretty()])])
+    TypeApplication(callee~, arguments~, type_~, ..) =>
+      typed_header("type_application", type_) +
+      type_arguments_doc(arguments) +
+      space +
+      @pretty.braced_block([@pretty.section("callee", [callee.pretty()])])
     Let(binding~, body~, type_~, ..) =>
-      typed_header("let_expr", type_) +
+      typed_header("let", type_) +
       space +
       @pretty.braced_block([
         @pretty.section("binding", [binding.pretty()]),
@@ -89,61 +145,15 @@ pub impl @prettyprinter.Pretty for CoreExpr with fn pretty(expr : CoreExpr) {
       space +
       @pretty.braced_block([
         @pretty.section("scrutinee", [scrutinee.pretty()]),
-        @pretty.section("arms", arms.map(CoreMatchArm::pretty)),
+        @pretty.section("arms", arms.map(BuslaneMatchArm::pretty)),
       ])
-  }
-}
-
-///|
-pub impl @prettyprinter.Pretty for CoreBinding with fn pretty(
-  binding : CoreBinding,
-) {
-  match binding {
-    Value(symbol~, name~, rhs~, type_~, ..) => {
-      let name_doc = match name {
-        Some(name) => text(name)
-        None => text("<anonymous>")
-      }
-      typed_header("binding", type_) +
-      space +
-      symbol.pretty() +
-      space +
-      name_doc +
-      space +
-      @pretty.braced_block([rhs.pretty()])
-    }
-    Temp(temp~, rhs~, type_~, ..) =>
-      typed_header("temp_binding", type_) +
-      space +
-      temp.pretty() +
-      space +
-      @pretty.braced_block([rhs.pretty()])
-    Pattern(pattern~, initializer~, ..) =>
-      text("pattern_binding") +
-      space +
-      @pretty.braced_block([
-        @pretty.section("pattern", [pattern.pretty()]),
-        @pretty.section("initializer", [initializer.pretty()]),
-      ])
-  }
-}
-
-///|
-pub impl @prettyprinter.Pretty for CoreRhs with fn pretty(rhs : CoreRhs) {
-  match rhs {
-    Atom(atom) => atom.pretty()
     Call(callee~, arguments~, type_~, ..) =>
       typed_header("call", type_) +
       space +
       @pretty.braced_block([
         @pretty.section("callee", [callee.pretty()]),
-        @pretty.section("arguments", arguments.map(CoreAtom::pretty)),
+        @pretty.section("arguments", arguments.map(BuslaneExpr::pretty)),
       ])
-    TypeApplication(callee~, arguments~, type_~, ..) =>
-      typed_header("type_application", type_) +
-      type_arguments_doc(arguments) +
-      space +
-      @pretty.braced_block([@pretty.section("callee", [callee.pretty()])])
     Field(base~, field~, name~, type_~, ..) =>
       typed_header("field", type_) +
       space +
@@ -160,7 +170,7 @@ pub impl @prettyprinter.Pretty for CoreRhs with fn pretty(rhs : CoreRhs) {
       space +
       @pretty.braced_block(
         type_witnesses.map(@checked.CheckedStructTypeWitness::pretty) +
-        fields.map(CoreStructField::pretty),
+        fields.map(BuslaneStructField::pretty),
       )
     Variant(symbol~, type_arguments~, arguments~, type_~, ..) =>
       typed_header("variant", type_) +
@@ -168,13 +178,13 @@ pub impl @prettyprinter.Pretty for CoreRhs with fn pretty(rhs : CoreRhs) {
       symbol.pretty() +
       type_arguments_doc(type_arguments) +
       space +
-      @pretty.braced_block(arguments.map(CoreAtom::pretty))
+      @pretty.braced_block(arguments.map(BuslaneExpr::pretty))
   }
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CoreStructField with fn pretty(
-  field : CoreStructField,
+pub impl @prettyprinter.Pretty for BuslaneStructField with fn pretty(
+  field : BuslaneStructField,
 ) {
   text("field") +
   space +
@@ -186,41 +196,8 @@ pub impl @prettyprinter.Pretty for CoreStructField with fn pretty(
 }
 
 ///|
-pub impl @prettyprinter.Pretty for CoreAtom with fn pretty(atom : CoreAtom) {
-  match atom {
-    Literal(literal~, type_~, ..) =>
-      typed_named_doc(literal_label(literal), type_)
-    Value(name~, symbol~, type_~, ..) =>
-      typed_header("value", type_) +
-      space +
-      symbol.pretty() +
-      space +
-      text(name)
-    Temp(temp~, type_~, ..) =>
-      typed_header("temp", type_) + space + temp.pretty()
-    UnsafeBuiltin(name~, type_~, ..) =>
-      typed_named_doc("unsafe_builtin " + quoted(name), type_)
-    Function(parameters~, body~, type_~, ..) =>
-      typed_header("fn_atom", type_) +
-      space +
-      @pretty.braced_block([
-        @pretty.section(
-          "parameters",
-          parameters.map(@checked.CheckedValueParameter::pretty),
-        ),
-        @pretty.section("body", [body.pretty()]),
-      ])
-    TypeLambda(type_parameters~, body~, type_~, ..) =>
-      typed_header("type_lambda", type_) +
-      type_parameters_doc(type_parameters) +
-      space +
-      @pretty.braced_block([@pretty.section("body", [body.pretty()])])
-  }
-}
-
-///|
-pub impl @prettyprinter.Pretty for CoreMatchArm with fn pretty(
-  arm : CoreMatchArm,
+pub impl @prettyprinter.Pretty for BuslaneMatchArm with fn pretty(
+  arm : BuslaneMatchArm,
 ) {
   text("arm") +
   space +
@@ -228,11 +205,6 @@ pub impl @prettyprinter.Pretty for CoreMatchArm with fn pretty(
     @pretty.section("pattern", [arm.pattern.pretty()]),
     @pretty.section("body", [arm.body.pretty()]),
   ])
-}
-
-///|
-pub impl @prettyprinter.Pretty for CoreTempId with fn pretty(id : CoreTempId) {
-  text("temp#") + text(id.index.to_string())
 }
 
 ///|

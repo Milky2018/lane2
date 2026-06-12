@@ -1,0 +1,97 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/lane2/buslane"
+
+import {
+  "Milky2018/lane2/basic",
+  "Milky2018/lane2/checked",
+  "Milky2018/lane2/symbol",
+  "Milky2018/lane2/types",
+  "moonbit-community/prettyprinter",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn lower_checked_source_file_to_buslane(@checked.CheckedSourceFile) -> BuslaneProgram
+
+// Errors
+
+// Types and methods
+pub(all) enum BuslaneBinding {
+  Value(symbol~ : @symbol.ValueSymbolId, name~ : String?, value~ : BuslaneExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Pattern(pattern~ : @checked.CheckedPattern, initializer~ : BuslaneExpr, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneBinding
+
+pub(all) enum BuslaneExpr {
+  Literal(literal~ : @checked.CheckedLiteral, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Value(name~ : String, symbol~ : @symbol.ValueSymbolId, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  UnsafeBuiltin(name~ : String, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Function(parameters~ : Array[@checked.CheckedValueParameter], body~ : BuslaneExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  TypeLambda(type_parameters~ : Array[@types.TypeParameter], body~ : BuslaneExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  TypeApplication(callee~ : BuslaneExpr, arguments~ : Array[@types.Type], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Let(binding~ : BuslaneBinding, body~ : BuslaneExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  If(condition~ : BuslaneExpr, then_branch~ : BuslaneExpr, else_branch~ : BuslaneExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Match(scrutinee~ : BuslaneExpr, arms~ : Array[BuslaneMatchArm], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Call(callee~ : BuslaneExpr, arguments~ : Array[BuslaneExpr], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Field(base~ : BuslaneExpr, field~ : @symbol.FieldSymbolId, name~ : String, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Struct(symbol~ : @symbol.TypeSymbolId, type_arguments~ : Array[@types.Type], type_witnesses~ : Array[@checked.CheckedStructTypeWitness], fields~ : Array[BuslaneStructField], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Variant(symbol~ : @symbol.VariantSymbolId, type_arguments~ : Array[@types.Type], arguments~ : Array[BuslaneExpr], type_~ : @types.Type, loc~ : @basic.SourceSpan)
+} derive(Eq, @debug.Debug)
+pub fn BuslaneExpr::loc(Self) -> @basic.SourceSpan
+pub fn BuslaneExpr::type_(Self) -> @types.Type
+pub impl @prettyprinter.Pretty for BuslaneExpr
+
+pub(all) struct BuslaneFunctionDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String
+  type_parameters : Array[@types.TypeParameter]
+  parameters : Array[@checked.CheckedValueParameter]
+  return_type : @types.Type
+  body : BuslaneExpr
+  type_ : @types.Type
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneFunctionDeclaration
+
+pub(all) struct BuslaneLetDeclaration {
+  symbol : @symbol.ValueSymbolId
+  name : String?
+  value : BuslaneExpr
+  type_ : @types.Type
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneLetDeclaration
+
+pub(all) struct BuslaneMatchArm {
+  pattern : @checked.CheckedPattern
+  body : BuslaneExpr
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneMatchArm
+
+pub(all) struct BuslaneProgram {
+  declarations : Array[BuslaneTopLevelDeclaration]
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneProgram
+
+pub(all) struct BuslaneStructField {
+  symbol : @symbol.FieldSymbolId
+  name : String
+  value : BuslaneExpr
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneStructField
+
+pub(all) enum BuslaneTopLevelDeclaration {
+  Struct(@checked.CheckedStructDeclaration)
+  Enum(@checked.CheckedEnumDeclaration)
+  Function(BuslaneFunctionDeclaration)
+  Let(BuslaneLetDeclaration)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneTopLevelDeclaration
+
+// Type aliases
+
+// Traits
+

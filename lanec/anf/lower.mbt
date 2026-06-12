@@ -1,14 +1,14 @@
 ///|
-priv struct CoreLowerer {
+priv struct AnfLowerer {
   mut next_temp : Int
 }
 
 ///|
-/// Lowers Checked Source into typed core ANF.
-pub fn lower_checked_source_file(
+/// Lowers Checked Source into ANF.
+pub fn lower_checked_source_file_to_anf(
   source : @checked.CheckedSourceFile,
-) -> CoreProgram {
-  let lowerer = CoreLowerer::{ next_temp: 0 }
+) -> AnfProgram {
+  let lowerer = AnfLowerer::{ next_temp: 0 }
   {
     declarations: source.declarations.map(fn(declaration) {
       lowerer.lower_top_level_declaration(declaration)
@@ -18,17 +18,17 @@ pub fn lower_checked_source_file(
 }
 
 ///|
-fn CoreLowerer::fresh_temp(self : CoreLowerer) -> CoreTempId {
-  let temp = CoreTempId::{ index: self.next_temp }
+fn AnfLowerer::fresh_temp(self : AnfLowerer) -> AnfTempId {
+  let temp = AnfTempId::{ index: self.next_temp }
   self.next_temp = self.next_temp + 1
   temp
 }
 
 ///|
-fn CoreLowerer::lower_top_level_declaration(
-  self : CoreLowerer,
+fn AnfLowerer::lower_top_level_declaration(
+  self : AnfLowerer,
   declaration : @checked.CheckedTopLevelDeclaration,
-) -> CoreTopLevelDeclaration {
+) -> AnfTopLevelDeclaration {
   match declaration {
     Struct(declaration) => Struct(declaration)
     Enum(declaration) => Enum(declaration)
@@ -39,10 +39,10 @@ fn CoreLowerer::lower_top_level_declaration(
 }
 
 ///|
-fn CoreLowerer::lower_function_declaration(
-  self : CoreLowerer,
+fn AnfLowerer::lower_function_declaration(
+  self : AnfLowerer,
   declaration : @checked.CheckedFunctionDeclaration,
-) -> CoreFunctionDeclaration {
+) -> AnfFunctionDeclaration {
   {
     symbol: declaration.symbol,
     name: declaration.name,
@@ -56,10 +56,10 @@ fn CoreLowerer::lower_function_declaration(
 }
 
 ///|
-fn CoreLowerer::lower_let_declaration(
-  self : CoreLowerer,
+fn AnfLowerer::lower_let_declaration(
+  self : AnfLowerer,
   declaration : @checked.CheckedLetDeclaration,
-) -> CoreLetDeclaration {
+) -> AnfLetDeclaration {
   {
     symbol: declaration.symbol,
     name: declaration.name,
@@ -70,21 +70,21 @@ fn CoreLowerer::lower_let_declaration(
 }
 
 ///|
-fn CoreLowerer::lower_expr(
-  self : CoreLowerer,
+fn AnfLowerer::lower_expr(
+  self : AnfLowerer,
   expression : @checked.CheckedExpr,
-) -> CoreExpr {
+) -> AnfExpr {
   self.lower_to_atom(expression, fn(atom) {
     Atom(atom~, type_=atom.type_(), loc=atom.loc())
   })
 }
 
 ///|
-fn CoreLowerer::lower_to_atom(
-  self : CoreLowerer,
+fn AnfLowerer::lower_to_atom(
+  self : AnfLowerer,
   expression : @checked.CheckedExpr,
-  continuation : (CoreAtom) -> CoreExpr,
-) -> CoreExpr {
+  continuation : (AnfAtom) -> AnfExpr,
+) -> AnfExpr {
   match expression {
     Literal(literal~, type_~, loc~) =>
       continuation(Literal(literal~, type_~, loc~))
@@ -205,20 +205,20 @@ fn CoreLowerer::lower_to_atom(
 }
 
 ///|
-fn CoreLowerer::lower_function_atom(
-  self : CoreLowerer,
+fn AnfLowerer::lower_function_atom(
+  self : AnfLowerer,
   type_parameters : Array[@types.TypeParameter],
   parameters : Array[@checked.CheckedValueParameter],
   return_type : @types.Type,
   body : @checked.CheckedExpr,
   type_ : @types.Type,
   loc : SourceSpan,
-) -> CoreAtom {
+) -> AnfAtom {
   let function_type = @types.Type::Function(
     parameters.map(fn(parameter) { parameter.type_ }),
     return_type,
   )
-  let function = CoreAtom::Function(
+  let function = AnfAtom::Function(
     parameters~,
     body=self.lower_expr(body),
     type_=function_type,
@@ -232,27 +232,27 @@ fn CoreLowerer::lower_function_atom(
 }
 
 ///|
-fn CoreLowerer::bind_temp(
-  self : CoreLowerer,
-  rhs : CoreRhs,
+fn AnfLowerer::bind_temp(
+  self : AnfLowerer,
+  rhs : AnfRhs,
   type_ : @types.Type,
   loc : SourceSpan,
-  continuation : (CoreAtom) -> CoreExpr,
-) -> CoreExpr {
+  continuation : (AnfAtom) -> AnfExpr,
+) -> AnfExpr {
   let temp = self.fresh_temp()
-  let atom = CoreAtom::Temp(temp~, type_~, loc~)
+  let atom = AnfAtom::Temp(temp~, type_~, loc~)
   let body = continuation(atom)
   Let(binding=Temp(temp~, rhs~, type_~, loc~), body~, type_=body.type_(), loc~)
 }
 
 ///|
-fn CoreLowerer::lower_items(
-  self : CoreLowerer,
+fn AnfLowerer::lower_items(
+  self : AnfLowerer,
   items : Array[@checked.CheckedLocalItem],
   index : Int,
-  continuation : () -> CoreExpr,
+  continuation : () -> AnfExpr,
   loc : SourceSpan,
-) -> CoreExpr {
+) -> AnfExpr {
   if index >= items.length() {
     continuation()
   } else {
@@ -315,13 +315,13 @@ fn CoreLowerer::lower_items(
 }
 
 ///|
-fn CoreLowerer::lower_exprs_to_atoms(
-  self : CoreLowerer,
+fn AnfLowerer::lower_exprs_to_atoms(
+  self : AnfLowerer,
   expressions : Array[@checked.CheckedExpr],
   index : Int,
-  atoms : Array[CoreAtom],
-  continuation : (Array[CoreAtom]) -> CoreExpr,
-) -> CoreExpr {
+  atoms : Array[AnfAtom],
+  continuation : (Array[AnfAtom]) -> AnfExpr,
+) -> AnfExpr {
   if index >= expressions.length() {
     continuation(atoms)
   } else {
@@ -339,13 +339,13 @@ fn CoreLowerer::lower_exprs_to_atoms(
 }
 
 ///|
-fn CoreLowerer::lower_struct_fields(
-  self : CoreLowerer,
+fn AnfLowerer::lower_struct_fields(
+  self : AnfLowerer,
   fields : Array[@checked.CheckedStructLiteralField],
   index : Int,
-  lowered : Array[CoreStructField],
-  continuation : (Array[CoreStructField]) -> CoreExpr,
-) -> CoreExpr {
+  lowered : Array[AnfStructField],
+  continuation : (Array[AnfStructField]) -> AnfExpr,
+) -> AnfExpr {
   if index >= fields.length() {
     continuation(lowered)
   } else {

@@ -15,10 +15,10 @@ pub(all) enum RuntimeValue {
   Struct(symbol~ : TypeSymbolId, fields~ : Array[RuntimeStructField])
   Variant(symbol~ : VariantSymbolId, arguments~ : Array[RuntimeValue])
   Closure(
-    function~ : @core.CoreFunctionDeclaration,
+    function~ : @anf.AnfFunctionDeclaration,
     environment~ : RuntimeEnvironment
   )
-  FunctionAtom(function~ : @core.CoreAtom, environment~ : RuntimeEnvironment)
+  FunctionAtom(function~ : @anf.AnfAtom, environment~ : RuntimeEnvironment)
 } derive(Debug, Eq)
 
 ///|
@@ -36,7 +36,7 @@ struct RuntimeBinding {
 
 ///|
 struct RuntimeTempBinding {
-  temp : @core.CoreTempId
+  temp : @anf.AnfTempId
   value : RuntimeValue
 } derive(Debug, Eq)
 
@@ -60,7 +60,7 @@ pub struct RuntimeProgram {
 #warnings("-unused_constructor")
 pub suberror RuntimeError {
   UnboundValue(ValueSymbolId)
-  UnboundTemp(@core.CoreTempId)
+  UnboundTemp(@anf.AnfTempId)
   MissingBuiltin(name~ : String, type_~ : @types.Type)
   BuiltinFailure(name~ : String, message~ : String)
   InvalidRuntimeValue(message~ : String)
@@ -127,7 +127,7 @@ pub fn RuntimeEnvironment::bind_value(
 /// Binds an ANF temporary in this runtime environment.
 pub fn RuntimeEnvironment::bind_temp(
   self : RuntimeEnvironment,
-  temp : @core.CoreTempId,
+  temp : @anf.AnfTempId,
   value : RuntimeValue,
 ) -> Unit {
   self.temps.push({ temp, value })
@@ -152,7 +152,7 @@ pub fn RuntimeEnvironment::lookup_value(
 /// Looks up an ANF temporary, preferring the latest local binding.
 pub fn RuntimeEnvironment::lookup_temp(
   self : RuntimeEnvironment,
-  temp : @core.CoreTempId,
+  temp : @anf.AnfTempId,
 ) -> RuntimeValue raise RuntimeError {
   for index = self.temps.length() - 1; index >= 0; index = index - 1 {
     let binding = self.temps[index]

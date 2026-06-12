@@ -28,8 +28,8 @@ affect. Items prefixed with `Existential:` refer to the design note in
 
 - [x] Introduce stable compiler identities for types, values, fields, variants,
   and type parameters.
-- [x] Introduce checked type objects shared by semantic analysis, typed core,
-  builtin dispatch, and the interpreter.
+- [x] Introduce checked type objects shared by semantic analysis, Buslane Core
+  Language, builtin dispatch, and the interpreter.
 - [x] Support primitive type constants, nominal type applications, function
   types, forall types, kind metadata, substitution, and alpha-equivalence.
 - [x] Provide pretty printers and tests for symbols and checked types.
@@ -120,7 +120,7 @@ ordinary local typing has determined their target types.
     binder uniqueness, binder scope, and unreachable arms.
   - [x] Produce checked patterns with resolved variants, resolved struct
     fields, declaration-order struct fields, and typed binders.
-  - [x] Keep checked patterns available for typed core.
+  - [x] Keep checked patterns available for Buslane Core Language.
   - [x] Defer decision tree generation to later lowered IR or VM work.
   - [x] Existential: type check enum and struct pattern elimination by
     introducing fresh abstract type binders into the arm or remaining local
@@ -131,7 +131,7 @@ ordinary local typing has determined their target types.
 
 Source elaboration consumes the type checker and produces the Checked Source
 AST. It preserves source-level structure while eliminating source-only syntax
-and unresolved or ambiguous states before typed core lowering.
+and unresolved or ambiguous states before Buslane lowering.
 
 - [x] Create the `lanec/checked` package as the owner of the Checked Source
   AST.
@@ -160,29 +160,42 @@ and unresolved or ambiguous states before typed core lowering.
 - [ ] Produce a typed source-level result that contains no unresolved names,
   omitted contextual arguments, or source-only ambiguity states.
 - [x] Existential: preserve witness and opened-type information in Checked
-  Source so later typed core lowering does not need source syntax.
+  Source so later Buslane lowering does not need source syntax.
 
-## 5. Typed Core ANF
+## 5. Buslane Core Language
 
-- [x] Define the typed core program representation after the source-level
-  elaborator has a closed typed result.
+- [x] Define the Buslane Core Language program representation after the
+  source-level elaborator has a closed typed result.
+- [x] Lower Checked Source semantics into typed expression-tree core nodes with
+  origin spans.
+- [x] Preserve nominal data, first-class functions, type lambdas, type
+  applications, existential packages, checked patterns, and typed unsafe
+  builtins.
+- [x] Remove source-only constructs such as pipeline, contextual offer lookup,
+  omitted contextual arguments, and ordinary operator aliases.
+- [x] Existential: lower checked existential packages and unpack/opened-type
+  scopes without depending on source syntax.
+- [x] Provide a Buslane Core Language pretty printer and tests based on Buslane
+  output.
+
+## 6. ANF IR
+
+- [x] Rename the previous structured ANF package from `core` to `anf`.
 - [x] Lower checked source semantics into structured ANF with typed nodes and
   origin spans.
 - [x] Preserve nominal data, first-class functions, type lambdas, type
   applications, existential packages, checked patterns, and typed unsafe
   builtins.
-- [x] Existential: lower checked existential packages and unpack/opened-type
-  scopes without depending on source syntax.
-- [x] Remove source-only constructs such as pipeline, contextual offer lookup,
-  omitted contextual arguments, and ordinary operator aliases.
-- [x] Provide a typed core pretty printer and tests based on typed core output.
+- [x] Provide an ANF pretty printer and tests based on ANF output.
+- [ ] Lower Buslane Core Language into ANF IR instead of lowering ANF directly
+  from Checked Source.
 
-## 6. Reference Interpreter
+## 7. Reference Interpreter
 
 - [x] Define uniform interpreter values, global environments, call frames,
   closure environments, and runtime programs.
-- [x] Evaluate whole typed core programs without hard-coding `main`.
-- [x] Use the interpreter runtime model while evaluating typed core programs.
+- [x] Evaluate whole ANF programs without hard-coding `main`.
+- [x] Use the interpreter runtime model while evaluating ANF programs.
 - [x] Evaluate first-class calls, type lambdas/applications with runtime type
   erasure, existential packages, nominal data, checked patterns, conditionals,
   and matches.
@@ -191,7 +204,7 @@ and unresolved or ambiguous states before typed core lowering.
 - [x] Define the builtin runtime plugin contract and runtime error reports.
 - [ ] Use the interpreter as the semantic oracle for later execution targets.
 
-## 7. Prelude And Conformance
+## 8. Prelude And Conformance
 
 - [ ] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial contextual offer environment from prelude-provided
@@ -200,8 +213,9 @@ and unresolved or ambiguous states before typed core lowering.
   plugins.
 - [x] Expand valid and invalid conformance fixtures under `spec/examples`.
 - [x] Existential: add valid and invalid parser, resolver, type checker,
-  elaborator, typed core, and interpreter fixture coverage for existential
-  enums, structs, higher-kind-ready type members, and escape diagnostics.
+  elaborator, Buslane Core Language, ANF, and interpreter fixture coverage for
+  existential enums, structs, higher-kind-ready type members, and escape
+  diagnostics.
 - [ ] Run parser, type checker, elaborator, and interpreter tests over shared
   fixtures where practical.
 
