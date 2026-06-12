@@ -199,7 +199,7 @@ and unresolved or ambiguous states before typed core lowering.
 - [ ] Provide required intrinsic implementations through builtin runtime
   plugins.
 - [x] Expand valid and invalid conformance fixtures under `spec/examples`.
-- [ ] Existential: add valid and invalid parser, resolver, type checker,
+- [x] Existential: add valid and invalid parser, resolver, type checker,
   elaborator, typed core, and interpreter fixture coverage for existential
   enums, structs, higher-kind-ready type members, and escape diagnostics.
 - [ ] Run parser, type checker, elaborator, and interpreter tests over shared

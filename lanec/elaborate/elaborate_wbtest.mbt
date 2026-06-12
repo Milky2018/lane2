@@ -548,3 +548,112 @@ test "elaborate lazy bool operator into thunked checked call" {
     ),
   )
 }
+
+///|
+test "elaborate existential openings into checked source" {
+  let result = elaborate_source(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn repack_struct(h : Hide) -> Hide {
+      #|  {
+      #|    let Hide::{ T, val } = h
+      #|    Hide::{ T = T, val: val }
+      #|  }
+      #|}
+      #|fn repack_enum(p : Packed) -> Packed {
+      #|  match p {
+      #|    Packed::hide[T](value) => Packed::hide[T](value)
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|elaborate_result {
+      #|  checked_source {
+      #|    struct type#0 Hide {
+      #|      type tmember#0 tparam#0 T : Type index=0
+      #|      field field#0 val : tparam#0 index=0
+      #|    }
+      #|    enum type#1 Packed {
+      #|      variant variant#0 hide index=0 payloads=1[tparam#1 T : Type](tparam#1)
+      #|    }
+      #|    fn : (type#0) -> type#0 value#0 repack_struct {
+      #|      parameters {
+      #|        param : type#0 value#2 h
+      #|      }
+      #|      return : type#0
+      #|      body {
+      #|        block : type#0 {
+      #|          result {
+      #|            block : type#0 {
+      #|              pattern_let {
+      #|                pattern {
+      #|                  struct_pattern : type#0 type#0 {
+      #|                    type_pattern tmember#0 tparam#2 T
+      #|                    field_pattern field#0 val {
+      #|                      binding : tparam#2 value#3 val
+      #|                    }
+      #|                  }
+      #|                }
+      #|                initializer {
+      #|                  value : type#0 value#2 h
+      #|                }
+      #|              }
+      #|              result {
+      #|                struct : type#0 type#0 {
+      #|                  type tmember#0 T = tparam#2
+      #|                  field field#0 val {
+      #|                    value : tparam#2 value#3 val
+      #|                  }
+      #|                }
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|    fn : (type#1) -> type#1 value#1 repack_enum {
+      #|      parameters {
+      #|        param : type#1 value#4 p
+      #|      }
+      #|      return : type#1
+      #|      body {
+      #|        block : type#1 {
+      #|          result {
+      #|            match : type#1 {
+      #|              scrutinee {
+      #|                value : type#1 value#4 p
+      #|              }
+      #|              arms {
+      #|                arm {
+      #|                  pattern {
+      #|                    variant_pattern : type#1 variant#0[tparam#3] {
+      #|                      binding : tparam#3 value#5 value
+      #|                    }
+      #|                  }
+      #|                  body {
+      #|                    variant : type#1 variant#0[tparam#3] {
+      #|                      value : tparam#3 value#5 value
+      #|                    }
+      #|                  }
+      #|                }
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
