@@ -97,6 +97,15 @@ pub fn RuntimeProgram::RuntimeProgram(
 }
 
 ///|
+/// Looks up a global value symbol in this runtime program.
+pub fn RuntimeProgram::lookup_value(
+  self : RuntimeProgram,
+  symbol : ValueSymbolId,
+) -> RuntimeValue raise RuntimeError {
+  self.globals.lookup_value(symbol)
+}
+
+///|
 /// Returns a copy of this runtime environment.
 pub fn RuntimeEnvironment::copy(
   self : RuntimeEnvironment,

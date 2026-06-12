@@ -10,6 +10,48 @@ fn loc() -> SourceSpan {
 }
 
 ///|
+fn expect_core_program(source : String) -> @core.CoreProgram {
+  let parse_result = @parser.parse_string(source)
+  if !parse_result.lexical_errors.is_empty() ||
+    !parse_result.parse_errors.is_empty() {
+    abort("expected parse success")
+  }
+  guard parse_result.source is Some(file) else { abort("expected source") }
+  let resolved = @resolve.resolve_source_file(file)
+  let checked = @typecheck.typecheck_checked_source_file(resolved)
+  guard checked.source is Some(source) else {
+    abort(@prettyprinter.render(checked.diagnostics, width=100))
+  }
+  @core.lower_checked_source_file(source)
+}
+
+///|
+fn expect_top_level_value(
+  program : @core.CoreProgram,
+  name : String,
+) -> ValueSymbolId {
+  for declaration in program.declarations {
+    if declaration is Let(declaration) && declaration.name == Some(name) {
+      return declaration.symbol
+    }
+  }
+  abort("expected top-level value \{name}")
+}
+
+///|
+fn answer_builtins() -> BuiltinRuntime {
+  let runtime = BuiltinRuntime::BuiltinRuntime()
+  runtime.add_handler((name, type_, arguments) => {
+    guard name == "%answer" else { raise MissingBuiltin(name~, type_~) }
+    guard arguments.is_empty() else {
+      raise BuiltinFailure(name~, message="expected no arguments")
+    }
+    Int(42L)
+  })
+  runtime
+}
+
+///|
 test "pretty runtime nominal values erase existential witnesses" {
   let registry = SymbolRegistry::SymbolRegistry()
   let box = registry.define_type("Box", Struct, 0, loc())
@@ -66,5 +108,106 @@ test "pretty runtime errors" {
   inspect(
     @prettyprinter.render(InvalidRuntimeValue(message="not callable")),
     content="invalid_runtime_value \"not callable\"",
+  )
+}
+
+///|
+test "evaluate source generic call and unsafe builtin" {
+  let program = expect_core_program(
+    (
+      #|fn[A] id(value : A) -> A {
+      #|  value
+      #|}
+      #|let answer : Int = id(builtin("%answer"))
+    ),
+  )
+  let answer = expect_top_level_value(program, "answer")
+  let runtime = evaluate_core_program(program, answer_builtins())
+  inspect(
+    @prettyprinter.render(runtime.lookup_value(answer), width=80),
+    content="int 42",
+  )
+}
+
+///|
+test "evaluate existential struct package without runtime witnesses" {
+  let program = expect_core_program(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|let packed : Hide = Hide::{ T = Int, val: builtin("%answer") }
+    ),
+  )
+  let packed = expect_top_level_value(program, "packed")
+  let runtime = evaluate_core_program(program, answer_builtins())
+  inspect(
+    @prettyprinter.render(runtime.lookup_value(packed), width=80),
+    content=(
+      #|struct_value type#0 {
+      #|  field field#0 val {
+      #|    int 42
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "evaluate existential enum match and repack" {
+  let program = expect_core_program(
+    (
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+      #|fn repack(p : Packed) -> Packed {
+      #|  match p {
+      #|    Packed::hide[T](value) => Packed::hide[T](value)
+      #|  }
+      #|}
+      #|let packed : Packed = repack(Packed::hide[Int](builtin("%answer")))
+    ),
+  )
+  let packed = expect_top_level_value(program, "packed")
+  let runtime = evaluate_core_program(program, answer_builtins())
+  inspect(
+    @prettyprinter.render(runtime.lookup_value(packed), width=80),
+    content=(
+      #|variant_value variant#0 {
+      #|  int 42
+      #|}
+    ),
+  )
+}
+
+///|
+test "evaluate existential struct pattern opening and repack" {
+  let program = expect_core_program(
+    (
+      #|struct Hide {
+      #|  type T : Type
+      #|  val : T
+      #|}
+      #|fn repack(h : Hide) -> Hide {
+      #|  {
+      #|    let Hide::{ T, val } = h
+      #|    Hide::{ T = T, val: val }
+      #|  }
+      #|}
+      #|let packed : Hide = repack(Hide::{ T = Int, val: builtin("%answer") })
+    ),
+  )
+  let packed = expect_top_level_value(program, "packed")
+  let runtime = evaluate_core_program(program, answer_builtins())
+  inspect(
+    @prettyprinter.render(runtime.lookup_value(packed), width=80),
+    content=(
+      #|struct_value type#0 {
+      #|  field field#0 val {
+      #|    int 42
+      #|  }
+      #|}
+    ),
   )
 }

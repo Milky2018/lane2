@@ -181,12 +181,12 @@ and unresolved or ambiguous states before typed core lowering.
 
 - [x] Define uniform interpreter values, global environments, call frames,
   closure environments, and runtime programs.
-- [ ] Evaluate whole typed core programs without hard-coding `main`.
-- [ ] Use the interpreter runtime model while evaluating typed core programs.
-- [ ] Evaluate first-class calls, type lambdas/applications with runtime type
+- [x] Evaluate whole typed core programs without hard-coding `main`.
+- [x] Use the interpreter runtime model while evaluating typed core programs.
+- [x] Evaluate first-class calls, type lambdas/applications with runtime type
   erasure, existential packages, nominal data, checked patterns, conditionals,
   and matches.
-- [ ] Existential: evaluate packages and unpacking with runtime type erasure
+- [x] Existential: evaluate packages and unpacking with runtime type erasure
   while preserving the checked scope discipline.
 - [x] Define the builtin runtime plugin contract and runtime error reports.
 - [ ] Use the interpreter as the semantic oracle for later execution targets.
