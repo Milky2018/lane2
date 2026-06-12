@@ -10,6 +10,11 @@ using @symbol {
 }
 
 ///|
+pub(all) struct CoreTempId {
+  index : Int
+} derive(Debug, Eq, Compare)
+
+///|
 pub(all) struct CoreProgram {
   declarations : Array[CoreTopLevelDeclaration]
   loc : SourceSpan
@@ -73,6 +78,12 @@ pub(all) enum CoreBinding {
   Value(
     symbol~ : ValueSymbolId,
     name~ : String?,
+    rhs~ : CoreRhs,
+    type_~ : @types.Type,
+    loc~ : SourceSpan
+  )
+  Temp(
+    temp~ : CoreTempId,
     rhs~ : CoreRhs,
     type_~ : @types.Type,
     loc~ : SourceSpan
@@ -144,6 +155,7 @@ pub(all) enum CoreAtom {
     type_~ : @types.Type,
     loc~ : SourceSpan
   )
+  Temp(temp~ : CoreTempId, type_~ : @types.Type, loc~ : SourceSpan)
   UnsafeBuiltin(name~ : String, type_~ : @types.Type, loc~ : SourceSpan)
   Function(
     parameters~ : Array[@checked.CheckedValueParameter],
@@ -215,6 +227,7 @@ pub fn CoreAtom::type_(self : CoreAtom) -> @types.Type {
   match self {
     Literal(type_~, ..)
     | Value(type_~, ..)
+    | Temp(type_~, ..)
     | UnsafeBuiltin(type_~, ..)
     | Function(type_~, ..)
     | TypeLambda(type_~, ..) => type_
@@ -227,6 +240,7 @@ pub fn CoreAtom::loc(self : CoreAtom) -> SourceSpan {
   match self {
     Literal(loc~, ..)
     | Value(loc~, ..)
+    | Temp(loc~, ..)
     | UnsafeBuiltin(loc~, ..)
     | Function(loc~, ..)
     | TypeLambda(loc~, ..) => loc

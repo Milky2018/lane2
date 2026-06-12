@@ -16,6 +16,13 @@ fn elaborate_source(source : String) -> ElaborateResult {
 }
 
 ///|
+fn elaborate_core_source(source : String) -> CoreElaborateResult {
+  let file = expect_parse_ok(source)
+  let resolved = @resolve.resolve_source_file(file)
+  elaborate_resolved_source_file_to_core(resolved)
+}
+
+///|
 test "elaborate resolved source into checked source" {
   let result = elaborate_source(
     (
@@ -51,6 +58,60 @@ test "elaborate resolved source into checked source" {
       #|    }
       #|    let : Int value#2 answer {
       #|      int 42 : Int
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "elaborate resolved source into typed core" {
+  let result = elaborate_core_source(
+    (
+      #|fn identity(x : Int) -> Int {
+      #|  x
+      #|}
+      #|let answer : Int = identity(42)
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|core_elaborate_result {
+      #|  core_program {
+      #|    fn : (Int) -> Int value#0 identity {
+      #|      parameters {
+      #|        param : Int value#1 x
+      #|      }
+      #|      return : Int
+      #|      body {
+      #|        atom : Int {
+      #|          value : Int value#1 x
+      #|        }
+      #|      }
+      #|    }
+      #|    let : Int value#2 answer {
+      #|      let_expr : Int {
+      #|        binding {
+      #|          temp_binding : Int temp#0 {
+      #|            call : Int {
+      #|              callee {
+      #|                value : (Int) -> Int value#0 identity
+      #|              }
+      #|              arguments {
+      #|                int 42 : Int
+      #|              }
+      #|            }
+      #|          }
+      #|        }
+      #|        body {
+      #|          atom : Int {
+      #|            temp : Int temp#0
+      #|          }
+      #|        }
+      #|      }
       #|    }
       #|  }
       #|  diagnostics {}

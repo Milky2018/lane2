@@ -11,6 +11,7 @@ import {
 }
 
 // Values
+pub fn lower_checked_source_file(@checked.CheckedSourceFile) -> CoreProgram
 
 // Errors
 
@@ -18,6 +19,7 @@ import {
 pub(all) enum CoreAtom {
   Literal(literal~ : @checked.CheckedLiteral, type_~ : @types.Type, loc~ : @basic.SourceSpan)
   Value(name~ : String, symbol~ : @symbol.ValueSymbolId, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Temp(temp~ : CoreTempId, type_~ : @types.Type, loc~ : @basic.SourceSpan)
   UnsafeBuiltin(name~ : String, type_~ : @types.Type, loc~ : @basic.SourceSpan)
   Function(parameters~ : Array[@checked.CheckedValueParameter], body~ : CoreExpr, type_~ : @types.Type, loc~ : @basic.SourceSpan)
   TypeLambda(type_parameters~ : Array[@types.TypeParameter], body~ : CoreAtom, type_~ : @types.Type, loc~ : @basic.SourceSpan)
@@ -28,6 +30,7 @@ pub impl @prettyprinter.Pretty for CoreAtom
 
 pub(all) enum CoreBinding {
   Value(symbol~ : @symbol.ValueSymbolId, name~ : String?, rhs~ : CoreRhs, type_~ : @types.Type, loc~ : @basic.SourceSpan)
+  Temp(temp~ : CoreTempId, rhs~ : CoreRhs, type_~ : @types.Type, loc~ : @basic.SourceSpan)
   Pattern(pattern~ : @checked.CheckedPattern, initializer~ : CoreAtom, loc~ : @basic.SourceSpan)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CoreBinding
@@ -95,6 +98,11 @@ pub(all) struct CoreStructField {
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CoreStructField
+
+pub(all) struct CoreTempId {
+  index : Int
+} derive(Compare, Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreTempId
 
 pub(all) enum CoreTopLevelDeclaration {
   Struct(@checked.CheckedStructDeclaration)

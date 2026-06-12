@@ -3,6 +3,7 @@ package "Milky2018/lane2/elaborate"
 
 import {
   "Milky2018/lane2/checked",
+  "Milky2018/lane2/core",
   "Milky2018/lane2/resolve",
   "Milky2018/lane2/typecheck",
   "moonbit-community/prettyprinter",
@@ -12,9 +13,17 @@ import {
 // Values
 pub fn elaborate_resolved_source_file(@resolve.ResolvedSourceFile) -> ElaborateResult
 
+pub fn elaborate_resolved_source_file_to_core(@resolve.ResolvedSourceFile) -> CoreElaborateResult
+
 // Errors
 
 // Types and methods
+pub(all) struct CoreElaborateResult {
+  program : @core.CoreProgram?
+  diagnostics : Array[@typecheck.TypeCheckDiagnostic]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CoreElaborateResult
+
 pub(all) struct ElaborateResult {
   source : @checked.CheckedSourceFile?
   diagnostics : Array[@typecheck.TypeCheckDiagnostic]

@@ -112,6 +112,12 @@ pub impl @prettyprinter.Pretty for CoreBinding with fn pretty(
       space +
       @pretty.braced_block([rhs.pretty()])
     }
+    Temp(temp~, rhs~, type_~, ..) =>
+      typed_header("temp_binding", type_) +
+      space +
+      temp.pretty() +
+      space +
+      @pretty.braced_block([rhs.pretty()])
     Pattern(pattern~, initializer~, ..) =>
       text("pattern_binding") +
       space +
@@ -190,6 +196,8 @@ pub impl @prettyprinter.Pretty for CoreAtom with fn pretty(atom : CoreAtom) {
       symbol.pretty() +
       space +
       text(name)
+    Temp(temp~, type_~, ..) =>
+      typed_header("temp", type_) + space + temp.pretty()
     UnsafeBuiltin(name~, type_~, ..) =>
       typed_named_doc("unsafe_builtin " + quoted(name), type_)
     Function(parameters~, body~, type_~, ..) =>
@@ -220,6 +228,11 @@ pub impl @prettyprinter.Pretty for CoreMatchArm with fn pretty(
     @pretty.section("pattern", [arm.pattern.pretty()]),
     @pretty.section("body", [arm.body.pretty()]),
   ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for CoreTempId with fn pretty(id : CoreTempId) {
+  text("temp#") + text(id.index.to_string())
 }
 
 ///|

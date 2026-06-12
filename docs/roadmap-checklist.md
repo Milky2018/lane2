@@ -155,7 +155,7 @@ and unresolved or ambiguous states before typed core lowering.
   variant-call expression shape.
 - [x] Elaborate builtin expressions into typed unsafe builtins without
   interpreting intrinsic names.
-- [ ] Integrate checked-source lowering with the resolved-to-checked source
+- [x] Integrate checked-source lowering with the resolved-to-checked source
   elaboration pipeline.
 - [ ] Produce a typed source-level result that contains no unresolved names,
   omitted contextual arguments, or source-only ambiguity states.
@@ -166,14 +166,14 @@ and unresolved or ambiguous states before typed core lowering.
 
 - [x] Define the typed core program representation after the source-level
   elaborator has a closed typed result.
-- [ ] Lower checked source semantics into structured ANF with typed nodes and
+- [x] Lower checked source semantics into structured ANF with typed nodes and
   origin spans.
-- [ ] Preserve nominal data, first-class functions, type lambdas, type
+- [x] Preserve nominal data, first-class functions, type lambdas, type
   applications, existential packages, checked patterns, and typed unsafe
   builtins.
-- [ ] Existential: lower checked existential packages and unpack/opened-type
+- [x] Existential: lower checked existential packages and unpack/opened-type
   scopes without depending on source syntax.
-- [ ] Remove source-only constructs such as pipeline, contextual offer lookup,
+- [x] Remove source-only constructs such as pipeline, contextual offer lookup,
   omitted contextual arguments, and ordinary operator aliases.
 - [x] Provide a typed core pretty printer and tests based on typed core output.
 

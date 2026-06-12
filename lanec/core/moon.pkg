@@ -6,3 +6,9 @@ import {
   "Milky2018/lane2/types",
   "moonbit-community/prettyprinter",
 }
+
+import {
+  "Milky2018/lane2/parser",
+  "Milky2018/lane2/resolve",
+  "Milky2018/lane2/typecheck",
+} for "wbtest"
