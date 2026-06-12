@@ -27,6 +27,14 @@ test "pretty prints checked type objects" {
 }
 
 ///|
+test "pretty prints arrow kinds" {
+  inspect(
+    @prettyprinter.render(Kind::Arrow(Type, Type)),
+    content="Type -> Type",
+  )
+}
+
+///|
 test "substitutes free type parameters but not forall-bound parameters" {
   let (_, a, b) = test_symbols()
   let substitution = TypeSubstitution::single(a.id, Primitive(Int))

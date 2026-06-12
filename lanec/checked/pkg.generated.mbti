@@ -118,6 +118,7 @@ pub(all) struct CheckedStructDeclaration {
   symbol : @symbol.TypeSymbolId
   name : String
   type_parameters : Array[@types.TypeParameter]
+  type_members : Array[CheckedTypeMemberDeclaration]
   fields : Array[CheckedFieldDeclaration]
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
@@ -147,6 +148,16 @@ pub(all) enum CheckedTopLevelDeclaration {
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedTopLevelDeclaration
 
+pub(all) struct CheckedTypeMemberDeclaration {
+  symbol : @symbol.TypeMemberSymbolId
+  type_parameter : @types.TypeParameter
+  name : String
+  kind : @types.Kind
+  index : Int
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedTypeMemberDeclaration
+
 pub(all) struct CheckedValueParameter {
   symbol : @symbol.ValueSymbolId
   is_auto : Bool
@@ -161,6 +172,7 @@ pub(all) struct CheckedVariantDeclaration {
   symbol : @symbol.VariantSymbolId
   name : String
   index : Int
+  type_parameters : Array[@types.TypeParameter]
   payload : Array[@types.Type]
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)

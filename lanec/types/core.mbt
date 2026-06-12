@@ -9,6 +9,7 @@ pub(all) enum PrimitiveType {
 ///|
 pub(all) enum Kind {
   Type
+  Arrow(Kind, Kind)
 } derive(Debug, Eq)
 
 ///|

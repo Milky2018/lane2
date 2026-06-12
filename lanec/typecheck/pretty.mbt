@@ -41,6 +41,10 @@ pub impl @prettyprinter.Pretty for CheckedDeclarationEnvironment with fn pretty(
       environment.types.map(CheckedTypeDeclaration::pretty),
     ),
     @pretty.section(
+      "type_members",
+      environment.type_members.map(CheckedTypeMemberDeclaration::pretty),
+    ),
+    @pretty.section(
       "fields",
       environment.fields.map(CheckedFieldDeclaration::pretty),
     ),
@@ -91,7 +95,30 @@ pub impl @prettyprinter.Pretty for CheckedStructDeclaration with fn pretty(
   text(declaration.name) +
   type_parameters_doc(declaration.type_parameters) +
   space +
-  @pretty.braced_block(declaration.fields.map(CheckedFieldDeclaration::pretty))
+  @pretty.braced_block(
+    declaration.type_members.map(CheckedTypeMemberDeclaration::pretty) +
+    declaration.fields.map(CheckedFieldDeclaration::pretty),
+  )
+}
+
+///|
+pub impl @prettyprinter.Pretty for CheckedTypeMemberDeclaration with fn pretty(
+  type_member : CheckedTypeMemberDeclaration,
+) {
+  text("type") +
+  space +
+  type_member.symbol.pretty() +
+  space +
+  type_member.type_parameter.id.pretty() +
+  space +
+  text(type_member.name) +
+  space +
+  text(":") +
+  space +
+  type_member.kind.pretty() +
+  space +
+  text("index=") +
+  text(type_member.index.to_string())
 }
 
 ///|
@@ -179,6 +206,7 @@ pub impl @prettyprinter.Pretty for CheckedVariantDeclaration with fn pretty(
   space +
   text("payloads=") +
   text(variant.payload.length().to_string()) +
+  type_parameters_doc(variant.type_parameters) +
   payload_doc(variant.payload)
 }
 

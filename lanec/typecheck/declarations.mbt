@@ -11,12 +11,16 @@ pub fn typecheck_declarations(
 ) -> DeclarationTypeCheckResult {
   let checker = DeclarationChecker::{ source, diagnostics: [] }
   let types = []
+  let type_members = []
   let fields = []
   let variants = []
   for declaration in source.declarations {
     match declaration {
       Struct(declaration) => {
         let checked = checker.check_struct(declaration)
+        for type_member in checked.type_members {
+          type_members.push(type_member)
+        }
         for field in checked.fields {
           fields.push(field)
         }
@@ -33,7 +37,7 @@ pub fn typecheck_declarations(
     }
   }
   {
-    declarations: { types, fields, variants },
+    declarations: { types, type_members, fields, variants },
     diagnostics: checker.diagnostics,
   }
 }
@@ -43,18 +47,41 @@ fn DeclarationChecker::check_struct(
   self : DeclarationChecker,
   declaration : @resolve.ResolvedStructDeclaration,
 ) -> CheckedStructDeclaration {
+  let type_members = []
   let fields = []
   for item in declaration.members {
-    if item is Field(field) {
-      fields.push(self.check_field(field))
+    match item {
+      TypeMember(type_member) =>
+        type_members.push(self.check_type_member(type_member))
+      Field(field) => fields.push(self.check_field(field))
     }
   }
   {
     symbol: declaration.symbol,
     name: declaration.name,
     type_parameters: declaration.type_parameters.map(checked_type_parameter),
+    type_members,
     fields,
     loc: declaration.loc,
+  }
+}
+
+///|
+fn DeclarationChecker::check_type_member(
+  self : DeclarationChecker,
+  type_member : @resolve.ResolvedTypeMemberDeclaration,
+) -> CheckedTypeMemberDeclaration {
+  let kind = self.check_kind(type_member.kind)
+  {
+    symbol: type_member.symbol,
+    type_parameter: checked_type_parameter_with_kind(
+      type_member.type_parameter,
+      kind,
+    ),
+    name: type_member.name,
+    kind,
+    index: type_member.index,
+    loc: type_member.loc,
   }
 }
 
@@ -100,6 +127,7 @@ fn DeclarationChecker::check_variant(
     symbol: variant.symbol,
     name: variant.name,
     index: variant.index,
+    type_parameters: variant.type_parameters.map(checked_type_parameter),
     payload: variant.payload.map(fn(type_) { self.check_type(type_) }),
     loc: variant.loc,
   }
@@ -111,6 +139,18 @@ fn DeclarationChecker::check_type(
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
   check_resolved_type(self.source.symbols, self.diagnostics, type_)
+}
+
+///|
+fn DeclarationChecker::check_kind(
+  self : DeclarationChecker,
+  kind : @resolve.ResolvedKind,
+) -> @types.Kind {
+  match kind {
+    Type(..) => Type
+    Arrow(parameter~, result~, ..) =>
+      Arrow(self.check_kind(parameter), self.check_kind(result))
+  }
 }
 
 ///|
@@ -181,5 +221,13 @@ fn check_type_arity(
 fn checked_type_parameter(
   parameter : @resolve.ResolvedTypeParameter,
 ) -> @types.TypeParameter {
-  { id: parameter.symbol, name: parameter.name, kind: Type }
+  checked_type_parameter_with_kind(parameter, Type)
+}
+
+///|
+fn checked_type_parameter_with_kind(
+  parameter : @resolve.ResolvedTypeParameter,
+  kind : @types.Kind,
+) -> @types.TypeParameter {
+  { id: parameter.symbol, name: parameter.name, kind }
 }

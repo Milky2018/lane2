@@ -145,6 +145,7 @@ test "typecheck custom type declaration environment" {
       #|        field field#2 option : type#1[String] index=1
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {
       #|      field field#0 value : tparam#0 index=0
       #|      field field#1 boxed : type#0[Int] index=0
@@ -153,6 +154,49 @@ test "typecheck custom type declaration environment" {
       #|    variants {
       #|      variant variant#0 none index=0 payloads=0
       #|      variant variant#1 some index=1 payloads=1(tparam#1)
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck preserves existential declaration metadata" {
+  let result = expect_declaration_typecheck_result(
+    (
+      #|struct HideF {
+      #|  type F : Type -> Type
+      #|  val : F[Int]
+      #|}
+      #|enum Packed {
+      #|  hide[T](T)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|declaration_typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 HideF {
+      #|        type tmember#0 tparam#0 F : Type -> Type index=0
+      #|        field field#0 val : tparam#0 index=0
+      #|      }
+      #|      enum type#1 Packed {
+      #|        variant variant#0 hide index=0 payloads=1[tparam#1 T : Type](tparam#1)
+      #|      }
+      #|    }
+      #|    type_members {
+      #|      type tmember#0 tparam#0 F : Type -> Type index=0
+      #|    }
+      #|    fields {
+      #|      field field#0 val : tparam#0 index=0
+      #|    }
+      #|    variants {
+      #|      variant variant#0 hide index=0 payloads=1[tparam#1 T : Type](tparam#1)
       #|    }
       #|  }
       #|  diagnostics {}
@@ -343,6 +387,7 @@ test "typecheck auto offer parameter is visible in function body" {
       #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {
       #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
       #|    }
@@ -475,6 +520,7 @@ test "typecheck reports missing contextual offer" {
       #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {
       #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
       #|    }
@@ -519,6 +565,7 @@ test "typecheck reports ambiguous contextual offer" {
       #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {
       #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
       #|    }
@@ -559,6 +606,7 @@ test "typecheck top level values and direct calls" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -596,6 +644,7 @@ test "typecheck top level functions recurse and values stay ordered" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -647,6 +696,7 @@ test "typecheck local bindings are sequential and local functions see prior scop
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -679,6 +729,7 @@ test "typecheck local function can call itself after declaration" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -732,6 +783,7 @@ test "typecheck local generic function after declaration" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -762,6 +814,7 @@ test "typecheck direct binary operator alias" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -811,6 +864,7 @@ test "typecheck direct unary operator alias" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -844,6 +898,7 @@ test "typecheck function literal parameters from expected function type" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -875,6 +930,7 @@ test "typecheck pipeline expression as first argument call" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -905,6 +961,7 @@ test "typecheck pipeline expression into function literal" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -935,6 +992,7 @@ test "typecheck generic function literal parameters from expected forall type" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -996,6 +1054,7 @@ test "typecheck synthesizes direct generic call from argument type" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -1027,6 +1086,7 @@ test "typecheck generic call uses expected result type" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -1060,6 +1120,7 @@ test "typecheck generic call drives function literal argument" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -1094,6 +1155,7 @@ test "typecheck polymorphic function parameter instantiation" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {}
+      #|    type_members {}
       #|    fields {}
       #|    variants {}
       #|  }
@@ -1156,6 +1218,7 @@ test "typecheck generic struct construction and field access" {
       #|        field field#0 value : tparam#0 index=0
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {
       #|      field field#0 value : tparam#0 index=0
       #|    }
@@ -1212,6 +1275,7 @@ test "typecheck qualified enum variant construction" {
       #|        variant variant#1 some index=1 payloads=1(tparam#0)
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {}
       #|    variants {
       #|      variant variant#0 none index=0 payloads=0
@@ -1255,6 +1319,7 @@ test "typecheck unqualified enum variant construction" {
       #|        variant variant#1 some index=1 payloads=1(tparam#0)
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {}
       #|    variants {
       #|      variant variant#0 none index=0 payloads=0
@@ -1379,6 +1444,7 @@ test "typecheck exhaustive enum match" {
       #|        variant variant#1 some index=1 payloads=1(tparam#0)
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {}
       #|    variants {
       #|      variant variant#0 none index=0 payloads=0
@@ -1591,6 +1657,7 @@ test "typecheck keeps unresolved type as error type" {
       #|        field field#0 missing : <error> index=0
       #|      }
       #|    }
+      #|    type_members {}
       #|    fields {
       #|      field field#0 missing : <error> index=0
       #|    }

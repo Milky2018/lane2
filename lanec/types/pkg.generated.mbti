@@ -14,6 +14,7 @@ import {
 // Types and methods
 pub(all) enum Kind {
   Type
+  Arrow(Kind, Kind)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for Kind
 

@@ -17,7 +17,18 @@ pub(all) struct CheckedStructDeclaration {
   symbol : TypeSymbolId
   name : String
   type_parameters : Array[@types.TypeParameter]
+  type_members : Array[CheckedTypeMemberDeclaration]
   fields : Array[CheckedFieldDeclaration]
+  loc : SourceSpan
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckedTypeMemberDeclaration {
+  symbol : TypeMemberSymbolId
+  type_parameter : @types.TypeParameter
+  name : String
+  kind : @types.Kind
+  index : Int
   loc : SourceSpan
 } derive(Debug, Eq)
 
@@ -45,6 +56,7 @@ pub(all) struct CheckedVariantDeclaration {
   symbol : VariantSymbolId
   name : String
   index : Int
+  type_parameters : Array[@types.TypeParameter]
   payload : Array[@types.Type]
   loc : SourceSpan
 } derive(Debug, Eq)

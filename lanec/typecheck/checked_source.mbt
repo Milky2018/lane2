@@ -364,9 +364,26 @@ fn CheckedStructDeclaration::to_checked_struct_declaration(
     symbol: self.symbol,
     name: self.name,
     type_parameters: self.type_parameters,
+    type_members: self.type_members.map(
+      CheckedTypeMemberDeclaration::to_checked_type_member_declaration,
+    ),
     fields: self.fields.map(
       CheckedFieldDeclaration::to_checked_field_declaration,
     ),
+    loc: self.loc,
+  }
+}
+
+///|
+fn CheckedTypeMemberDeclaration::to_checked_type_member_declaration(
+  self : CheckedTypeMemberDeclaration,
+) -> @checked.CheckedTypeMemberDeclaration {
+  {
+    symbol: self.symbol,
+    type_parameter: self.type_parameter,
+    name: self.name,
+    kind: self.kind,
+    index: self.index,
     loc: self.loc,
   }
 }
@@ -408,6 +425,7 @@ fn CheckedVariantDeclaration::to_checked_variant_declaration(
     symbol: self.symbol,
     name: self.name,
     index: self.index,
+    type_parameters: self.type_parameters,
     payload: self.payload,
     loc: self.loc,
   }

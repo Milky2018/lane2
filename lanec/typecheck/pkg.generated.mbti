@@ -23,6 +23,7 @@ pub fn typecheck_source_file(@resolve.ResolvedSourceFile) -> TypeCheckResult
 // Types and methods
 pub(all) struct CheckedDeclarationEnvironment {
   types : Array[CheckedTypeDeclaration]
+  type_members : Array[CheckedTypeMemberDeclaration]
   fields : Array[CheckedFieldDeclaration]
   variants : Array[CheckedVariantDeclaration]
 } derive(Eq, @debug.Debug)
@@ -73,6 +74,7 @@ pub(all) struct CheckedStructDeclaration {
   symbol : @symbol.TypeSymbolId
   name : String
   type_parameters : Array[@types.TypeParameter]
+  type_members : Array[CheckedTypeMemberDeclaration]
   fields : Array[CheckedFieldDeclaration]
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
@@ -83,6 +85,16 @@ pub(all) enum CheckedTypeDeclaration {
   Enum(CheckedEnumDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for CheckedTypeDeclaration
+
+pub(all) struct CheckedTypeMemberDeclaration {
+  symbol : @symbol.TypeMemberSymbolId
+  type_parameter : @types.TypeParameter
+  name : String
+  kind : @types.Kind
+  index : Int
+  loc : @basic.SourceSpan
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for CheckedTypeMemberDeclaration
 
 pub(all) enum CheckedValueDeclaration {
   Function(CheckedFunctionDeclaration)
@@ -99,6 +111,7 @@ pub(all) struct CheckedVariantDeclaration {
   symbol : @symbol.VariantSymbolId
   name : String
   index : Int
+  type_parameters : Array[@types.TypeParameter]
   payload : Array[@types.Type]
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)

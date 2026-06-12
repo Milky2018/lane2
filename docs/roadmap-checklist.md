@@ -35,7 +35,7 @@ affect. Items prefixed with `Existential:` refer to the design note in
 - [x] Provide pretty printers and tests for symbols and checked types.
 - [x] Keep compiler identity and substitution internals behind public APIs
   instead of exposing raw indices or backing arrays.
-- [ ] Existential: extend type objects and kind checking so existential
+- [x] Existential: extend type objects and kind checking so existential
   packages can carry explicit hidden type members while preserving nominal
   struct and enum identity.
 

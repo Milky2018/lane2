@@ -14,6 +14,8 @@ pub impl @prettyprinter.Pretty for PrimitiveType with fn pretty(
 pub impl @prettyprinter.Pretty for Kind with fn pretty(kind : Kind) {
   match kind {
     Type => text("Type")
+    Arrow(parameter, result) =>
+      group(parameter.pretty() + space + text("->") + space + result.pretty())
   }
 }
 
