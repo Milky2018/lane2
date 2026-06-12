@@ -81,7 +81,7 @@ fn SemanticChecker::check_top_level_function(
     let type_ = self.check_type(parameter.type_)
     scope.bind(parameter.symbol, type_)
     if parameter.is_offered {
-      scope.offer(parameter.symbol, type_)
+      self.offer_symbol(scope.offers, parameter.symbol, type_, parameter.loc)
     }
   }
   self.check_expr(
@@ -109,7 +109,7 @@ fn SemanticChecker::check_top_level_let(
   }
   self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
   if declaration.is_offered {
-    self.offers.push({ symbol: declaration.symbol, type_ })
+    self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
   }
   self.values.push(
     Let({
@@ -130,7 +130,8 @@ fn SemanticChecker::check_top_level_offer(
   match declaration.reference {
     Symbol(symbol) =>
       match scope.lookup(symbol) {
-        Some(type_) => self.offers.push({ symbol, type_ })
+        Some(type_) =>
+          self.offer_symbol(self.offers, symbol, type_, declaration.loc)
         None =>
           self.diagnostics.push({
             kind: CannotInferExpression("offer value has no checked type"),

@@ -24,7 +24,7 @@ fn SemanticChecker::check_checked_expr(
       // `builtin` is unsafe and opaque to the checker. The adjacent expected
       // type is the whole type of the resulting checked node.
       checked_expression(UnsafeBuiltin(name~, type_=expected, loc~), expected)
-    Literal(..) => {
+    Literal(..) | Field(..) => {
       let checked = self.synthesize_checked_expr(scope, expression)
       self.expect_type(expected, checked.type_, expression.loc())
       checked
@@ -83,6 +83,8 @@ fn SemanticChecker::synthesize_checked_expr(
       )
     Var(name~, reference~, loc~) =>
       self.synthesize_checked_value_reference(scope, reference, name, loc)
+    Field(base~, name~, reference~, loc~) =>
+      self.synthesize_checked_field(scope, base, name, reference, loc)
     Call(callee~, arguments~, loc~) =>
       self.synthesize_checked_call(scope, callee, arguments, loc)
     Builtin(_, loc~) => {
@@ -118,11 +120,7 @@ fn SemanticChecker::check_checked_block(
           None => complete = false
         }
       Offer(declaration) =>
-        next_scope.offer_reference(
-          declaration.reference,
-          self.diagnostics,
-          declaration.loc,
-        )
+        next_scope.offer_reference(self, declaration.reference, declaration.loc)
     }
   }
   let checked_result = self.check_checked_expr(next_scope, result, expected)
@@ -435,7 +433,12 @@ fn SemanticChecker::synthesize_checked_function_literal(
       let type_ = self.check_type(type_annotation)
       body_scope.bind(parameter.symbol, type_)
       if parameter.is_offered {
-        body_scope.offer(parameter.symbol, type_)
+        self.offer_symbol(
+          body_scope.offers,
+          parameter.symbol,
+          type_,
+          parameter.loc,
+        )
       }
       parameter_types.push(type_)
       checked_parameters.push({
@@ -454,7 +457,12 @@ fn SemanticChecker::synthesize_checked_function_literal(
       })
       body_scope.bind(parameter.symbol, type_)
       if parameter.is_offered {
-        body_scope.offer(parameter.symbol, type_)
+        self.offer_symbol(
+          body_scope.offers,
+          parameter.symbol,
+          type_,
+          parameter.loc,
+        )
       }
       parameter_types.push(type_)
       checked_parameters.push({
@@ -608,6 +616,68 @@ fn SemanticChecker::synthesize_checked_symbol_value(
     return checked_expression_none(Error)
   }
   checked_expression(Value(name~, symbol~, type_~, loc~), type_)
+}
+
+///|
+fn SemanticChecker::synthesize_checked_field(
+  self : SemanticChecker,
+  scope : TypeScope,
+  base : @desugar.DesugaredExpr,
+  name : String,
+  reference : @resolve.ResolvedFieldReference,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let checked_base = self.synthesize_checked_expr(scope, base)
+  guard self.require_checked_expression(checked_base, base.loc(), "field base")
+    is Some(base) else {
+    return checked_expression_none_reported(Error)
+  }
+  match reference {
+    Symbol(field) =>
+      self.checked_field_from_symbol(base, checked_base.type_, field, name, loc)
+    Deferred(_) =>
+      if checked_base.type_ is Nominal(symbol, _) {
+        guard self.source.symbols.field_named(symbol, name) is Some(field) else {
+          self.diagnostics.push({ kind: UnknownField(name~), loc })
+          return checked_expression_none_reported(Error)
+        }
+        self.checked_field_from_symbol(
+          base,
+          checked_base.type_,
+          field,
+          name,
+          loc,
+        )
+      } else if checked_base.type_ is Error {
+        checked_expression_none_reported(Error)
+      } else {
+        self.diagnostics.push({ kind: NotAStruct(checked_base.type_), loc })
+        checked_expression_none_reported(Error)
+      }
+    Unresolved(..) => {
+      self.diagnostics.push({ kind: UnknownField(name~), loc })
+      checked_expression_none_reported(Error)
+    }
+  }
+}
+
+///|
+fn SemanticChecker::checked_field_from_symbol(
+  self : SemanticChecker,
+  base : @checked.CheckedExpr,
+  base_type : @types.Type,
+  field : FieldSymbolId,
+  name : String,
+  loc : SourceSpan,
+) -> CheckedExpressionSynthesis {
+  let type_ = self.declarations.field_type(
+    self.diagnostics,
+    base_type,
+    field,
+    name,
+    loc,
+  )
+  checked_expression(Field(base~, field~, name~, type_~, loc~), type_)
 }
 
 ///|

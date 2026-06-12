@@ -16,7 +16,12 @@ fn SemanticChecker::synthesize_function_literal(
       let type_ = self.check_type(type_annotation)
       body_scope.bind(parameter.symbol, type_)
       if parameter.is_offered {
-        body_scope.offer(parameter.symbol, type_)
+        self.offer_symbol(
+          body_scope.offers,
+          parameter.symbol,
+          type_,
+          parameter.loc,
+        )
       }
       parameter_types.push(type_)
     } else {
@@ -26,7 +31,12 @@ fn SemanticChecker::synthesize_function_literal(
       })
       body_scope.bind(parameter.symbol, Error)
       if parameter.is_offered {
-        body_scope.offer(parameter.symbol, Error)
+        self.offer_symbol(
+          body_scope.offers,
+          parameter.symbol,
+          Error,
+          parameter.loc,
+        )
       }
       parameter_types.push(Error)
     }
@@ -97,7 +107,12 @@ fn SemanticChecker::check_function_literal(
         }
         body_scope.bind(parameter.symbol, expected_parameters[index])
         if parameter.is_offered {
-          body_scope.offer(parameter.symbol, expected_parameters[index])
+          self.offer_symbol(
+            body_scope.offers,
+            parameter.symbol,
+            expected_parameters[index],
+            parameter.loc,
+          )
         }
       }
       if return_type is Some(type_annotation) {

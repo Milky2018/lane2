@@ -285,11 +285,7 @@ fn SemanticChecker::contextual_offer_expr(
     }
     1 => {
       let offer = matches[0]
-      let name = match self.source.symbols.value_metadata(offer.symbol) {
-        Some(metadata) => metadata.name
-        None => "<unknown>"
-      }
-      Some(Var(name~, reference=Symbol(offer.symbol), loc~))
+      Some(offer.expression)
     }
     _ => {
       self.diagnostics.push({

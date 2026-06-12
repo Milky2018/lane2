@@ -7,7 +7,9 @@ priv struct ValueTypeBinding {
 
 ///|
 priv struct ContextualOffer {
-  symbol : ValueSymbolId
+  root : ValueSymbolId
+  path : Array[FieldSymbolId]
+  expression : @desugar.DesugaredExpr
   type_ : @types.Type
 }
 
@@ -67,15 +69,6 @@ fn TypeScope::lookup_function_parameters(
 }
 
 ///|
-fn TypeScope::offer(
-  self : TypeScope,
-  symbol : ValueSymbolId,
-  type_ : @types.Type,
-) -> Unit {
-  self.offers.push({ symbol, type_ })
-}
-
-///|
 fn TypeScope::copy(self : TypeScope) -> TypeScope {
   { values: self.values.copy(), offers: self.offers.copy() }
 }
@@ -83,25 +76,121 @@ fn TypeScope::copy(self : TypeScope) -> TypeScope {
 ///|
 fn TypeScope::offer_reference(
   self : TypeScope,
+  checker : SemanticChecker,
   reference : @resolve.ResolvedValueReference,
-  diagnostics : Array[TypeCheckDiagnostic],
   loc : SourceSpan,
 ) -> Unit {
   match reference {
     Symbol(symbol) =>
       match self.lookup(symbol) {
-        Some(type_) => self.offer(symbol, type_)
+        Some(type_) => checker.offer_symbol(self.offers, symbol, type_, loc)
         None =>
-          diagnostics.push({
+          checker.diagnostics.push({
             kind: CannotInferExpression("offer value has no checked type"),
             loc,
           })
       }
     _ =>
-      diagnostics.push({
+      checker.diagnostics.push({
         kind: CannotInferExpression("offer requires a resolved value"),
         loc,
       })
+  }
+}
+
+///|
+fn SemanticChecker::offer_symbol(
+  self : SemanticChecker,
+  offers : Array[ContextualOffer],
+  symbol : ValueSymbolId,
+  type_ : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  let name = match self.source.symbols.value_metadata(symbol) {
+    Some(metadata) => metadata.name
+    None => "<unknown>"
+  }
+  let expression = @desugar.DesugaredExpr::Var(
+    name~,
+    reference=Symbol(symbol),
+    loc~,
+  )
+  self.offer_expression(offers, symbol, [], expression, type_, loc)
+}
+
+///|
+fn SemanticChecker::offer_expression(
+  self : SemanticChecker,
+  offers : Array[ContextualOffer],
+  root : ValueSymbolId,
+  path : Array[FieldSymbolId],
+  expression : @desugar.DesugaredExpr,
+  type_ : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  if !contains_contextual_offer(offers, root, path) {
+    offers.push({ root, path, expression, type_ })
+  }
+  self.offer_forwarding_fields(offers, root, path, expression, type_, loc)
+}
+
+///|
+fn contains_contextual_offer(
+  offers : Array[ContextualOffer],
+  root : ValueSymbolId,
+  path : Array[FieldSymbolId],
+) -> Bool {
+  offers.any(fn(offer) {
+    offer.root == root && field_path_equals(offer.path, path)
+  })
+}
+
+///|
+fn field_path_equals(
+  left : Array[FieldSymbolId],
+  right : Array[FieldSymbolId],
+) -> Bool {
+  if left.length() != right.length() {
+    return false
+  }
+  for index in 0..<left.length() {
+    if left[index] != right[index] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn SemanticChecker::offer_forwarding_fields(
+  self : SemanticChecker,
+  offers : Array[ContextualOffer],
+  root : ValueSymbolId,
+  path : Array[FieldSymbolId],
+  expression : @desugar.DesugaredExpr,
+  type_ : @types.Type,
+  loc : SourceSpan,
+) -> Unit {
+  guard type_ is Nominal(owner, arguments) else { return }
+  guard self.declarations.checked_struct(owner) is Some(declaration) else {
+    return
+  }
+  let substitution = declaration.nominal_substitution(arguments)
+  for field in declaration.fields {
+    if field.is_offered && !path.contains(field.symbol) {
+      let field_type = field.type_.substitute(substitution)
+      let field_path = path.copy()
+      field_path.push(field.symbol)
+      let field_expr = @desugar.DesugaredExpr::Field(
+        base=expression,
+        name=field.name,
+        reference=Symbol(field.symbol),
+        loc~,
+      )
+      self.offer_expression(
+        offers, root, field_path, field_expr, field_type, loc,
+      )
+    }
   }
 }
 
@@ -120,7 +209,7 @@ fn SemanticChecker::check_local_let(
   }
   scope.bind(declaration.symbol, type_)
   if declaration.is_offered {
-    scope.offer(declaration.symbol, type_)
+    self.offer_symbol(scope.offers, declaration.symbol, type_, declaration.loc)
   }
 }
 
@@ -143,7 +232,12 @@ fn SemanticChecker::check_local_function(
   for parameter in parameters {
     body_scope.bind(parameter.symbol, parameter.type_)
     if parameter.is_offered {
-      body_scope.offer(parameter.symbol, parameter.type_)
+      self.offer_symbol(
+        body_scope.offers,
+        parameter.symbol,
+        parameter.type_,
+        parameter.loc,
+      )
     }
   }
   self.check_expr(

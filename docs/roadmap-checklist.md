@@ -40,7 +40,7 @@ module tasks should live in issues or implementation notes.
   contextual offer environment.
 - [x] Resolve field access into field symbol identities after enough type
   information is available.
-- [ ] Resolve contextual forwarding fields declared with `offer field : Type`
+- [x] Resolve contextual forwarding fields declared with `offer field : Type`
   after checked field types are available.
 - [ ] Resolve operator aliases through ordinary operation names while
   preserving call origin metadata for diagnostics.

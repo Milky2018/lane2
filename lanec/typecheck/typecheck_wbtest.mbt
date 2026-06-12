@@ -53,7 +53,7 @@ fn expect_checked_let_initializer(
             expected,
           )
           guard checked.expression is Some(expression) else {
-            abort("expected checked expression")
+            abort(@prettyprinter.render(checker.diagnostics, width=100))
           }
           return expression
         } else {
@@ -358,6 +358,89 @@ test "typecheck auto offer parameter is visible in function body" {
       #|    let value#8 answer : Int
       #|  }
       #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck forwards offered struct fields" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Equal[A] {
+      #|  equal : (A, A) -> Bool
+      #|}
+      #|struct Compare[A] {
+      #|  offer equal_impl : Equal[A]
+      #|}
+      #|fn[A] op_equal(a : A, b : A, auto op : Equal[A]) -> Bool {
+      #|  op.equal(a, b)
+      #|}
+      #|let offer int_compare_ops : Compare[Int] = builtin("%int_compare_ops")
+      #|let answer : Bool = 1 == 2
+    ),
+    "answer",
+    Primitive(Bool),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Bool {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Bool[Int] {
+      #|      callee {
+      #|        value : forall [tparam#2 A : Type]. (tparam#2, tparam#2, type#0[tparam#2]) -> Bool value#0 op_equal
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    field : type#0[Int] field#1 equal_impl {
+      #|      base {
+      #|        value : type#1[Int] value#4 int_compare_ops
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck repeated identical offer is idempotent" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|offer int_add_ops
+      #|offer int_add_ops
+      #|let answer : Int = 1 + 2
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Int {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|      callee {
+      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    value : type#0[Int] value#4 int_add_ops
+      #|  }
       #|}
     ),
   )

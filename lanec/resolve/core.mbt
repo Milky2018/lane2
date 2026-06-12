@@ -66,6 +66,7 @@ pub(all) enum ResolvedStructMember {
 ///|
 pub(all) struct ResolvedFieldDeclaration {
   symbol : FieldSymbolId
+  is_offered : Bool
   name : String
   type_ : ResolvedType
   index : Int

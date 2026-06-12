@@ -211,7 +211,14 @@ fn @syntax.FieldDeclaration::resolve_field(
 ) -> ResolvedFieldDeclaration {
   let symbol = resolver.registry.field_named(owner, self.name).unwrap()
   let type_ = self.type_.resolve_type(resolver, scope)
-  { symbol, name: self.name, type_, index, loc: self.loc }
+  {
+    symbol,
+    is_offered: self.is_offered,
+    name: self.name,
+    type_,
+    index,
+    loc: self.loc,
+  }
 }
 
 ///|

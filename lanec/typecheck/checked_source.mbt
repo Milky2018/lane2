@@ -94,7 +94,12 @@ fn SemanticChecker::checked_top_level_function(
   for parameter in parameters {
     body_scope.bind(parameter.symbol, parameter.type_)
     if parameter.is_offered {
-      body_scope.offer(parameter.symbol, parameter.type_)
+      self.offer_symbol(
+        body_scope.offers,
+        parameter.symbol,
+        parameter.type_,
+        parameter.loc,
+      )
     }
   }
   let return_type = self.check_type(declaration.return_type)
@@ -150,7 +155,7 @@ fn SemanticChecker::checked_top_level_let(
   )
   self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
   if declaration.is_offered {
-    self.offers.push({ symbol: declaration.symbol, type_ })
+    self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
   }
   self.values.push(
     Let({
@@ -197,7 +202,7 @@ fn SemanticChecker::check_checked_local_let(
   )
   scope.bind(declaration.symbol, type_)
   if declaration.is_offered {
-    scope.offer(declaration.symbol, type_)
+    self.offer_symbol(scope.offers, declaration.symbol, type_, declaration.loc)
   }
   guard self.require_checked_expression(
       checked_initializer,
@@ -241,7 +246,12 @@ fn SemanticChecker::check_checked_local_function(
   for parameter in parameters {
     body_scope.bind(parameter.symbol, parameter.type_)
     if parameter.is_offered {
-      body_scope.offer(parameter.symbol, parameter.type_)
+      self.offer_symbol(
+        body_scope.offers,
+        parameter.symbol,
+        parameter.type_,
+        parameter.loc,
+      )
     }
   }
   let return_type = self.check_type(declaration.return_type)
@@ -306,6 +316,7 @@ fn CheckedFieldDeclaration::to_checked_field_declaration(
 ) -> @checked.CheckedFieldDeclaration {
   {
     symbol: self.symbol,
+    is_offered: self.is_offered,
     name: self.name,
     index: self.index,
     type_: self.type_,
