@@ -82,6 +82,7 @@ pub(all) struct CheckedFunctionDeclaration {
   symbol : ValueSymbolId
   name : String
   type_ : @types.Type
+  parameters : Array[@checked.CheckedValueParameter]
   loc : SourceSpan
 } derive(Debug, Eq)
 

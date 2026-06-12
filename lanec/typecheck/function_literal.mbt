@@ -10,11 +10,14 @@ fn SemanticChecker::synthesize_function_literal(
 ) -> @types.Type {
   ignore(loc)
   let parameter_types = []
-  let body_scope : TypeScope = { values: scope.values.copy() }
+  let body_scope = scope.copy()
   for parameter in parameters {
     if parameter.type_annotation is Some(type_annotation) {
       let type_ = self.check_type(type_annotation)
       body_scope.bind(parameter.symbol, type_)
+      if parameter.is_offered {
+        body_scope.offer(parameter.symbol, type_)
+      }
       parameter_types.push(type_)
     } else {
       self.diagnostics.push({
@@ -22,6 +25,9 @@ fn SemanticChecker::synthesize_function_literal(
         loc: parameter.loc,
       })
       body_scope.bind(parameter.symbol, Error)
+      if parameter.is_offered {
+        body_scope.offer(parameter.symbol, Error)
+      }
       parameter_types.push(Error)
     }
   }
@@ -79,7 +85,7 @@ fn SemanticChecker::check_function_literal(
         })
         return
       }
-      let body_scope : TypeScope = { values: scope.values.copy() }
+      let body_scope = scope.copy()
       for index in 0..<parameters.length() {
         let parameter = parameters[index]
         if parameter.type_annotation is Some(type_annotation) {
@@ -90,6 +96,9 @@ fn SemanticChecker::check_function_literal(
           )
         }
         body_scope.bind(parameter.symbol, expected_parameters[index])
+        if parameter.is_offered {
+          body_scope.offer(parameter.symbol, expected_parameters[index])
+        }
       }
       if return_type is Some(type_annotation) {
         self.expect_type(expected_result, self.check_type(type_annotation), loc)

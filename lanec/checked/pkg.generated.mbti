@@ -148,6 +148,8 @@ pub impl @prettyprinter.Pretty for CheckedTopLevelDeclaration
 
 pub(all) struct CheckedValueParameter {
   symbol : @symbol.ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : @types.Type
   loc : @basic.SourceSpan

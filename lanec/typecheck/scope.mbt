@@ -2,16 +2,24 @@
 priv struct ValueTypeBinding {
   symbol : ValueSymbolId
   type_ : @types.Type
+  parameters : Array[@checked.CheckedValueParameter]?
+}
+
+///|
+priv struct ContextualOffer {
+  symbol : ValueSymbolId
+  type_ : @types.Type
 }
 
 ///|
 priv struct TypeScope {
   values : Array[ValueTypeBinding]
+  offers : Array[ContextualOffer]
 }
 
 ///|
 fn SemanticChecker::root_scope(self : SemanticChecker) -> TypeScope {
-  { values: self.value_types.copy() }
+  { values: self.value_types.copy(), offers: self.offers.copy() }
 }
 
 ///|
@@ -20,7 +28,17 @@ fn TypeScope::bind(
   symbol : ValueSymbolId,
   type_ : @types.Type,
 ) -> Unit {
-  self.values.push({ symbol, type_ })
+  self.values.push({ symbol, type_, parameters: None })
+}
+
+///|
+fn TypeScope::bind_function(
+  self : TypeScope,
+  symbol : ValueSymbolId,
+  type_ : @types.Type,
+  parameters : Array[@checked.CheckedValueParameter],
+) -> Unit {
+  self.values.push({ symbol, type_, parameters: Some(parameters) })
 }
 
 ///|
@@ -32,6 +50,59 @@ fn TypeScope::lookup(self : TypeScope, symbol : ValueSymbolId) -> @types.Type? {
     }
   }
   None
+}
+
+///|
+fn TypeScope::lookup_function_parameters(
+  self : TypeScope,
+  symbol : ValueSymbolId,
+) -> Array[@checked.CheckedValueParameter]? {
+  for index = self.values.length() - 1; index >= 0; index = index - 1 {
+    let binding = self.values[index]
+    if binding.symbol == symbol {
+      return binding.parameters
+    }
+  }
+  None
+}
+
+///|
+fn TypeScope::offer(
+  self : TypeScope,
+  symbol : ValueSymbolId,
+  type_ : @types.Type,
+) -> Unit {
+  self.offers.push({ symbol, type_ })
+}
+
+///|
+fn TypeScope::copy(self : TypeScope) -> TypeScope {
+  { values: self.values.copy(), offers: self.offers.copy() }
+}
+
+///|
+fn TypeScope::offer_reference(
+  self : TypeScope,
+  reference : @resolve.ResolvedValueReference,
+  diagnostics : Array[TypeCheckDiagnostic],
+  loc : SourceSpan,
+) -> Unit {
+  match reference {
+    Symbol(symbol) =>
+      match self.lookup(symbol) {
+        Some(type_) => self.offer(symbol, type_)
+        None =>
+          diagnostics.push({
+            kind: CannotInferExpression("offer value has no checked type"),
+            loc,
+          })
+      }
+    _ =>
+      diagnostics.push({
+        kind: CannotInferExpression("offer requires a resolved value"),
+        loc,
+      })
+  }
 }
 
 ///|
@@ -48,6 +119,9 @@ fn SemanticChecker::check_local_let(
     self.synthesize_expr(scope, declaration.initializer)
   }
   scope.bind(declaration.symbol, type_)
+  if declaration.is_offered {
+    scope.offer(declaration.symbol, type_)
+  }
 }
 
 ///|
@@ -61,10 +135,16 @@ fn SemanticChecker::check_local_function(
     declaration.parameters,
     declaration.return_type,
   )
-  scope.bind(declaration.symbol, type_)
-  let body_scope : TypeScope = { values: scope.values.copy() }
-  for parameter in declaration.parameters {
-    body_scope.bind(parameter.symbol, self.check_type(parameter.type_))
+  let parameters = declaration.parameters.map(fn(parameter) {
+    self.checked_value_parameter(parameter)
+  })
+  scope.bind_function(declaration.symbol, type_, parameters)
+  let body_scope = scope.copy()
+  for parameter in parameters {
+    body_scope.bind(parameter.symbol, parameter.type_)
+    if parameter.is_offered {
+      body_scope.offer(parameter.symbol, parameter.type_)
+    }
   }
   self.check_expr(
     body_scope,

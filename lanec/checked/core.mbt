@@ -72,6 +72,8 @@ pub(all) struct CheckedLetDeclaration {
 ///|
 pub(all) struct CheckedValueParameter {
   symbol : ValueSymbolId
+  is_auto : Bool
+  is_offered : Bool
   name : String
   type_ : @types.Type
   loc : SourceSpan

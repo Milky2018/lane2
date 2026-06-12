@@ -365,7 +365,14 @@ fn @syntax.LetDeclaration::resolve_let(
   if self.name is Some(name) {
     scope.define_value(name, symbol, type_annotation)
   }
-  { symbol, name: self.name, type_annotation, initializer, loc: self.loc }
+  {
+    symbol,
+    is_offered: self.is_offered,
+    name: self.name,
+    type_annotation,
+    initializer,
+    loc: self.loc,
+  }
 }
 
 ///|
@@ -373,10 +380,11 @@ fn @syntax.LetDeclaration::resolve_let(
 ///
 /// Example: `offer int_add_ops` records the offered value name; later semantic
 /// checking validates its type and uses it for Contextual Resolution.
-fn @syntax.OfferDeclaration::resolve_offer(
+fn @syntax.OfferDeclaration::resolve_offer_with_reference(
   self : @syntax.OfferDeclaration,
+  reference : ResolvedValueReference,
 ) -> ResolvedOfferDeclaration {
-  { name: self.name, loc: self.loc }
+  { name: self.name, reference, loc: self.loc }
 }
 
 ///|
@@ -390,11 +398,14 @@ fn @syntax.OfferDeclaration::resolve_top_level_offer(
   scope : ResolveScope,
   resolver : Resolver,
 ) -> ResolvedOfferDeclaration {
-  match scope.value_binding(self.name) {
-    Some(_) => ()
-    None => resolver.report(UnresolvedValue(self.name), self.loc)
+  let reference = match scope.value_binding(self.name) {
+    Some(binding) => binding.reference
+    None => {
+      resolver.report(UnresolvedValue(self.name), self.loc)
+      Unresolved(self.name)
+    }
   }
-  self.resolve_offer()
+  self.resolve_offer_with_reference(reference)
 }
 
 ///|
@@ -871,11 +882,14 @@ fn @syntax.OfferDeclaration::resolve_local_offer(
   resolver : Resolver,
   scope : ResolveScope,
 ) -> ResolvedOfferDeclaration {
-  match scope.value_binding(self.name) {
-    Some(_) => ()
-    None => resolver.report(UnresolvedValue(self.name), self.loc)
+  let reference = match scope.value_binding(self.name) {
+    Some(binding) => binding.reference
+    None => {
+      resolver.report(UnresolvedValue(self.name), self.loc)
+      Unresolved(self.name)
+    }
   }
-  self.resolve_offer()
+  self.resolve_offer_with_reference(reference)
 }
 
 ///|

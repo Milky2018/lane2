@@ -130,6 +130,7 @@ pub impl @prettyprinter.Pretty for ResolvedFunctionLiteralParameter
 
 pub(all) struct ResolvedLetDeclaration {
   symbol : @symbol.ValueSymbolId
+  is_offered : Bool
   name : String?
   type_annotation : ResolvedType?
   initializer : ResolvedExpr
@@ -153,6 +154,7 @@ pub impl @prettyprinter.Pretty for ResolvedMatchArm
 
 pub(all) struct ResolvedOfferDeclaration {
   name : String
+  reference : ResolvedValueReference
   loc : @basic.SourceSpan
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ResolvedOfferDeclaration

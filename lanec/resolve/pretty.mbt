@@ -213,7 +213,11 @@ pub impl @prettyprinter.Pretty for ResolvedLetDeclaration with fn pretty(
 pub impl @prettyprinter.Pretty for ResolvedOfferDeclaration with fn pretty(
   declaration : ResolvedOfferDeclaration,
 ) {
-  text("offer") + space + text(declaration.name)
+  text("offer") +
+  space +
+  declaration.reference.pretty() +
+  space +
+  text(declaration.name)
 }
 
 ///|

@@ -19,13 +19,16 @@ fn SemanticChecker::synthesize_call(
       scope, name, candidates, arguments, callee_loc,
     )
   }
-  self.synthesize_callable_call(
+  let callee_type = self.synthesize_expr(scope, callee)
+  let arguments = self.prepare_direct_call_arguments(
     scope,
-    self.synthesize_expr(scope, callee),
+    callee,
+    callee_type,
     arguments,
     None,
     loc,
   )
+  self.synthesize_callable_call(scope, callee_type, arguments, None, loc)
 }
 
 ///|
@@ -119,9 +122,18 @@ fn SemanticChecker::check_call(
     )
     return
   }
+  let callee_type = self.synthesize_expr(scope, callee)
+  let arguments = self.prepare_direct_call_arguments(
+    scope,
+    callee,
+    callee_type,
+    arguments,
+    Some(expected),
+    loc,
+  )
   let actual = self.synthesize_callable_call(
     scope,
-    self.synthesize_expr(scope, callee),
+    callee_type,
     arguments,
     Some(expected),
     loc,

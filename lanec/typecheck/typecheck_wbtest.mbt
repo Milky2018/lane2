@@ -40,23 +40,27 @@ fn expect_checked_let_initializer(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    offers: [],
   }
   checker.collect_top_level_function_types()
   for declaration in source.declarations {
-    if declaration is Let(declaration) {
-      if declaration.name == Some(name) {
-        let checked = checker.check_checked_expr(
-          checker.root_scope(),
-          declaration.initializer,
-          expected,
-        )
-        guard checked.expression is Some(expression) else {
-          abort("expected checked expression")
+    match declaration {
+      Let(declaration) =>
+        if declaration.name == Some(name) {
+          let checked = checker.check_checked_expr(
+            checker.root_scope(),
+            declaration.initializer,
+            expected,
+          )
+          guard checked.expression is Some(expression) else {
+            abort("expected checked expression")
+          }
+          return expression
+        } else {
+          checker.check_top_level_let(declaration)
         }
-        return expression
-      } else {
-        checker.check_top_level_let(declaration)
-      }
+      Offer(declaration) => checker.check_top_level_offer(declaration)
+      _ => ()
     }
   }
   abort("expected named let")
@@ -77,6 +81,7 @@ fn expect_first_checked_match_pattern(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    offers: [],
   }
   checker.collect_top_level_function_types()
   for declaration in source.declarations {
@@ -94,7 +99,7 @@ fn expect_first_checked_match_pattern(
       }
       guard !arms.is_empty() else { abort("expected match arm") }
       let scrutinee_type = checker.synthesize_expr(scope, scrutinee)
-      let arm_scope : TypeScope = { values: scope.values.copy() }
+      let arm_scope = scope.copy()
       return checker.check_match_pattern(
         arm_scope,
         arms[0].pattern,
@@ -197,6 +202,252 @@ test "typecheck reports out of range int literal" {
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
     content="invalid_int_literal 9223372036854775808 @ 1:17-1:36",
+  )
+}
+
+///|
+test "typecheck inserts contextual auto argument" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|let answer : Int = 1 + 2
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Int {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|      callee {
+      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    value : type#0[Int] value#4 int_add_ops
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck accepts explicit named contextual argument" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let custom_add : Add[Int] = builtin("%custom_add")
+      #|let answer : Int = op_add(1, 2, op=custom_add)
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Int {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|      callee {
+      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    value : type#0[Int] value#4 custom_add
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck separate offer declaration supplies contextual argument" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|offer int_add_ops
+      #|let answer : Int = 1 + 2
+    ),
+    "answer",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression, width=100),
+    content=(
+      #|call : Int {
+      #|  callee {
+      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
+      #|      callee {
+      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
+      #|      }
+      #|    }
+      #|  }
+      #|  arguments {
+      #|    int 1 : Int
+      #|    int 2 : Int
+      #|    value : type#0[Int] value#4 int_add_ops
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck auto offer parameter is visible in function body" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|fn[A] twice(x : A, auto offer op : Add[A]) -> A {
+      #|  x + x
+      #|}
+      #|let offer int_add_ops : Add[Int] = builtin("%int_add_ops")
+      #|let answer : Int = twice(1)
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Add[tparam#0 A : Type] {
+      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_add : forall [
+      #|      tparam#1 A : Type
+      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    fn value#1 twice : forall [tparam#2 A : Type]. (tparam#2, type#0[tparam#2]) -> tparam#2
+      #|    let value#7 int_add_ops : type#0[Int]
+      #|    let value#8 answer : Int
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck reports missing contextual offer" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let answer : Int = 1 + 2
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Add[tparam#0 A : Type] {
+      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_add : forall [
+      #|      tparam#1 A : Type
+      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    let value#4 answer : Int
+      #|  }
+      #|  diagnostics {
+      #|    cannot_infer missing contextual offer @ 7:24-7:25
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "typecheck reports ambiguous contextual offer" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Add[A] {
+      #|  add : (A, A) -> A
+      #|}
+      #|fn[A] op_add(a : A, b : A, auto op : Add[A]) -> A {
+      #|  op.add(a, b)
+      #|}
+      #|let offer add_a : Add[Int] = builtin("%add_a")
+      #|let offer add_b : Add[Int] = builtin("%add_b")
+      #|let answer : Int = 1 + 2
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct type#0 Add[tparam#0 A : Type] {
+      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      }
+      #|    }
+      #|    fields {
+      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn value#0 op_add : forall [
+      #|      tparam#1 A : Type
+      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    let value#4 add_a : type#0[Int]
+      #|    let value#5 add_b : type#0[Int]
+      #|    let value#6 answer : Int
+      #|  }
+      #|  diagnostics {
+      #|    cannot_infer ambiguous contextual offer @ 9:24-9:25
+      #|  }
+      #|}
+    ),
   )
 }
 

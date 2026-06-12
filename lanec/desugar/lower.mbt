@@ -22,7 +22,7 @@ fn desugar_top_level_declaration(
     Function(declaration) =>
       Some(Function(desugar_function_declaration(declaration)))
     Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
-    Offer(_) => None
+    Offer(declaration) => Some(Offer(declaration))
   }
 }
 
@@ -47,6 +47,7 @@ fn desugar_let_declaration(
 ) -> DesugaredLetDeclaration {
   {
     symbol: declaration.symbol,
+    is_offered: declaration.is_offered,
     name: declaration.name,
     type_annotation: declaration.type_annotation,
     initializer: desugar_expr(declaration.initializer),
@@ -60,7 +61,7 @@ fn desugar_local_item(item : @resolve.ResolvedLocalItem) -> DesugaredLocalItem? 
     Let(declaration) => Some(Let(desugar_let_declaration(declaration)))
     Function(declaration) =>
       Some(Function(desugar_function_declaration(declaration)))
-    Offer(_) => None
+    Offer(declaration) => Some(Offer(declaration))
   }
 }
 

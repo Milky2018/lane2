@@ -39,7 +39,7 @@ fn SemanticChecker::check_match(
   let scrutinee_type = self.synthesize_expr(scope, scrutinee)
   let matrix = PatternMatrix::PatternMatrix()
   for arm in arms {
-    let arm_scope : TypeScope = { values: scope.values.copy() }
+    let arm_scope = scope.copy()
     let pattern = self.check_match_pattern(
       arm_scope,
       arm.pattern,
@@ -79,7 +79,7 @@ fn SemanticChecker::synthesize_match(
   let mut result : @types.Type = Error
   let mut has_result = false
   for arm in arms {
-    let arm_scope : TypeScope = { values: scope.values.copy() }
+    let arm_scope = scope.copy()
     let pattern = self.check_match_pattern(
       arm_scope,
       arm.pattern,

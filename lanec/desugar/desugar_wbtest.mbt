@@ -96,7 +96,7 @@ test "desugar lazy bool operators into thunked ordinary calls" {
 }
 
 ///|
-test "desugar offer declarations away and expands struct field punning" {
+test "desugar preserves offer declarations and expands struct field punning" {
   let source = desugar_source(
     (
       #|struct Box {
@@ -121,6 +121,7 @@ test "desugar offer declarations away and expands struct field punning" {
       #|      value: 1
       #|    }
       #|  }
+      #|  offer value#1 box
       #|  fn value#0 make {
       #|    body {
       #|      {

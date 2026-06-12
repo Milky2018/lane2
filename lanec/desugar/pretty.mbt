@@ -18,6 +18,7 @@ pub impl @prettyprinter.Pretty for DesugaredTopLevelDeclaration with fn pretty(
     Enum(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
     Let(declaration) => declaration.pretty()
+    Offer(declaration) => declaration.pretty()
   }
 }
 
@@ -58,6 +59,7 @@ pub impl @prettyprinter.Pretty for DesugaredLocalItem with fn pretty(
   match item {
     Let(declaration) => declaration.pretty()
     Function(declaration) => declaration.pretty()
+    Offer(declaration) => declaration.pretty()
   }
 }
 

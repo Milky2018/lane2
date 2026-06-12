@@ -102,7 +102,7 @@ fn SemanticChecker::check_checked_block(
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
-  let next_scope : TypeScope = { values: scope.values.copy() }
+  let next_scope = scope.copy()
   let checked_items : Array[@checked.CheckedLocalItem] = []
   let mut complete = true
   for item in items {
@@ -117,6 +117,12 @@ fn SemanticChecker::check_checked_block(
           Some(declaration) => checked_items.push(Function(declaration))
           None => complete = false
         }
+      Offer(declaration) =>
+        next_scope.offer_reference(
+          declaration.reference,
+          self.diagnostics,
+          declaration.loc,
+        )
     }
   }
   let checked_result = self.check_checked_expr(next_scope, result, expected)
@@ -176,16 +182,27 @@ fn SemanticChecker::synthesize_checked_call_with_expected(
       callee.loc(),
       "call callee",
     )
-    is Some(callee) else {
+    is Some(checked_callee_expr) else {
     return checked_expression_none_reported(Error)
   }
+  let arguments = self.prepare_direct_call_arguments(
+    scope,
+    callee,
+    checked_callee.type_,
+    arguments,
+    expected_result,
+    loc,
+  )
   match checked_callee.type_ {
     Function(parameters, result) => {
       guard self.check_checked_call_arguments(scope, parameters, arguments, loc)
         is Some(arguments) else {
         return checked_expression_none_reported(result)
       }
-      checked_expression(Call(callee~, arguments~, type_=result, loc~), result)
+      checked_expression(
+        Call(callee=checked_callee_expr, arguments~, type_=result, loc~),
+        result,
+      )
     }
     Forall(type_parameters, body) => {
       guard self.instantiate_generic_callable(
@@ -204,7 +221,7 @@ fn SemanticChecker::synthesize_checked_call_with_expected(
         return checked_expression_none_reported(instantiated.result)
       }
       let callee = type_applied_callee(
-        callee,
+        checked_callee_expr,
         instantiated.type_arguments,
         Function(instantiated.parameters, instantiated.result),
         loc,
@@ -412,14 +429,19 @@ fn SemanticChecker::synthesize_checked_function_literal(
 ) -> CheckedExpressionSynthesis {
   let parameter_types = []
   let checked_parameters : Array[@checked.CheckedValueParameter] = []
-  let body_scope : TypeScope = { values: scope.values.copy() }
+  let body_scope = scope.copy()
   for parameter in parameters {
     if parameter.type_annotation is Some(type_annotation) {
       let type_ = self.check_type(type_annotation)
       body_scope.bind(parameter.symbol, type_)
+      if parameter.is_offered {
+        body_scope.offer(parameter.symbol, type_)
+      }
       parameter_types.push(type_)
       checked_parameters.push({
         symbol: parameter.symbol,
+        is_auto: false,
+        is_offered: parameter.is_offered,
         name: parameter.name,
         type_,
         loc: parameter.loc,
@@ -431,9 +453,14 @@ fn SemanticChecker::synthesize_checked_function_literal(
         loc: parameter.loc,
       })
       body_scope.bind(parameter.symbol, type_)
+      if parameter.is_offered {
+        body_scope.offer(parameter.symbol, type_)
+      }
       parameter_types.push(type_)
       checked_parameters.push({
         symbol: parameter.symbol,
+        is_auto: false,
+        is_offered: parameter.is_offered,
         name: parameter.name,
         type_,
         loc: parameter.loc,

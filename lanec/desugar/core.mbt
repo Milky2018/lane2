@@ -11,6 +11,7 @@ pub(all) enum DesugaredTopLevelDeclaration {
   Enum(@resolve.ResolvedEnumDeclaration)
   Function(DesugaredFunctionDeclaration)
   Let(DesugaredLetDeclaration)
+  Offer(@resolve.ResolvedOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
@@ -27,6 +28,7 @@ pub(all) struct DesugaredFunctionDeclaration {
 ///|
 pub(all) struct DesugaredLetDeclaration {
   symbol : @symbol.ValueSymbolId
+  is_offered : Bool
   name : String?
   type_annotation : @resolve.ResolvedType?
   initializer : DesugaredExpr
@@ -37,6 +39,7 @@ pub(all) struct DesugaredLetDeclaration {
 pub(all) enum DesugaredLocalItem {
   Let(DesugaredLetDeclaration)
   Function(DesugaredFunctionDeclaration)
+  Offer(@resolve.ResolvedOfferDeclaration)
 } derive(Debug, Eq)
 
 ///|
