@@ -174,10 +174,15 @@ and unresolved or ambiguous states before Buslane lowering.
 - [x] Remove source spans, display names, checked-source nodes, compiler symbol
   ids, compiler type objects, field nodes, `if` nodes, and unsafe-builtin nodes
   from Buslane.
-- [x] Lower Checked Source into Buslane expression-tree core: nominal data
+- [ ] Lower Checked Source into Buslane expression-tree core: nominal data
   construction, first-class calls, functions, type lambdas, type applications,
   local `let`, `let-rec`, one-level matches, external values, and existential
   witnesses.
+- [x] Lower checked literals, values, functions, calls, blocks, conditionals,
+  enum construction, struct construction, pattern lets, source matches,
+  external values, and generic applications into Buslane expression-tree core.
+- [ ] Generate real Buslane selector functions for checked source field access
+  instead of the temporary external-call placeholder.
 - [x] Provide a program-level Buslane verifier for metadata, type
   well-formedness, scope, typing, constructor arity, match exhaustiveness, and
   let-rec RHS shape.
