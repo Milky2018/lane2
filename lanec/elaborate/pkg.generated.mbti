@@ -18,6 +18,8 @@ pub fn elaborate_resolved_source_file_to_anf(@resolve.ResolvedSourceFile) -> Anf
 
 pub fn elaborate_resolved_source_file_to_buslane(@resolve.ResolvedSourceFile) -> BuslaneElaborateResult
 
+pub fn lower_checked_source_file_to_buslane(@checked.CheckedSourceFile) -> @buslane.Program
+
 // Errors
 
 // Types and methods

@@ -4,7 +4,9 @@ import {
   "Milky2018/lane2/buslane",
   "Milky2018/lane2/pretty",
   "Milky2018/lane2/resolve",
+  "Milky2018/lane2/symbol",
   "Milky2018/lane2/typecheck",
+  "Milky2018/lane2/types",
   "moonbit-community/prettyprinter",
 }
 

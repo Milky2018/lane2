@@ -1,0 +1,834 @@
+///|
+priv struct TypeMapEntry {
+  source : @symbol.TypeSymbolId
+  target : @buslane.TypeId
+}
+
+///|
+priv struct TypeParameterMapEntry {
+  source : @symbol.TypeParameterId
+  target : @buslane.TypeParameterId
+}
+
+///|
+priv struct ValueMapEntry {
+  source : @symbol.ValueSymbolId
+  target : @buslane.ValueId
+}
+
+///|
+priv struct DataConMapEntry {
+  source : @symbol.VariantSymbolId
+  target : @buslane.DataConId
+}
+
+///|
+priv struct StructConMapEntry {
+  source : @symbol.TypeSymbolId
+  target : @buslane.DataConId
+}
+
+///|
+priv struct BuslaneLowerer {
+  metadata : @buslane.MetadataRegistry
+  type_symbols : Array[TypeMapEntry]
+  type_parameters : Array[TypeParameterMapEntry]
+  values : Array[ValueMapEntry]
+  data_constructors : Array[DataConMapEntry]
+  struct_constructors : Array[StructConMapEntry]
+  external_terms : Array[@buslane.TopTerm]
+}
+
+///|
+fn BuslaneLowerer::BuslaneLowerer() -> BuslaneLowerer {
+  {
+    metadata: MetadataRegistry(),
+    type_symbols: [],
+    type_parameters: [],
+    values: [],
+    data_constructors: [],
+    struct_constructors: [],
+    external_terms: [],
+  }
+}
+
+///|
+/// Lowers Checked Source into the Buslane Core Language.
+pub fn lower_checked_source_file_to_buslane(
+  source : @checked.CheckedSourceFile,
+) -> @buslane.Program {
+  let lowerer = BuslaneLowerer::BuslaneLowerer()
+  lowerer.collect_type_headers(source)
+  lowerer.collect_data_constructors(source)
+  lowerer.collect_top_values(source)
+  let terms = lowerer.lower_top_terms(source)
+  { metadata: lowerer.metadata, terms: lowerer.external_terms + terms }
+}
+
+///|
+fn BuslaneLowerer::collect_type_headers(
+  self : BuslaneLowerer,
+  source : @checked.CheckedSourceFile,
+) -> Unit {
+  for declaration in source.declarations {
+    match declaration {
+      Struct(declaration) => self.collect_struct_header(declaration)
+      Enum(declaration) => self.collect_enum_header(declaration)
+      _ => ()
+    }
+  }
+}
+
+///|
+fn BuslaneLowerer::collect_struct_header(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedStructDeclaration,
+) -> Unit {
+  let parameters = declaration.type_parameters.map(fn(parameter) {
+    self.define_type_parameter(parameter.id)
+  })
+  for type_member in declaration.type_members {
+    ignore(self.define_type_parameter(type_member.type_parameter.id))
+  }
+  let target = self.metadata.define_type(parameters)
+  self.type_symbols.push({ source: declaration.symbol, target })
+}
+
+///|
+fn BuslaneLowerer::collect_enum_header(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedEnumDeclaration,
+) -> Unit {
+  let parameters = declaration.type_parameters.map(fn(parameter) {
+    self.define_type_parameter(parameter.id)
+  })
+  for variant in declaration.variants {
+    for parameter in variant.type_parameters {
+      ignore(self.define_type_parameter(parameter.id))
+    }
+  }
+  let target = self.metadata.define_type(parameters)
+  self.type_symbols.push({ source: declaration.symbol, target })
+}
+
+///|
+fn BuslaneLowerer::collect_data_constructors(
+  self : BuslaneLowerer,
+  source : @checked.CheckedSourceFile,
+) -> Unit {
+  for declaration in source.declarations {
+    match declaration {
+      Struct(declaration) => self.collect_struct_constructor(declaration)
+      Enum(declaration) => self.collect_enum_constructors(declaration)
+      _ => ()
+    }
+  }
+}
+
+///|
+fn BuslaneLowerer::collect_struct_constructor(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedStructDeclaration,
+) -> Unit {
+  let owner = self.type_id(declaration.symbol)
+  let hidden_type_parameters = declaration.type_members.map(fn(type_member) {
+    self.define_type_parameter(type_member.type_parameter.id)
+  })
+  let payload_types = declaration.fields.map(fn(field) {
+    self.lower_type(field.type_)
+  })
+  let target = self.metadata.define_data_constructor(
+    owner, hidden_type_parameters, payload_types,
+  )
+  self.struct_constructors.push({ source: declaration.symbol, target })
+}
+
+///|
+fn BuslaneLowerer::collect_enum_constructors(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedEnumDeclaration,
+) -> Unit {
+  let owner = self.type_id(declaration.symbol)
+  for variant in declaration.variants {
+    let hidden_type_parameters = variant.type_parameters.map(fn(parameter) {
+      self.define_type_parameter(parameter.id)
+    })
+    let payload_types = variant.payload.map(fn(type_) { self.lower_type(type_) })
+    let target = self.metadata.define_data_constructor(
+      owner, hidden_type_parameters, payload_types,
+    )
+    self.data_constructors.push({ source: variant.symbol, target })
+  }
+}
+
+///|
+fn BuslaneLowerer::collect_top_values(
+  self : BuslaneLowerer,
+  source : @checked.CheckedSourceFile,
+) -> Unit {
+  for declaration in source.declarations {
+    match declaration {
+      Function(declaration) => {
+        for parameter in declaration.type_parameters {
+          ignore(self.define_type_parameter(parameter.id))
+        }
+        ignore(
+          self.define_value(
+            declaration.symbol,
+            Function,
+            self.lower_type(declaration.type_),
+          ),
+        )
+      }
+      Let(declaration) =>
+        ignore(
+          self.define_value(
+            declaration.symbol,
+            Value,
+            self.lower_type(declaration.type_),
+          ),
+        )
+      _ => ()
+    }
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_top_terms(
+  self : BuslaneLowerer,
+  source : @checked.CheckedSourceFile,
+) -> Array[@buslane.TopTerm] {
+  let terms : Array[@buslane.TopTerm] = []
+  let recursive_functions : Array[@buslane.RecursiveBinding] = []
+  for declaration in source.declarations {
+    if declaration is Function(function) {
+      recursive_functions.push(self.lower_recursive_function(function))
+    }
+  }
+  if !recursive_functions.is_empty() {
+    terms.push(LetRec(recursive_functions))
+  }
+  for declaration in source.declarations {
+    if declaration is Let(declaration) {
+      terms.push(
+        Let(
+          self.value_id(declaration.symbol),
+          self.lower_expr(declaration.initializer),
+        ),
+      )
+    }
+  }
+  terms
+}
+
+///|
+fn BuslaneLowerer::lower_recursive_function(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedFunctionDeclaration,
+) -> @buslane.RecursiveBinding {
+  {
+    id: self.value_id(declaration.symbol),
+    rhs: self.lower_function_declaration(declaration),
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_function_declaration(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedFunctionDeclaration,
+) -> @buslane.Expr {
+  for parameter in declaration.type_parameters {
+    ignore(self.define_type_parameter(parameter.id))
+  }
+  let type_parameters = declaration.type_parameters.map(fn(parameter) {
+    self.type_parameter_id(parameter.id)
+  })
+  let function = @buslane.Expr::Function({
+    parameters: declaration.parameters.map(fn(parameter) {
+      self.define_value(
+        parameter.symbol,
+        Parameter,
+        self.lower_type(parameter.type_),
+      )
+    }),
+    result_type: self.lower_type(declaration.return_type),
+    body: self.lower_expr(declaration.body),
+  })
+  if type_parameters.is_empty() {
+    function
+  } else {
+    TypeLambda(type_parameters, function)
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_expr(
+  self : BuslaneLowerer,
+  expression : @checked.CheckedExpr,
+) -> @buslane.Expr {
+  match expression {
+    Literal(literal~, ..) => Literal(lower_literal(literal))
+    Value(symbol~, ..) => Ref(self.value_id(symbol))
+    UnsafeBuiltin(type_~, ..) =>
+      Ref(self.define_external(self.lower_type(type_)))
+    FunctionLiteral(type_parameters~, parameters~, return_type~, body~, ..) =>
+      self.lower_function_literal(
+        type_parameters, parameters, return_type, body,
+      )
+    TypeApplication(callee~, arguments~, ..) =>
+      TypeApply(
+        self.lower_expr(callee),
+        arguments.map(fn(argument) { self.lower_type(argument) }),
+      )
+    Block(items~, result~, ..) => self.lower_items(items, 0, result)
+    If(condition~, then_branch~, else_branch~, type_~, ..) =>
+      self.lower_if(condition, then_branch, else_branch, type_)
+    Match(scrutinee~, arms~, type_~, ..) =>
+      self.lower_match(scrutinee, arms, type_)
+    Call(callee~, arguments~, ..) =>
+      Call(
+        self.lower_expr(callee),
+        arguments.map(fn(argument) { self.lower_expr(argument) }),
+      )
+    Field(base~, ..) => self.lower_field(base)
+    StructLiteral(symbol~, type_arguments~, type_witnesses~, fields~, ..) =>
+      Construct({
+        data_constructor: self.struct_constructor_id(symbol),
+        type_arguments: type_arguments.map(fn(argument) {
+          self.lower_type(argument)
+        }),
+        hidden_witnesses: type_witnesses.map(fn(witness) {
+          self.lower_type(witness.type_)
+        }),
+        payloads: fields.map(fn(field) { self.lower_expr(field.value) }),
+      })
+    Variant(symbol~, type_arguments~, arguments~, ..) =>
+      Construct({
+        data_constructor: self.data_constructor_id(symbol),
+        type_arguments: [],
+        hidden_witnesses: type_arguments.map(fn(argument) {
+          self.lower_type(argument)
+        }),
+        payloads: arguments.map(fn(argument) { self.lower_expr(argument) }),
+      })
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_function_literal(
+  self : BuslaneLowerer,
+  type_parameters : Array[@types.TypeParameter],
+  parameters : Array[@checked.CheckedValueParameter],
+  return_type : @types.Type,
+  body : @checked.CheckedExpr,
+) -> @buslane.Expr {
+  for parameter in type_parameters {
+    ignore(self.define_type_parameter(parameter.id))
+  }
+  let lowered_type_parameters = type_parameters.map(fn(parameter) {
+    self.type_parameter_id(parameter.id)
+  })
+  let function = @buslane.Expr::Function({
+    parameters: parameters.map(fn(parameter) {
+      self.define_value(
+        parameter.symbol,
+        Local,
+        self.lower_type(parameter.type_),
+      )
+    }),
+    result_type: self.lower_type(return_type),
+    body: self.lower_expr(body),
+  })
+  if lowered_type_parameters.is_empty() {
+    function
+  } else {
+    TypeLambda(lowered_type_parameters, function)
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_items(
+  self : BuslaneLowerer,
+  items : Array[@checked.CheckedLocalItem],
+  index : Int,
+  result : @checked.CheckedExpr,
+) -> @buslane.Expr {
+  if index >= items.length() {
+    self.lower_expr(result)
+  } else {
+    match items[index] {
+      Let(declaration) => {
+        let id = self.define_value(
+          declaration.symbol,
+          Local,
+          self.lower_type(declaration.type_),
+        )
+        Let(
+          id,
+          self.lower_expr(declaration.initializer),
+          self.lower_items(items, index + 1, result),
+        )
+      }
+      Function(declaration) => {
+        let id = self.define_value(
+          declaration.symbol,
+          Local,
+          self.lower_type(declaration.type_),
+        )
+        Let(
+          id,
+          self.lower_function_declaration(declaration),
+          self.lower_items(items, index + 1, result),
+        )
+      }
+      PatternLet(declaration) => {
+        let initializer = self.lower_expr(declaration.initializer)
+        let body = self.lower_items(items, index + 1, result)
+        self.lower_pattern_as_match(declaration.pattern, initializer, body)
+      }
+    }
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_if(
+  self : BuslaneLowerer,
+  condition : @checked.CheckedExpr,
+  then_branch : @checked.CheckedExpr,
+  else_branch : @checked.CheckedExpr,
+  result_type : @types.Type,
+) -> @buslane.Expr {
+  let binder = self.define_fresh_value(MatchBinder, Primitive(Bool))
+  Match({
+    scrutinee: self.lower_expr(condition),
+    binder,
+    result_type: self.lower_type(result_type),
+    alternatives: [
+      {
+        alt_constructor: Literal(Bool(true)),
+        type_binders: [],
+        value_binders: [],
+        body: self.lower_expr(then_branch),
+      },
+      {
+        alt_constructor: Literal(Bool(false)),
+        type_binders: [],
+        value_binders: [],
+        body: self.lower_expr(else_branch),
+      },
+    ],
+  })
+}
+
+///|
+fn BuslaneLowerer::lower_match(
+  self : BuslaneLowerer,
+  scrutinee : @checked.CheckedExpr,
+  arms : Array[@checked.CheckedMatchArm],
+  result_type : @types.Type,
+) -> @buslane.Expr {
+  let binder = self.define_fresh_value(
+    MatchBinder,
+    self.lower_type(scrutinee.type_()),
+  )
+  Match({
+    scrutinee: self.lower_expr(scrutinee),
+    binder,
+    result_type: self.lower_type(result_type),
+    alternatives: arms.map(fn(arm) {
+      self.lower_match_arm(arm, binder, result_type)
+    }),
+  })
+}
+
+///|
+fn BuslaneLowerer::lower_match_arm(
+  self : BuslaneLowerer,
+  arm : @checked.CheckedMatchArm,
+  match_binder : @buslane.ValueId,
+  result_type : @types.Type,
+) -> @buslane.Alternative {
+  self.lower_pattern_alternative(
+    arm.pattern,
+    match_binder,
+    self.lower_expr(arm.body),
+    self.lower_type(result_type),
+  )
+}
+
+///|
+fn BuslaneLowerer::lower_pattern_as_match(
+  self : BuslaneLowerer,
+  pattern : @checked.CheckedPattern,
+  initializer : @buslane.Expr,
+  body : @buslane.Expr,
+) -> @buslane.Expr {
+  let binder = self.define_fresh_value(
+    MatchBinder,
+    self.lower_type(pattern.type_()),
+  )
+  Match({
+    scrutinee: initializer,
+    binder,
+    result_type: self.synthesize_known_body_type(body),
+    alternatives: [
+      self.lower_pattern_alternative(
+        pattern,
+        binder,
+        body,
+        self.synthesize_known_body_type(body),
+      ),
+    ],
+  })
+}
+
+///|
+fn BuslaneLowerer::lower_pattern_alternative(
+  self : BuslaneLowerer,
+  pattern : @checked.CheckedPattern,
+  match_binder : @buslane.ValueId,
+  body : @buslane.Expr,
+  result_type : @buslane.Type,
+) -> @buslane.Alternative {
+  match pattern {
+    Wildcard(..) =>
+      { alt_constructor: Default, type_binders: [], value_binders: [], body }
+    Binding(symbol~, ..) =>
+      {
+        alt_constructor: Default,
+        type_binders: [],
+        value_binders: [],
+        body: Let(self.value_id(symbol), Ref(match_binder), body),
+      }
+    Literal(literal~, ..) =>
+      {
+        alt_constructor: Literal(lower_literal(literal)),
+        type_binders: [],
+        value_binders: [],
+        body,
+      }
+    Variant(symbol~, arguments~, ..) =>
+      self.lower_data_pattern_alternative(
+        self.data_constructor_id(symbol),
+        [],
+        arguments,
+        body,
+        result_type,
+      )
+    Struct(symbol~, type_binders~, fields~, ..) =>
+      self.lower_struct_pattern_alternative(
+        symbol, type_binders, fields, body, result_type,
+      )
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_data_pattern_alternative(
+  self : BuslaneLowerer,
+  data_constructor : @buslane.DataConId,
+  type_binders : Array[@buslane.TypeParameterId],
+  patterns : Array[@checked.CheckedPattern],
+  body : @buslane.Expr,
+  result_type : @buslane.Type,
+) -> @buslane.Alternative {
+  let value_binders = patterns.map(fn(pattern) {
+    self.value_binder_for_payload(pattern)
+  })
+  let lowered_body = self.lower_nested_payload_patterns(
+    patterns, value_binders, 0, body, result_type,
+  )
+  {
+    alt_constructor: DataCon(data_constructor),
+    type_binders,
+    value_binders,
+    body: lowered_body,
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_struct_pattern_alternative(
+  self : BuslaneLowerer,
+  symbol : @symbol.TypeSymbolId,
+  type_binders : Array[@checked.CheckedStructTypeBinder],
+  fields : Array[@checked.CheckedStructPatternField],
+  body : @buslane.Expr,
+  result_type : @buslane.Type,
+) -> @buslane.Alternative {
+  let lowered_type_binders : Array[@buslane.TypeParameterId] = []
+  for binder in type_binders {
+    if binder.type_parameter is Some(parameter) {
+      lowered_type_binders.push(self.define_type_parameter(parameter.id))
+    }
+  }
+  let patterns = fields.map(fn(field) { field.pattern })
+  self.lower_data_pattern_alternative(
+    self.struct_constructor_id(symbol),
+    lowered_type_binders,
+    patterns,
+    body,
+    result_type,
+  )
+}
+
+///|
+fn BuslaneLowerer::lower_nested_payload_patterns(
+  self : BuslaneLowerer,
+  patterns : Array[@checked.CheckedPattern],
+  value_binders : Array[@buslane.ValueId],
+  index : Int,
+  body : @buslane.Expr,
+  result_type : @buslane.Type,
+) -> @buslane.Expr {
+  if index >= patterns.length() {
+    body
+  } else {
+    let next = self.lower_nested_payload_patterns(
+      patterns,
+      value_binders,
+      index + 1,
+      body,
+      result_type,
+    )
+    self.lower_payload_pattern(
+      patterns[index],
+      value_binders[index],
+      next,
+      result_type,
+    )
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_payload_pattern(
+  self : BuslaneLowerer,
+  pattern : @checked.CheckedPattern,
+  binder : @buslane.ValueId,
+  body : @buslane.Expr,
+  result_type : @buslane.Type,
+) -> @buslane.Expr {
+  match pattern {
+    Wildcard(..) => body
+    Binding(symbol~, ..) =>
+      if self.value_id(symbol) == binder {
+        body
+      } else {
+        Let(self.value_id(symbol), Ref(binder), body)
+      }
+    _ =>
+      Match({
+        scrutinee: Ref(binder),
+        binder,
+        result_type,
+        alternatives: [
+          self.lower_pattern_alternative(pattern, binder, body, result_type),
+        ],
+      })
+  }
+}
+
+///|
+fn BuslaneLowerer::value_binder_for_payload(
+  self : BuslaneLowerer,
+  pattern : @checked.CheckedPattern,
+) -> @buslane.ValueId {
+  match pattern {
+    Binding(symbol~, type_~, ..) =>
+      self.define_value(symbol, MatchBinder, self.lower_type(type_))
+    _ => self.define_fresh_value(MatchBinder, self.lower_type(pattern.type_()))
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_field(
+  self : BuslaneLowerer,
+  base : @checked.CheckedExpr,
+) -> @buslane.Expr {
+  // Field selectors are ordinary generated values in the Buslane model. The
+  // full selector-body generation will be added with the verifier-facing
+  // lowering pass; until then the field base is preserved as an ordinary call
+  // shape rather than a Buslane field node.
+  Call(Ref(self.define_external(self.lower_type(base.type_()))), [
+    self.lower_expr(base),
+  ])
+}
+
+///|
+fn BuslaneLowerer::synthesize_known_body_type(
+  self : BuslaneLowerer,
+  body : @buslane.Expr,
+) -> @buslane.Type {
+  match body {
+    Literal(Unit) => Primitive(Unit)
+    Literal(Bool(_)) => Primitive(Bool)
+    Literal(Int(_)) => Primitive(Int)
+    Literal(String(_)) => Primitive(String)
+    Ref(id) =>
+      match self.metadata.value_info(id) {
+        Some(info) => info.type_
+        None => Primitive(Unit)
+      }
+    _ => Primitive(Unit)
+  }
+}
+
+///|
+fn lower_literal(literal : @checked.CheckedLiteral) -> @buslane.Literal {
+  match literal {
+    Int(literal) => Int(literal.value)
+    String(value) => String(value)
+    Bool(value) => Bool(value)
+    Unit => Unit
+  }
+}
+
+///|
+fn BuslaneLowerer::lower_type(
+  self : BuslaneLowerer,
+  type_ : @types.Type,
+) -> @buslane.Type {
+  match type_ {
+    Error => Primitive(Unit)
+    Primitive(primitive) => Primitive(lower_primitive_type(primitive))
+    Nominal(symbol, arguments) =>
+      Nominal(
+        self.type_id(symbol),
+        arguments.map(fn(argument) { self.lower_type(argument) }),
+      )
+    Parameter(parameter) => Parameter(self.type_parameter_id(parameter))
+    Function(parameters, result) =>
+      Function(
+        parameters.map(fn(parameter) { self.lower_type(parameter) }),
+        self.lower_type(result),
+      )
+    Forall(parameters, body) =>
+      Forall(
+        parameters.map(fn(parameter) {
+          self.define_type_parameter(parameter.id)
+        }),
+        self.lower_type(body),
+      )
+  }
+}
+
+///|
+fn lower_primitive_type(
+  primitive : @types.PrimitiveType,
+) -> @buslane.PrimitiveType {
+  match primitive {
+    Int => Int
+    Bool => Bool
+    String => String
+    Unit => Unit
+  }
+}
+
+///|
+fn BuslaneLowerer::define_external(
+  self : BuslaneLowerer,
+  type_ : @buslane.Type,
+) -> @buslane.ValueId {
+  let id = self.metadata.define_value(External, type_)
+  self.external_terms.push(External(id))
+  id
+}
+
+///|
+fn BuslaneLowerer::define_fresh_value(
+  self : BuslaneLowerer,
+  kind : @buslane.ValueKind,
+  type_ : @buslane.Type,
+) -> @buslane.ValueId {
+  self.metadata.define_value(kind, type_)
+}
+
+///|
+fn BuslaneLowerer::define_value(
+  self : BuslaneLowerer,
+  source : @symbol.ValueSymbolId,
+  kind : @buslane.ValueKind,
+  type_ : @buslane.Type,
+) -> @buslane.ValueId {
+  for entry in self.values {
+    if entry.source == source {
+      return entry.target
+    }
+  }
+  let target = self.metadata.define_value(kind, type_)
+  self.values.push({ source, target })
+  target
+}
+
+///|
+fn BuslaneLowerer::define_type_parameter(
+  self : BuslaneLowerer,
+  source : @symbol.TypeParameterId,
+) -> @buslane.TypeParameterId {
+  for entry in self.type_parameters {
+    if entry.source == source {
+      return entry.target
+    }
+  }
+  let target = self.metadata.define_type_parameter(Type)
+  self.type_parameters.push({ source, target })
+  target
+}
+
+///|
+fn BuslaneLowerer::type_id(
+  self : BuslaneLowerer,
+  source : @symbol.TypeSymbolId,
+) -> @buslane.TypeId {
+  for entry in self.type_symbols {
+    if entry.source == source {
+      return entry.target
+    }
+  }
+  abort("unknown Buslane type id")
+}
+
+///|
+fn BuslaneLowerer::type_parameter_id(
+  self : BuslaneLowerer,
+  source : @symbol.TypeParameterId,
+) -> @buslane.TypeParameterId {
+  self.define_type_parameter(source)
+}
+
+///|
+fn BuslaneLowerer::value_id(
+  self : BuslaneLowerer,
+  source : @symbol.ValueSymbolId,
+) -> @buslane.ValueId {
+  for entry in self.values {
+    if entry.source == source {
+      return entry.target
+    }
+  }
+  abort("unknown Buslane value id")
+}
+
+///|
+fn BuslaneLowerer::data_constructor_id(
+  self : BuslaneLowerer,
+  source : @symbol.VariantSymbolId,
+) -> @buslane.DataConId {
+  for entry in self.data_constructors {
+    if entry.source == source {
+      return entry.target
+    }
+  }
+  abort("unknown Buslane data constructor id")
+}
+
+///|
+fn BuslaneLowerer::struct_constructor_id(
+  self : BuslaneLowerer,
+  source : @symbol.TypeSymbolId,
+) -> @buslane.DataConId {
+  for entry in self.struct_constructors {
+    if entry.source == source {
+      return entry.target
+    }
+  }
+  abort("unknown Buslane struct constructor id")
+}

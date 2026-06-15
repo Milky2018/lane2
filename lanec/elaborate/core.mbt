@@ -33,7 +33,11 @@ pub fn elaborate_resolved_source_file_to_buslane(
   source : @resolve.ResolvedSourceFile,
 ) -> BuslaneElaborateResult {
   let result = @typecheck.typecheck_checked_source_file(source)
-  { program: None, diagnostics: result.diagnostics }
+  let program = match result.source {
+    Some(source) => Some(lower_checked_source_file_to_buslane(source))
+    None => None
+  }
+  { program, diagnostics: result.diagnostics }
 }
 
 ///|
