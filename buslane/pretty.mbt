@@ -78,10 +78,10 @@ pub impl @prettyprinter.Pretty for Type with fn pretty(type_ : Type) {
 ///|
 pub impl @prettyprinter.Pretty for Literal with fn pretty(literal : Literal) {
   match literal {
-    Unit => text("unit")
-    Bool(value) => text("bool ") + text(value.to_string())
-    Int(value) => text("int ") + text(value.to_string())
-    String(value) => text("string ") + quoted(value)
+    Unit => text("()")
+    Bool(value) => text(value.to_string())
+    Int(value) => text(value.to_string())
+    String(value) => quoted(value)
   }
 }
 
@@ -99,90 +99,64 @@ pub impl @prettyprinter.Pretty for ValueKind with fn pretty(kind : ValueKind) {
 
 ///|
 pub impl @prettyprinter.Pretty for TypeInfo with fn pretty(info : TypeInfo) {
-  text("type_info") +
+  text("type") +
+  type_parameters_doc(info.parameters) +
   space +
-  braced_block([
-    section_inline("parameters", info.parameters.map(TypeParameterId::pretty)),
-    section_inline("constructors", info.constructors.map(DataConId::pretty)),
-  ])
+  braced_block(info.constructors.map(DataConId::pretty))
 }
 
 ///|
 pub impl @prettyprinter.Pretty for TypeParameterInfo with fn pretty(
   info : TypeParameterInfo,
 ) {
-  text("type_parameter_info") +
-  space +
-  braced_block([text("kind ") + info.kind.pretty()])
+  text("type_parameter") + space + text(":") + space + info.kind.pretty()
 }
 
 ///|
 pub impl @prettyprinter.Pretty for ValueInfo with fn pretty(info : ValueInfo) {
-  text("value_info") +
-  space +
-  braced_block([
-    text("kind ") + info.kind.pretty(),
-    text("type ") + info.type_.pretty(),
-  ])
+  info.kind.pretty() + space + text(":") + space + info.type_.pretty()
 }
 
 ///|
 pub impl @prettyprinter.Pretty for DataConInfo with fn pretty(
   info : DataConInfo,
 ) {
-  text("datacon_info") +
+  text("datacon") +
+  type_parameters_doc(info.hidden_type_parameters) +
+  parenthesized_inline(info.payload_types.map(Type::pretty)) +
   space +
-  braced_block([
-    text("owner ") + info.owner.pretty(),
-    section_inline(
-      "hidden_type_parameters",
-      info.hidden_type_parameters.map(TypeParameterId::pretty),
-    ),
-    section_inline("payload_types", info.payload_types.map(Type::pretty)),
-  ])
+  text(":") +
+  space +
+  info.owner.pretty()
 }
 
 ///|
 pub impl @prettyprinter.Pretty for MetadataRegistry with fn pretty(
   metadata : MetadataRegistry,
 ) {
-  text("metadata") +
-  space +
-  braced_block([
-    indexed_section("types", metadata.types.map(TypeInfo::pretty)),
-    indexed_section(
-      "type_parameters",
-      metadata.type_parameters.map(TypeParameterInfo::pretty),
-    ),
-    indexed_section("values", metadata.values.map(ValueInfo::pretty)),
-    indexed_section(
-      "data_constructors",
-      metadata.data_constructors.map(DataConInfo::pretty),
-    ),
-  ])
+  text("metadata") + space + braced_block(metadata_declarations(metadata))
 }
 
 ///|
 pub impl @prettyprinter.Pretty for Program with fn pretty(program : Program) {
-  text("buslane_program") +
+  text("buslane") +
   space +
-  braced_block([
-    program.metadata.pretty(),
-    section("terms", program.terms.map(TopTerm::pretty)),
-  ])
+  braced_block([program.metadata.pretty()] + program.terms.map(TopTerm::pretty))
 }
 
 ///|
 pub impl @prettyprinter.Pretty for TopTerm with fn pretty(term : TopTerm) {
   match term {
     Let(id, expr) =>
-      text("top_let") +
+      text("let") +
       space +
       id.pretty() +
       space +
-      braced_block([expr.pretty()])
+      text("=") +
+      space +
+      expr.pretty()
     LetRec(bindings) =>
-      text("top_letrec") +
+      text("letrec") +
       space +
       braced_block(bindings.map(RecursiveBinding::pretty))
     External(id) => text("external") + space + id.pretty()
@@ -193,54 +167,45 @@ pub impl @prettyprinter.Pretty for TopTerm with fn pretty(term : TopTerm) {
 pub impl @prettyprinter.Pretty for RecursiveBinding with fn pretty(
   binding : RecursiveBinding,
 ) {
-  text("rec") +
-  space +
-  binding.id.pretty() +
-  space +
-  braced_block([binding.rhs.pretty()])
+  binding.id.pretty() + space + text("=") + space + binding.rhs.pretty()
 }
 
 ///|
 pub impl @prettyprinter.Pretty for Expr with fn pretty(expr : Expr) {
   match expr {
-    Ref(id) => text("ref") + space + id.pretty()
+    Ref(id) => id.pretty()
     Literal(literal) => literal.pretty()
     Function(function) => function.pretty()
     Call(callee, arguments) =>
-      text("call") +
-      space +
-      braced_block([
-        section("callee", [callee.pretty()]),
-        section("arguments", arguments.map(Expr::pretty)),
-      ])
+      callee.pretty() + parenthesized_inline(arguments.map(Expr::pretty))
     TypeLambda(parameters, body) =>
-      text("type_lambda") +
-      space +
-      bracketed_inline(parameters.map(TypeParameterId::pretty)) +
+      text("fn") +
+      type_parameters_doc(parameters) +
       space +
       braced_block([body.pretty()])
     TypeApply(callee, arguments) =>
-      text("type_apply") +
-      type_arguments_doc(arguments) +
-      space +
-      braced_block([callee.pretty()])
+      callee.pretty() + type_arguments_doc(arguments)
     Construct(construct) => construct.pretty()
     Let(id, initializer, body) =>
       text("let") +
       space +
       id.pretty() +
       space +
-      braced_block([
-        section("initializer", [initializer.pretty()]),
-        section("body", [body.pretty()]),
-      ])
+      text("=") +
+      space +
+      initializer.pretty() +
+      space +
+      text("in") +
+      line +
+      body.pretty()
     LetRec(bindings, body) =>
       text("letrec") +
       space +
-      braced_block([
-        section("bindings", bindings.map(RecursiveBinding::pretty)),
-        section("body", [body.pretty()]),
-      ])
+      braced_block(bindings.map(RecursiveBinding::pretty)) +
+      space +
+      text("in") +
+      line +
+      body.pretty()
     Match(match_) => match_.pretty()
   }
 }
@@ -250,66 +215,61 @@ pub impl @prettyprinter.Pretty for FunctionExpr with fn pretty(
   function : FunctionExpr,
 ) {
   text("fn") +
+  parenthesized_inline(function.parameters.map(ValueId::pretty)) +
   space +
-  braced_block([
-    section_inline("parameters", function.parameters.map(ValueId::pretty)),
-    text("result ") + function.result_type.pretty(),
-    section("body", [function.body.pretty()]),
-  ])
+  text("->") +
+  space +
+  function.result_type.pretty() +
+  space +
+  braced_block([function.body.pretty()])
 }
 
 ///|
 pub impl @prettyprinter.Pretty for ConstructExpr with fn pretty(
   construct : ConstructExpr,
 ) {
-  text("construct") +
-  space +
   construct.data_constructor.pretty() +
-  type_arguments_doc(construct.type_arguments) +
-  hidden_witnesses_doc(construct.hidden_witnesses) +
-  space +
-  braced_block(construct.payloads.map(Expr::pretty))
+  type_and_witness_arguments_doc(
+    construct.type_arguments,
+    construct.hidden_witnesses,
+  ) +
+  parenthesized_inline(construct.payloads.map(Expr::pretty))
 }
 
 ///|
 pub impl @prettyprinter.Pretty for MatchExpr with fn pretty(match_ : MatchExpr) {
   text("match") +
   space +
-  braced_block([
-    section("scrutinee", [match_.scrutinee.pretty()]),
-    text("binder ") + match_.binder.pretty(),
-    text("result ") + match_.result_type.pretty(),
-    section("alternatives", match_.alternatives.map(Alternative::pretty)),
-  ])
+  match_.scrutinee.pretty() +
+  space +
+  text("as") +
+  space +
+  match_.binder.pretty() +
+  space +
+  text("->") +
+  space +
+  match_.result_type.pretty() +
+  space +
+  braced_block(match_.alternatives.map(Alternative::pretty))
 }
 
 ///|
 pub impl @prettyprinter.Pretty for Alternative with fn pretty(
   alternative : Alternative,
 ) {
-  text("alt") +
+  alternative_pattern_doc(alternative) +
   space +
-  alternative.alt_constructor.pretty() +
+  text("=>") +
   space +
-  braced_block([
-    section_inline(
-      "type_binders",
-      alternative.type_binders.map(TypeParameterId::pretty),
-    ),
-    section_inline(
-      "value_binders",
-      alternative.value_binders.map(ValueId::pretty),
-    ),
-    section("body", [alternative.body.pretty()]),
-  ])
+  alternative.body.pretty()
 }
 
 ///|
 pub impl @prettyprinter.Pretty for AltCon with fn pretty(alt : AltCon) {
   match alt {
-    Default => text("default")
-    Literal(literal) => text("literal ") + literal.pretty()
-    DataCon(id) => text("data ") + id.pretty()
+    Default => text("_")
+    Literal(literal) => literal.pretty()
+    DataCon(id) => id.pretty()
   }
 }
 
@@ -376,37 +336,132 @@ fn type_arguments_doc(arguments : Array[Type]) -> Document {
 }
 
 ///|
-fn hidden_witnesses_doc(witnesses : Array[Type]) -> Document {
-  if witnesses.is_empty() {
+fn type_parameters_doc(parameters : Array[TypeParameterId]) -> Document {
+  if parameters.is_empty() {
     empty
   } else {
-    text(" exists") + bracketed_inline(witnesses.map(Type::pretty))
+    bracketed_inline(parameters.map(TypeParameterId::pretty))
   }
 }
 
 ///|
-fn section_inline(label : String, docs : Array[Document]) -> Document {
-  text(label) + space + bracketed_inline(docs)
+fn type_and_witness_arguments_doc(
+  arguments : Array[Type],
+  witnesses : Array[Type],
+) -> Document {
+  if arguments.is_empty() && witnesses.is_empty() {
+    empty
+  } else if witnesses.is_empty() {
+    bracketed_inline(arguments.map(Type::pretty))
+  } else {
+    surround(
+      char('['),
+      char(']'),
+      join_comma(arguments.map(Type::pretty)) +
+      text(";") +
+      space +
+      join_comma(witnesses.map(Type::pretty)),
+    )
+  }
 }
 
 ///|
-fn indexed_section(label : String, docs : Array[Document]) -> Document {
-  text(label) + space + braced_block(docs)
+fn metadata_declarations(metadata : MetadataRegistry) -> Array[Document] {
+  let declarations : Array[Document] = []
+  for index in 0..<metadata.types.length() {
+    declarations.push(
+      type_declaration(metadata, { index, }, metadata.types[index]),
+    )
+  }
+  for index in 0..<metadata.type_parameters.length() {
+    declarations.push(
+      type_parameter_declaration({ index, }, metadata.type_parameters[index]),
+    )
+  }
+  for index in 0..<metadata.values.length() {
+    declarations.push(value_declaration({ index, }, metadata.values[index]))
+  }
+  declarations
 }
 
 ///|
-fn section(label : String, docs : Array[Document]) -> Document {
-  text(label) + space + braced_block(docs)
+fn type_declaration(
+  metadata : MetadataRegistry,
+  id : TypeId,
+  info : TypeInfo,
+) -> Document {
+  text("type") +
+  space +
+  id.pretty() +
+  type_parameters_doc(info.parameters) +
+  space +
+  braced_block(
+    info.constructors.map(fn(data_constructor) {
+      match metadata.data_constructor_info(data_constructor) {
+        Some(info) => data_constructor_declaration(data_constructor, info)
+        None => data_constructor.pretty()
+      }
+    }),
+  )
 }
 
 ///|
-fn bracketed_inline(docs : Array[Document]) -> Document {
-  surround(char('['), char(']'), separate(text(",") + space, docs))
+fn type_parameter_declaration(
+  id : TypeParameterId,
+  info : TypeParameterInfo,
+) -> Document {
+  text("type_parameter") +
+  space +
+  id.pretty() +
+  space +
+  text(":") +
+  space +
+  info.kind.pretty()
+}
+
+///|
+fn value_declaration(id : ValueId, info : ValueInfo) -> Document {
+  info.kind.pretty() +
+  space +
+  id.pretty() +
+  space +
+  text(":") +
+  space +
+  info.type_.pretty()
+}
+
+///|
+fn data_constructor_declaration(id : DataConId, info : DataConInfo) -> Document {
+  id.pretty() +
+  type_parameters_doc(info.hidden_type_parameters) +
+  parenthesized_inline(info.payload_types.map(Type::pretty))
+}
+
+///|
+fn alternative_pattern_doc(alternative : Alternative) -> Document {
+  match alternative.alt_constructor {
+    Default => text("_")
+    Literal(literal) => literal.pretty()
+    DataCon(id) =>
+      id.pretty() +
+      type_parameters_doc(alternative.type_binders) +
+      parenthesized_inline(alternative.value_binders.map(ValueId::pretty))
+  }
 }
 
 ///|
 fn parenthesized_inline(docs : Array[Document]) -> Document {
   surround(char('('), char(')'), separate(text(",") + space, docs))
+}
+
+///|
+fn bracketed_inline(docs : Array[Document]) -> Document {
+  surround(char('['), char(']'), join_comma(docs))
+}
+
+///|
+fn join_comma(docs : Array[Document]) -> Document {
+  separate(text(",") + space, docs)
 }
 
 ///|

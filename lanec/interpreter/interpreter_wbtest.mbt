@@ -247,15 +247,19 @@ test "evaluate buslane external call" {
     metadata,
     terms: [External(external), Let(result, Call(Ref(external), []))],
   }
-  let runtime = BuslaneExternalRuntime::BuslaneExternalRuntime()
+  let runtime = @buslane_interpreter.BuslaneExternalRuntime()
   runtime.add_handler((id, arguments) => {
-    guard id == external else { raise MissingExternal(id) }
-    guard arguments.is_empty() else {
-      raise ExternalFailure(id~, message="expected no arguments")
+    if id != external {
+      abort("unexpected Buslane external")
     }
-    Int(42L)
+    if !arguments.is_empty() {
+      abort("unexpected Buslane external arguments")
+    }
+    @buslane_interpreter.BuslaneRuntimeValue::int(42L)
   })
-  let evaluated = evaluate_buslane_program(program, runtime)
+  let evaluated = @buslane_interpreter.evaluate_buslane_program(
+    program, runtime,
+  )
   inspect(
     @prettyprinter.render(evaluated.lookup(result), width=80),
     content="int 42",
@@ -305,7 +309,10 @@ test "evaluate buslane nominal data match" {
       ),
     ],
   }
-  let evaluated = evaluate_buslane_program(program, BuslaneExternalRuntime())
+  let evaluated = @buslane_interpreter.evaluate_buslane_program(
+    program,
+    BuslaneExternalRuntime(),
+  )
   inspect(
     @prettyprinter.render(evaluated.lookup(result), width=80),
     content="int 7",
@@ -324,7 +331,10 @@ test "evaluate source field access through buslane selector" {
     ),
   )
   let answer = expect_last_buslane_let(program)
-  let evaluated = evaluate_buslane_program(program, BuslaneExternalRuntime())
+  let evaluated = @buslane_interpreter.evaluate_buslane_program(
+    program,
+    BuslaneExternalRuntime(),
+  )
   inspect(
     @prettyprinter.render(evaluated.lookup(answer), width=80),
     content="int 1",

@@ -1,0 +1,159 @@
+///|
+fn int_type() -> @buslane.Type {
+  Primitive(Int)
+}
+
+///|
+fn expect_ok(program : @buslane.Program) -> Unit raise {
+  inspect(
+    @prettyprinter.render(@buslane.verify_program(program), width=100),
+    content=(
+      #|verify_result {}
+    ),
+  )
+}
+
+///|
+test "external value calls runtime handler" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let external = metadata.define_value(External, Function([], int_type()))
+  let result = metadata.define_value(Value, int_type())
+  let program = @buslane.Program::{
+    metadata,
+    terms: [External(external), Let(result, Call(Ref(external), []))],
+  }
+  inspect(
+    @prettyprinter.render(program, width=100),
+    content=(
+      #|buslane {
+      #|  metadata {
+      #|    external value#0 : () -> Int
+      #|    value value#1 : Int
+      #|  }
+      #|  external value#0
+      #|  let value#1 = value#0()
+      #|}
+    ),
+  )
+  expect_ok(program)
+  let runtime = BuslaneExternalRuntime::BuslaneExternalRuntime()
+  runtime.add_handler((id, arguments) => {
+    if id != external {
+      abort("unexpected Buslane external")
+    }
+    if !arguments.is_empty() {
+      abort("unexpected Buslane external arguments")
+    }
+    BuslaneRuntimeValue::int(42L)
+  })
+  let evaluated = evaluate_buslane_program(program, runtime)
+  inspect(
+    @prettyprinter.render(evaluated.lookup(result), width=80),
+    content="int 42",
+  )
+}
+
+///|
+test "data constructor match selects matching alternative" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let parameter = metadata.define_type_parameter(Type)
+  let option = metadata.define_type([parameter])
+  let none = metadata.define_data_constructor(option, [], [])
+  let some = metadata.define_data_constructor(option, [], [Parameter(parameter)])
+  let option_int = @buslane.Type::Nominal(option, [int_type()])
+  let scrutinee = metadata.define_value(Value, option_int)
+  let binder = metadata.define_value(MatchBinder, option_int)
+  let payload = metadata.define_value(MatchBinder, int_type())
+  let result = metadata.define_value(Value, int_type())
+  let program = @buslane.Program::{
+    metadata,
+    terms: [
+      Let(
+        scrutinee,
+        Construct({
+          data_constructor: some,
+          type_arguments: [int_type()],
+          hidden_witnesses: [],
+          payloads: [Literal(Int(7L))],
+        }),
+      ),
+      Let(
+        result,
+        Match({
+          scrutinee: Ref(scrutinee),
+          binder,
+          result_type: int_type(),
+          alternatives: [
+            {
+              alt_constructor: DataCon(none),
+              type_binders: [],
+              value_binders: [],
+              body: Literal(Int(0L)),
+            },
+            {
+              alt_constructor: DataCon(some),
+              type_binders: [],
+              value_binders: [payload],
+              body: Ref(payload),
+            },
+          ],
+        }),
+      ),
+    ],
+  }
+  inspect(
+    @prettyprinter.render(program.terms[1], width=100),
+    content=(
+      #|let value#3 = match value#0 as value#1 -> Int {
+      #|  datacon#0() => 0
+      #|  datacon#1(value#2) => value#2
+      #|}
+    ),
+  )
+  expect_ok(program)
+  let evaluated = evaluate_buslane_program(program, BuslaneExternalRuntime())
+  inspect(
+    @prettyprinter.render(evaluated.lookup(result), width=80),
+    content="int 7",
+  )
+}
+
+///|
+test "evaluation rejects invalid program" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let value = metadata.define_value(Value, int_type())
+  let program = @buslane.Program::{
+    metadata,
+    terms: [Let(value, Literal(Bool(true)))],
+  }
+  inspect(
+    @prettyprinter.render(@buslane.verify_program(program), width=100),
+    content=(
+      #|verify_result {
+      #|  type_mismatch {
+      #|    expected Int
+      #|    actual Bool
+      #|  }
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(
+      try {
+        ignore(evaluate_buslane_program(program, BuslaneExternalRuntime()))
+        abort("expected invalid program")
+      } catch {
+        error => error
+      },
+      width=100,
+    ),
+    content=(
+      #|invalid_program {
+      #|  type_mismatch {
+      #|    expected Int
+      #|    actual Bool
+      #|  }
+      #|}
+    ),
+  )
+}

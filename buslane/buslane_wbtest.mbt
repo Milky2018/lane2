@@ -21,30 +21,11 @@ test "buslane metadata owns nominal data shape" {
     @prettyprinter.render(metadata, width=100),
     content=(
       #|metadata {
-      #|  types {
-      #|    type_info {
-      #|      parameters [tparam#0]
-      #|      constructors [datacon#0, datacon#1]
-      #|    }
+      #|  type type#0[tparam#0] {
+      #|    datacon#0()
+      #|    datacon#1(tparam#0)
       #|  }
-      #|  type_parameters {
-      #|    type_parameter_info {
-      #|      kind Type
-      #|    }
-      #|  }
-      #|  values {}
-      #|  data_constructors {
-      #|    datacon_info {
-      #|      owner type#0
-      #|      hidden_type_parameters []
-      #|      payload_types []
-      #|    }
-      #|    datacon_info {
-      #|      owner type#0
-      #|      hidden_type_parameters []
-      #|      payload_types [tparam#0]
-      #|    }
-      #|  }
+      #|  type_parameter tparam#0 : Type
       #|}
     ),
   )
@@ -93,49 +74,18 @@ test "pretty buslane expression tree core" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|buslane_program {
+      #|buslane {
       #|  metadata {
-      #|    types {}
-      #|    type_parameters {}
-      #|    values {
-      #|      value_info {
-      #|        kind value
-      #|        type Int
-      #|      }
-      #|      value_info {
-      #|        kind function
-      #|        type (Int) -> Int
-      #|      }
-      #|      value_info {
-      #|        kind parameter
-      #|        type Int
-      #|      }
-      #|    }
-      #|    data_constructors {}
+      #|    value value#0 : Int
+      #|    function value#1 : (Int) -> Int
+      #|    parameter value#2 : Int
       #|  }
-      #|  terms {
-      #|    top_letrec {
-      #|      rec value#1 {
-      #|        fn {
-      #|          parameters [value#2]
-      #|          result Int
-      #|          body {
-      #|            ref value#2
-      #|          }
-      #|        }
-      #|      }
-      #|    }
-      #|    top_let value#0 {
-      #|      call {
-      #|        callee {
-      #|          ref value#1
-      #|        }
-      #|        arguments {
-      #|          int 42
-      #|        }
-      #|      }
+      #|  letrec {
+      #|    value#1 = fn(value#2) -> Int {
+      #|      value#2
       #|    }
       #|  }
+      #|  let value#0 = value#1(42)
       #|}
     ),
   )
@@ -191,23 +141,8 @@ test "pretty buslane construct and one-level match" {
   inspect(
     @prettyprinter.render(program.terms[1], width=100),
     content=(
-      #|top_let value#2 {
-      #|  match {
-      #|    scrutinee {
-      #|      ref value#0
-      #|    }
-      #|    binder value#1
-      #|    result Int
-      #|    alternatives {
-      #|      alt data datacon#0 {
-      #|        type_binders []
-      #|        value_binders [value#2]
-      #|        body {
-      #|          ref value#2
-      #|        }
-      #|      }
-      #|    }
-      #|  }
+      #|let value#2 = match value#0 as value#1 -> Int {
+      #|  datacon#0(value#2) => value#2
       #|}
     ),
   )

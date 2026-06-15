@@ -1,5 +1,5 @@
 ///|
-pub(all) enum BuslaneRuntimeValue {
+enum BuslaneRuntimeValueKind {
   Int(Int64)
   Bool(Bool)
   String(String)
@@ -22,19 +22,24 @@ pub(all) enum BuslaneRuntimeValue {
 } derive(Debug, Eq)
 
 ///|
+pub struct BuslaneRuntimeValue {
+  priv kind : BuslaneRuntimeValueKind
+} derive(Debug, Eq)
+
+///|
 struct BuslaneRuntimeBinding {
   id : @buslane.ValueId
   value : BuslaneRuntimeValue
 } derive(Debug, Eq)
 
 ///|
-pub struct BuslaneRuntimeEnvironment {
+struct BuslaneRuntimeEnvironment {
   values : Array[BuslaneRuntimeBinding]
 } derive(Debug, Eq)
 
 ///|
 pub struct BuslaneRuntimeProgram {
-  globals : BuslaneRuntimeEnvironment
+  priv globals : BuslaneRuntimeEnvironment
 } derive(Debug, Eq)
 
 ///|
@@ -52,18 +57,58 @@ pub type BuslaneExternalHandler = (@buslane.ValueId, Array[BuslaneRuntimeValue])
 
 ///|
 pub struct BuslaneExternalRuntime {
-  handlers : Array[BuslaneExternalHandler]
+  priv handlers : Array[BuslaneExternalHandler]
+}
+
+///|
+/// Creates an integer Buslane runtime value.
+pub fn BuslaneRuntimeValue::int(value : Int64) -> BuslaneRuntimeValue {
+  { kind: Int(value) }
+}
+
+///|
+/// Creates a boolean Buslane runtime value.
+pub fn BuslaneRuntimeValue::bool(value : Bool) -> BuslaneRuntimeValue {
+  { kind: Bool(value) }
+}
+
+///|
+/// Creates a string Buslane runtime value.
+pub fn BuslaneRuntimeValue::string(value : String) -> BuslaneRuntimeValue {
+  { kind: String(value) }
+}
+
+///|
+/// Returns the unit Buslane runtime value.
+pub fn BuslaneRuntimeValue::unit() -> BuslaneRuntimeValue {
+  { kind: Unit }
+}
+
+///|
+/// Creates a nominal data Buslane runtime value.
+pub fn BuslaneRuntimeValue::data(
+  data_constructor : @buslane.DataConId,
+  arguments : Array[BuslaneRuntimeValue],
+) -> BuslaneRuntimeValue {
+  { kind: Data(data_constructor~, arguments~) }
+}
+
+///|
+fn BuslaneRuntimeValue::runtime(
+  kind : BuslaneRuntimeValueKind,
+) -> BuslaneRuntimeValue {
+  { kind, }
 }
 
 ///|
 /// Creates an empty Buslane runtime environment.
-pub fn BuslaneRuntimeEnvironment::BuslaneRuntimeEnvironment() -> BuslaneRuntimeEnvironment {
+fn BuslaneRuntimeEnvironment::BuslaneRuntimeEnvironment() -> BuslaneRuntimeEnvironment {
   { values: [] }
 }
 
 ///|
 /// Creates a runtime program from a global environment.
-pub fn BuslaneRuntimeProgram::BuslaneRuntimeProgram(
+fn BuslaneRuntimeProgram::BuslaneRuntimeProgram(
   globals : BuslaneRuntimeEnvironment,
 ) -> BuslaneRuntimeProgram {
   { globals, }
@@ -86,7 +131,7 @@ pub fn BuslaneExternalRuntime::add_handler(
 
 ///|
 /// Invokes the first external handler that accepts the value identity.
-pub fn BuslaneExternalRuntime::invoke(
+fn BuslaneExternalRuntime::invoke(
   self : BuslaneExternalRuntime,
   id : @buslane.ValueId,
   arguments : Array[BuslaneRuntimeValue],
@@ -104,7 +149,7 @@ pub fn BuslaneExternalRuntime::invoke(
 
 ///|
 /// Binds a Buslane value identity in this runtime environment.
-pub fn BuslaneRuntimeEnvironment::bind(
+fn BuslaneRuntimeEnvironment::bind(
   self : BuslaneRuntimeEnvironment,
   id : @buslane.ValueId,
   value : BuslaneRuntimeValue,
@@ -114,7 +159,7 @@ pub fn BuslaneRuntimeEnvironment::bind(
 
 ///|
 /// Returns a copy of this runtime environment.
-pub fn BuslaneRuntimeEnvironment::copy(
+fn BuslaneRuntimeEnvironment::copy(
   self : BuslaneRuntimeEnvironment,
 ) -> BuslaneRuntimeEnvironment {
   { values: self.values.copy() }
@@ -122,7 +167,7 @@ pub fn BuslaneRuntimeEnvironment::copy(
 
 ///|
 /// Looks up a value identity, preferring the latest binding.
-pub fn BuslaneRuntimeEnvironment::lookup(
+fn BuslaneRuntimeEnvironment::lookup(
   self : BuslaneRuntimeEnvironment,
   id : @buslane.ValueId,
 ) -> BuslaneRuntimeValue raise BuslaneRuntimeError {

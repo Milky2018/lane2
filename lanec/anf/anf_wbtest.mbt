@@ -473,7 +473,7 @@ test "lower buslane function call to ANF" {
       #|              ref value#1
       #|            }
       #|            arguments {
-      #|              int 42
+      #|              42
       #|            }
       #|          }
       #|        }

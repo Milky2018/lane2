@@ -15,7 +15,8 @@ pub fn evaluate_buslane_program(
   let globals = BuslaneRuntimeEnvironment::BuslaneRuntimeEnvironment()
   for term in program.terms {
     match term {
-      External(id) => globals.bind(id, External(id))
+      External(id) =>
+        globals.bind(id, BuslaneRuntimeValue::runtime(External(id)))
       LetRec(bindings) => bind_buslane_recursive_group(bindings, globals)
       Let(id, initializer) => {
         let value = evaluate_buslane_expr(initializer, globals, externals)
@@ -46,13 +47,17 @@ fn recursive_runtime_value(
 ) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
   match rhs {
     Function(function) =>
-      Closure(
-        parameters=function.parameters,
-        body=function.body,
-        environment=environment.copy(),
+      BuslaneRuntimeValue::runtime(
+        Closure(
+          parameters=function.parameters,
+          body=function.body,
+          environment=environment.copy(),
+        ),
       )
     TypeLambda(type_parameters, body) =>
-      TypeClosure(type_parameters~, body~, environment=environment.copy())
+      BuslaneRuntimeValue::runtime(
+        TypeClosure(type_parameters~, body~, environment=environment.copy()),
+      )
     _ => raise InvalidValue(message="letrec rhs is not a function")
   }
 }
@@ -67,26 +72,34 @@ fn evaluate_buslane_expr(
     Ref(id) => environment.lookup(id)
     Literal(literal) => evaluate_buslane_literal(literal)
     Function(function) =>
-      Closure(
-        parameters=function.parameters,
-        body=function.body,
-        environment=environment.copy(),
+      BuslaneRuntimeValue::runtime(
+        Closure(
+          parameters=function.parameters,
+          body=function.body,
+          environment=environment.copy(),
+        ),
       )
     Call(callee, arguments) =>
       evaluate_buslane_call(callee, arguments, environment, externals)
     TypeLambda(type_parameters, body) =>
-      TypeClosure(type_parameters~, body~, environment=environment.copy())
+      BuslaneRuntimeValue::runtime(
+        TypeClosure(type_parameters~, body~, environment=environment.copy()),
+      )
     TypeApply(callee, _) =>
       erase_buslane_type_application(
         evaluate_buslane_expr(callee, environment, externals),
         externals,
       )
     Construct(construct) =>
-      Data(
-        data_constructor=construct.data_constructor,
-        arguments=construct.payloads.map(fn(payload) raise BuslaneRuntimeError {
-          evaluate_buslane_expr(payload, environment, externals)
-        }),
+      BuslaneRuntimeValue::runtime(
+        Data(
+          data_constructor=construct.data_constructor,
+          arguments=construct.payloads.map(fn(
+            payload,
+          ) raise BuslaneRuntimeError {
+            evaluate_buslane_expr(payload, environment, externals)
+          }),
+        ),
       )
     Let(id, initializer, body) => {
       let frame = environment.copy()
@@ -106,10 +119,10 @@ fn evaluate_buslane_expr(
 ///|
 fn evaluate_buslane_literal(literal : @buslane.Literal) -> BuslaneRuntimeValue {
   match literal {
-    Int(value) => Int(value)
-    Bool(value) => Bool(value)
-    String(value) => String(value)
-    Unit => Unit
+    Int(value) => BuslaneRuntimeValue::int(value)
+    Bool(value) => BuslaneRuntimeValue::bool(value)
+    String(value) => BuslaneRuntimeValue::string(value)
+    Unit => BuslaneRuntimeValue::unit()
   }
 }
 
@@ -133,7 +146,7 @@ fn apply_buslane_function(
   arguments : Array[BuslaneRuntimeValue],
   externals : BuslaneExternalRuntime,
 ) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
-  match callee {
+  match callee.kind {
     Closure(parameters~, body~, environment~) => {
       if parameters.length() != arguments.length() {
         raise InvalidValue(message="argument count mismatch")
@@ -158,7 +171,7 @@ fn erase_buslane_type_application(
   callee : BuslaneRuntimeValue,
   externals : BuslaneExternalRuntime,
 ) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
-  match callee {
+  match callee.kind {
     TypeClosure(body~, environment~, ..) =>
       evaluate_buslane_expr(body, environment, externals)
     Closure(..) | External(_) => callee
@@ -213,7 +226,7 @@ fn bind_buslane_data_alternative(
   scrutinee : BuslaneRuntimeValue,
   environment : BuslaneRuntimeEnvironment,
 ) -> Bool {
-  guard scrutinee is Data(data_constructor=actual, arguments~) else {
+  guard scrutinee.kind is Data(data_constructor=actual, arguments~) else {
     return false
   }
   if actual != data_constructor || arguments.length() != value_binders.length() {
@@ -231,21 +244,21 @@ fn buslane_literal_matches(
   value : BuslaneRuntimeValue,
 ) -> Bool {
   match literal {
-    Unit => value is Unit
+    Unit => value.kind is Unit
     Bool(expected) =>
-      if value is Bool(actual) {
+      if value.kind is Bool(actual) {
         actual == expected
       } else {
         false
       }
     Int(expected) =>
-      if value is Int(actual) {
+      if value.kind is Int(actual) {
         actual == expected
       } else {
         false
       }
     String(expected) =>
-      if value is String(actual) {
+      if value.kind is String(actual) {
         actual == expected
       } else {
         false

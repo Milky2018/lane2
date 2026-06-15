@@ -1,5 +1,4 @@
 import {
-  "Milky2018/buslane",
   "Milky2018/lane2/checked",
   "Milky2018/lane2/anf",
   "Milky2018/lane2/pretty",
@@ -9,6 +8,8 @@ import {
 }
 
 import {
+  "Milky2018/buslane",
+  "Milky2018/buslane/interpreter" @buslane_interpreter,
   "Milky2018/lane2/elaborate",
   "Milky2018/lane2/basic",
   "Milky2018/lane2/parser",
