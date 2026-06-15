@@ -1,53 +1,205 @@
 ///|
-fn expect_buslane_program(source : String) -> BuslaneProgram {
-  let parse_result = @parser.parse_string(source)
-  if !parse_result.lexical_errors.is_empty() ||
-    !parse_result.parse_errors.is_empty() {
-    abort("expected parse success")
-  }
-  guard parse_result.source is Some(file) else { abort("expected source") }
-  let resolved = @resolve.resolve_source_file(file)
-  let checked = @typecheck.typecheck_checked_source_file(resolved)
-  guard checked.source is Some(source) else {
-    abort(@prettyprinter.render(checked.diagnostics, width=100))
-  }
-  lower_checked_source_file_to_buslane(source)
+fn int_type() -> Type {
+  Primitive(Int)
 }
 
 ///|
-test "lower checked source to buslane expression core" {
-  let program = expect_buslane_program(
-    (
-      #|fn[A] id(value : A) -> A {
-      #|  value
+test "buslane metadata owns nominal data shape" {
+  let metadata = MetadataRegistry::MetadataRegistry()
+  let option_param = metadata.define_type_parameter(Type)
+  let option_type = metadata.define_type([option_param])
+  let none = metadata.define_data_constructor(option_type, [], [])
+  let some = metadata.define_data_constructor(option_type, [], [
+    Parameter(option_param),
+  ])
+  inspect(
+    @prettyprinter.render(metadata, width=100),
+    content=(
+      #|metadata {
+      #|  types {
+      #|    type_info {
+      #|      parameters [tparam#0]
+      #|      constructors [datacon#0, datacon#1]
+      #|    }
+      #|  }
+      #|  type_parameters {
+      #|    type_parameter_info {
+      #|      kind Type
+      #|    }
+      #|  }
+      #|  values {}
+      #|  data_constructors {
+      #|    datacon_info {
+      #|      owner type#0
+      #|      hidden_type_parameters []
+      #|      payload_types []
+      #|    }
+      #|    datacon_info {
+      #|      owner type#0
+      #|      hidden_type_parameters []
+      #|      payload_types [tparam#0]
+      #|    }
+      #|  }
       #|}
-      #|let answer : Int = id(builtin("%answer"))
     ),
   )
+  assert_true(
+    metadata.data_constructor_info(none).unwrap().owner == option_type,
+  )
+  assert_true(
+    metadata.data_constructor_info(some).unwrap().owner == option_type,
+  )
+}
+
+///|
+test "buslane forall equality is alpha equivalent" {
+  let left_param = TypeParameterId::{ index: 0 }
+  let right_param = TypeParameterId::{ index: 1 }
+  let left = Type::Forall([left_param], Parameter(left_param))
+  let right = Type::Forall([right_param], Parameter(right_param))
+  assert_true(left == right)
+}
+
+///|
+test "pretty buslane expression tree core" {
+  let metadata = MetadataRegistry::MetadataRegistry()
+  let value = metadata.define_value(Value, int_type())
+  let function = metadata.define_value(
+    Function,
+    Function([int_type()], int_type()),
+  )
+  let parameter = metadata.define_value(Parameter, int_type())
+  let program = Program::{
+    metadata,
+    terms: [
+      LetRec([
+        {
+          id: function,
+          rhs: Function({
+            parameters: [parameter],
+            result_type: int_type(),
+            body: Ref(parameter),
+          }),
+        },
+      ]),
+      Let(value, Call(Ref(function), [Literal(Int(42L))])),
+    ],
+  }
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
       #|buslane_program {
-      #|  fn : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 value#0 id[tparam#0 A : Type] {
-      #|    parameters {
-      #|      param : tparam#0 value#1 value
+      #|  metadata {
+      #|    types {}
+      #|    type_parameters {}
+      #|    values {
+      #|      value_info {
+      #|        kind value
+      #|        type Int
+      #|      }
+      #|      value_info {
+      #|        kind function
+      #|        type (Int) -> Int
+      #|      }
+      #|      value_info {
+      #|        kind parameter
+      #|        type Int
+      #|      }
       #|    }
-      #|    return : tparam#0
-      #|    body {
-      #|      value : tparam#0 value#1 value
-      #|    }
+      #|    data_constructors {}
       #|  }
-      #|  let : Int value#2 answer {
-      #|    call : Int {
-      #|      callee {
-      #|        type_application : (Int) -> Int[Int] {
-      #|          callee {
-      #|            value : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 value#0 id
+      #|  terms {
+      #|    top_letrec {
+      #|      rec value#1 {
+      #|        fn {
+      #|          parameters [value#2]
+      #|          result Int
+      #|          body {
+      #|            ref value#2
       #|          }
       #|        }
       #|      }
-      #|      arguments {
-      #|        unsafe_builtin "%answer" : Int
+      #|    }
+      #|    top_let value#0 {
+      #|      call {
+      #|        callee {
+      #|          ref value#1
+      #|        }
+      #|        arguments {
+      #|          int 42
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "pretty buslane construct and one-level match" {
+  let metadata = MetadataRegistry::MetadataRegistry()
+  let option_type_parameter = metadata.define_type_parameter(Type)
+  let option_type = metadata.define_type([option_type_parameter])
+  let some = metadata.define_data_constructor(option_type, [], [
+    Parameter(option_type_parameter),
+  ])
+  let scrutinee = metadata.define_value(
+    Value,
+    Nominal(option_type, [int_type()]),
+  )
+  let match_binder = metadata.define_value(
+    MatchBinder,
+    Nominal(option_type, [int_type()]),
+  )
+  let payload = metadata.define_value(Parameter, int_type())
+  let program = Program::{
+    metadata,
+    terms: [
+      Let(
+        scrutinee,
+        Construct({
+          data_constructor: some,
+          type_arguments: [int_type()],
+          hidden_witnesses: [],
+          payloads: [Literal(Int(1L))],
+        }),
+      ),
+      Let(
+        payload,
+        Match({
+          scrutinee: Ref(scrutinee),
+          binder: match_binder,
+          result_type: int_type(),
+          alternatives: [
+            {
+              alt_constructor: DataCon(some),
+              type_binders: [],
+              value_binders: [payload],
+              body: Ref(payload),
+            },
+          ],
+        }),
+      ),
+    ],
+  }
+  inspect(
+    @prettyprinter.render(program.terms[1], width=100),
+    content=(
+      #|top_let value#2 {
+      #|  match {
+      #|    scrutinee {
+      #|      ref value#0
+      #|    }
+      #|    binder value#1
+      #|    result Int
+      #|    alternatives {
+      #|      alt data datacon#0 {
+      #|        type_binders []
+      #|        value_binders [value#2]
+      #|        body {
+      #|          ref value#2
+      #|        }
       #|      }
       #|    }
       #|  }

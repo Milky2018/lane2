@@ -87,27 +87,7 @@ test "elaborate resolved source into buslane core" {
     @prettyprinter.render(result, width=100),
     content=(
       #|buslane_elaborate_result {
-      #|  buslane_program {
-      #|    fn : (Int) -> Int value#0 identity {
-      #|      parameters {
-      #|        param : Int value#1 x
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        value : Int value#1 x
-      #|      }
-      #|    }
-      #|    let : Int value#2 answer {
-      #|      call : Int {
-      #|        callee {
-      #|          value : (Int) -> Int value#0 identity
-      #|        }
-      #|        arguments {
-      #|          int 42 : Int
-      #|        }
-      #|      }
-      #|    }
-      #|  }
+      #|  <no buslane program>
       #|  diagnostics {}
       #|}
     ),

@@ -1,251 +1,359 @@
 ///|
-using @prettyprinter {type Document, empty, space, text}
-
-///|
-pub impl @prettyprinter.Pretty for BuslaneProgram with fn pretty(
-  program : BuslaneProgram,
-) {
-  text("buslane_program") +
-  space +
-  @pretty.braced_block(
-    program.declarations.map(BuslaneTopLevelDeclaration::pretty),
-  )
+using @prettyprinter {
+  type Document,
+  char,
+  empty,
+  line,
+  nest,
+  separate,
+  space,
+  surround,
+  text,
 }
 
 ///|
-pub impl @prettyprinter.Pretty for BuslaneTopLevelDeclaration with fn pretty(
-  declaration : BuslaneTopLevelDeclaration,
+pub impl @prettyprinter.Pretty for TypeId with fn pretty(id : TypeId) {
+  text("type#") + text(id.index.to_string())
+}
+
+///|
+pub impl @prettyprinter.Pretty for TypeParameterId with fn pretty(
+  id : TypeParameterId,
 ) {
-  match declaration {
-    Struct(declaration) => declaration.pretty()
-    Enum(declaration) => declaration.pretty()
-    Function(declaration) => declaration.pretty()
-    Let(declaration) => declaration.pretty()
+  text("tparam#") + text(id.index.to_string())
+}
+
+///|
+pub impl @prettyprinter.Pretty for ValueId with fn pretty(id : ValueId) {
+  text("value#") + text(id.index.to_string())
+}
+
+///|
+pub impl @prettyprinter.Pretty for DataConId with fn pretty(id : DataConId) {
+  text("datacon#") + text(id.index.to_string())
+}
+
+///|
+pub impl @prettyprinter.Pretty for Kind with fn pretty(kind : Kind) {
+  match kind {
+    Type => text("Type")
   }
 }
 
 ///|
-pub impl @prettyprinter.Pretty for BuslaneFunctionDeclaration with fn pretty(
-  declaration : BuslaneFunctionDeclaration,
+pub impl @prettyprinter.Pretty for PrimitiveType with fn pretty(
+  primitive : PrimitiveType,
 ) {
-  typed_header("fn", declaration.type_) +
-  space +
-  declaration.symbol.pretty() +
-  space +
-  text(declaration.name) +
-  type_parameters_doc(declaration.type_parameters) +
+  match primitive {
+    Unit => text("Unit")
+    Bool => text("Bool")
+    Int => text("Int")
+    String => text("String")
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for Type with fn pretty(type_ : Type) {
+  match type_ {
+    Primitive(primitive) => primitive.pretty()
+    Parameter(parameter) => parameter.pretty()
+    Nominal(type_id, arguments) =>
+      type_id.pretty() + type_arguments_doc(arguments)
+    Function(parameters, result) =>
+      @pretty.parenthesized_inline(parameters.map(Type::pretty)) +
+      space +
+      text("->") +
+      space +
+      result.pretty()
+    Forall(parameters, body) =>
+      text("forall") +
+      space +
+      @pretty.bracketed_inline(parameters.map(TypeParameterId::pretty)) +
+      text(".") +
+      space +
+      body.pretty()
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for Literal with fn pretty(literal : Literal) {
+  match literal {
+    Unit => text("unit")
+    Bool(value) => text("bool ") + text(value.to_string())
+    Int(value) => text("int ") + text(value.to_string())
+    String(value) => text("string ") + quoted(value)
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for ValueKind with fn pretty(kind : ValueKind) {
+  match kind {
+    Function => text("function")
+    Value => text("value")
+    External => text("external")
+    Parameter => text("parameter")
+    Local => text("local")
+    MatchBinder => text("match_binder")
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for TypeInfo with fn pretty(info : TypeInfo) {
+  text("type_info") +
   space +
   @pretty.braced_block([
-    @pretty.section(
-      "parameters",
-      declaration.parameters.map(@checked.CheckedValueParameter::pretty),
-    ),
-    typed_named_doc("return", declaration.return_type),
-    @pretty.section("body", [declaration.body.pretty()]),
+    section_inline("parameters", info.parameters.map(TypeParameterId::pretty)),
+    section_inline("constructors", info.constructors.map(DataConId::pretty)),
   ])
 }
 
 ///|
-pub impl @prettyprinter.Pretty for BuslaneLetDeclaration with fn pretty(
-  declaration : BuslaneLetDeclaration,
+pub impl @prettyprinter.Pretty for TypeParameterInfo with fn pretty(
+  info : TypeParameterInfo,
 ) {
-  let name = match declaration.name {
-    Some(name) => text(name)
-    None => text("<anonymous>")
-  }
-  typed_header("let", declaration.type_) +
+  text("type_parameter_info") +
   space +
-  declaration.symbol.pretty() +
-  space +
-  name +
-  space +
-  @pretty.braced_block([declaration.value.pretty()])
+  @pretty.braced_block([text("kind ") + info.kind.pretty()])
 }
 
 ///|
-pub impl @prettyprinter.Pretty for BuslaneBinding with fn pretty(
-  binding : BuslaneBinding,
+pub impl @prettyprinter.Pretty for ValueInfo with fn pretty(info : ValueInfo) {
+  text("value_info") +
+  space +
+  @pretty.braced_block([
+    text("kind ") + info.kind.pretty(),
+    text("type ") + info.type_.pretty(),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for DataConInfo with fn pretty(
+  info : DataConInfo,
 ) {
-  match binding {
-    Value(symbol~, name~, value~, type_~, ..) => {
-      let name_doc = match name {
-        Some(name) => text(name)
-        None => text("<anonymous>")
-      }
-      typed_header("binding", type_) +
+  text("datacon_info") +
+  space +
+  @pretty.braced_block([
+    text("owner ") + info.owner.pretty(),
+    section_inline(
+      "hidden_type_parameters",
+      info.hidden_type_parameters.map(TypeParameterId::pretty),
+    ),
+    section_inline("payload_types", info.payload_types.map(Type::pretty)),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for MetadataRegistry with fn pretty(
+  metadata : MetadataRegistry,
+) {
+  text("metadata") +
+  space +
+  @pretty.braced_block([
+    indexed_section("types", metadata.types.map(TypeInfo::pretty)),
+    indexed_section(
+      "type_parameters",
+      metadata.type_parameters.map(TypeParameterInfo::pretty),
+    ),
+    indexed_section("values", metadata.values.map(ValueInfo::pretty)),
+    indexed_section(
+      "data_constructors",
+      metadata.data_constructors.map(DataConInfo::pretty),
+    ),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for Program with fn pretty(program : Program) {
+  text("buslane_program") +
+  space +
+  @pretty.braced_block([
+    program.metadata.pretty(),
+    @pretty.section("terms", program.terms.map(TopTerm::pretty)),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for TopTerm with fn pretty(term : TopTerm) {
+  match term {
+    Let(id, expr) =>
+      text("top_let") +
       space +
-      symbol.pretty() +
+      id.pretty() +
       space +
-      name_doc +
+      @pretty.braced_block([expr.pretty()])
+    LetRec(bindings) =>
+      text("top_letrec") +
       space +
-      @pretty.braced_block([value.pretty()])
-    }
-    Pattern(pattern~, initializer~, ..) =>
-      text("pattern_binding") +
-      space +
-      @pretty.braced_block([
-        @pretty.section("pattern", [pattern.pretty()]),
-        @pretty.section("initializer", [initializer.pretty()]),
-      ])
+      @pretty.braced_block(bindings.map(RecursiveBinding::pretty))
+    External(id) => text("external") + space + id.pretty()
   }
 }
 
 ///|
-pub impl @prettyprinter.Pretty for BuslaneExpr with fn pretty(
-  expression : BuslaneExpr,
+pub impl @prettyprinter.Pretty for RecursiveBinding with fn pretty(
+  binding : RecursiveBinding,
 ) {
-  match expression {
-    Literal(literal~, type_~, ..) =>
-      typed_named_doc(literal_label(literal), type_)
-    Value(name~, symbol~, type_~, ..) =>
-      typed_header("value", type_) +
-      space +
-      symbol.pretty() +
-      space +
-      text(name)
-    UnsafeBuiltin(name~, type_~, ..) =>
-      typed_named_doc("unsafe_builtin " + quoted(name), type_)
-    Function(parameters~, body~, type_~, ..) =>
-      typed_header("fn_value", type_) +
-      space +
-      @pretty.braced_block([
-        @pretty.section(
-          "parameters",
-          parameters.map(@checked.CheckedValueParameter::pretty),
-        ),
-        @pretty.section("body", [body.pretty()]),
-      ])
-    TypeLambda(type_parameters~, body~, type_~, ..) =>
-      typed_header("type_lambda", type_) +
-      type_parameters_doc(type_parameters) +
-      space +
-      @pretty.braced_block([@pretty.section("body", [body.pretty()])])
-    TypeApplication(callee~, arguments~, type_~, ..) =>
-      typed_header("type_application", type_) +
-      type_arguments_doc(arguments) +
-      space +
-      @pretty.braced_block([@pretty.section("callee", [callee.pretty()])])
-    Let(binding~, body~, type_~, ..) =>
-      typed_header("let", type_) +
-      space +
-      @pretty.braced_block([
-        @pretty.section("binding", [binding.pretty()]),
-        @pretty.section("body", [body.pretty()]),
-      ])
-    If(condition~, then_branch~, else_branch~, type_~, ..) =>
-      typed_header("if", type_) +
-      space +
-      @pretty.braced_block([
-        @pretty.section("condition", [condition.pretty()]),
-        @pretty.section("then", [then_branch.pretty()]),
-        @pretty.section("else", [else_branch.pretty()]),
-      ])
-    Match(scrutinee~, arms~, type_~, ..) =>
-      typed_header("match", type_) +
-      space +
-      @pretty.braced_block([
-        @pretty.section("scrutinee", [scrutinee.pretty()]),
-        @pretty.section("arms", arms.map(BuslaneMatchArm::pretty)),
-      ])
-    Call(callee~, arguments~, type_~, ..) =>
-      typed_header("call", type_) +
+  text("rec") +
+  space +
+  binding.id.pretty() +
+  space +
+  @pretty.braced_block([binding.rhs.pretty()])
+}
+
+///|
+pub impl @prettyprinter.Pretty for Expr with fn pretty(expr : Expr) {
+  match expr {
+    Ref(id) => text("ref") + space + id.pretty()
+    Literal(literal) => literal.pretty()
+    Function(function) => function.pretty()
+    Call(callee, arguments) =>
+      text("call") +
       space +
       @pretty.braced_block([
         @pretty.section("callee", [callee.pretty()]),
-        @pretty.section("arguments", arguments.map(BuslaneExpr::pretty)),
+        @pretty.section("arguments", arguments.map(Expr::pretty)),
       ])
-    Field(base~, field~, name~, type_~, ..) =>
-      typed_header("field", type_) +
+    TypeLambda(parameters, body) =>
+      text("type_lambda") +
       space +
-      field.pretty() +
+      @pretty.bracketed_inline(parameters.map(TypeParameterId::pretty)) +
       space +
-      text(name) +
+      @pretty.braced_block([body.pretty()])
+    TypeApply(callee, arguments) =>
+      text("type_apply") +
+      type_arguments_doc(arguments) +
       space +
-      @pretty.braced_block([@pretty.section("base", [base.pretty()])])
-    Struct(symbol~, type_arguments~, type_witnesses~, fields~, type_~, ..) =>
-      typed_header("struct", type_) +
+      @pretty.braced_block([callee.pretty()])
+    Construct(construct) => construct.pretty()
+    Let(id, initializer, body) =>
+      text("let") +
       space +
-      symbol.pretty() +
-      type_arguments_doc(type_arguments) +
+      id.pretty() +
       space +
-      @pretty.braced_block(
-        type_witnesses.map(@checked.CheckedStructTypeWitness::pretty) +
-        fields.map(BuslaneStructField::pretty),
-      )
-    Variant(symbol~, type_arguments~, arguments~, type_~, ..) =>
-      typed_header("variant", type_) +
+      @pretty.braced_block([
+        @pretty.section("initializer", [initializer.pretty()]),
+        @pretty.section("body", [body.pretty()]),
+      ])
+    LetRec(bindings, body) =>
+      text("letrec") +
       space +
-      symbol.pretty() +
-      type_arguments_doc(type_arguments) +
-      space +
-      @pretty.braced_block(arguments.map(BuslaneExpr::pretty))
+      @pretty.braced_block([
+        @pretty.section("bindings", bindings.map(RecursiveBinding::pretty)),
+        @pretty.section("body", [body.pretty()]),
+      ])
+    Match(match_) => match_.pretty()
   }
 }
 
 ///|
-pub impl @prettyprinter.Pretty for BuslaneStructField with fn pretty(
-  field : BuslaneStructField,
+pub impl @prettyprinter.Pretty for FunctionExpr with fn pretty(
+  function : FunctionExpr,
 ) {
-  text("field") +
-  space +
-  field.symbol.pretty() +
-  space +
-  text(field.name) +
-  space +
-  @pretty.braced_block([field.value.pretty()])
-}
-
-///|
-pub impl @prettyprinter.Pretty for BuslaneMatchArm with fn pretty(
-  arm : BuslaneMatchArm,
-) {
-  text("arm") +
+  text("fn") +
   space +
   @pretty.braced_block([
-    @pretty.section("pattern", [arm.pattern.pretty()]),
-    @pretty.section("body", [arm.body.pretty()]),
+    section_inline("parameters", function.parameters.map(ValueId::pretty)),
+    text("result ") + function.result_type.pretty(),
+    @pretty.section("body", [function.body.pretty()]),
   ])
 }
 
 ///|
-fn typed_header(label : String, type_ : @types.Type) -> Document {
-  text(label) + space + text(":") + space + type_.pretty()
+pub impl @prettyprinter.Pretty for ConstructExpr with fn pretty(
+  construct : ConstructExpr,
+) {
+  text("construct") +
+  space +
+  construct.data_constructor.pretty() +
+  type_arguments_doc(construct.type_arguments) +
+  hidden_witnesses_doc(construct.hidden_witnesses) +
+  space +
+  @pretty.braced_block(construct.payloads.map(Expr::pretty))
 }
 
 ///|
-fn typed_named_doc(label : String, type_ : @types.Type) -> Document {
-  typed_header(label, type_)
+pub impl @prettyprinter.Pretty for MatchExpr with fn pretty(match_ : MatchExpr) {
+  text("match") +
+  space +
+  @pretty.braced_block([
+    @pretty.section("scrutinee", [match_.scrutinee.pretty()]),
+    text("binder ") + match_.binder.pretty(),
+    text("result ") + match_.result_type.pretty(),
+    @pretty.section(
+      "alternatives",
+      match_.alternatives.map(Alternative::pretty),
+    ),
+  ])
 }
 
 ///|
-fn type_parameters_doc(parameters : Array[@types.TypeParameter]) -> Document {
-  if parameters.is_empty() {
-    empty
-  } else {
-    @pretty.bracketed_inline(parameters.map(@types.TypeParameter::pretty))
+pub impl @prettyprinter.Pretty for Alternative with fn pretty(
+  alternative : Alternative,
+) {
+  text("alt") +
+  space +
+  alternative.alt_constructor.pretty() +
+  space +
+  @pretty.braced_block([
+    section_inline(
+      "type_binders",
+      alternative.type_binders.map(TypeParameterId::pretty),
+    ),
+    section_inline(
+      "value_binders",
+      alternative.value_binders.map(ValueId::pretty),
+    ),
+    @pretty.section("body", [alternative.body.pretty()]),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for AltCon with fn pretty(alt : AltCon) {
+  match alt {
+    Default => text("default")
+    Literal(literal) => text("literal ") + literal.pretty()
+    DataCon(id) => text("data ") + id.pretty()
   }
 }
 
 ///|
-fn type_arguments_doc(arguments : Array[@types.Type]) -> Document {
+fn type_arguments_doc(arguments : Array[Type]) -> Document {
   if arguments.is_empty() {
     empty
   } else {
-    @pretty.bracketed_inline(arguments.map(@types.Type::pretty))
+    @pretty.bracketed_inline(arguments.map(Type::pretty))
   }
 }
 
 ///|
-fn literal_label(literal : @checked.CheckedLiteral) -> String {
-  match literal {
-    Int(literal) => "int " + literal.raw
-    String(value) => "string " + quoted(value)
-    Bool(value) => "bool " + value.to_string()
-    Unit => "unit"
+fn hidden_witnesses_doc(witnesses : Array[Type]) -> Document {
+  if witnesses.is_empty() {
+    empty
+  } else {
+    text(" exists") + @pretty.bracketed_inline(witnesses.map(Type::pretty))
   }
 }
 
 ///|
-fn quoted(value : String) -> String {
-  "\"" + value + "\""
+fn section_inline(label : String, docs : Array[Document]) -> Document {
+  text(label) + space + @pretty.bracketed_inline(docs)
+}
+
+///|
+fn indexed_section(label : String, docs : Array[Document]) -> Document {
+  text(label) + space + braced_block(docs)
+}
+
+///|
+fn braced_block(docs : Array[Document]) -> Document {
+  if docs.is_empty() {
+    surround(char('{'), char('}'), empty)
+  } else {
+    surround(char('{'), line + char('}'), nest(line + separate(line, docs)))
+  }
+}
+
+///|
+fn quoted(value : String) -> Document {
+  text("\"") + text(value) + text("\"")
 }

@@ -28,7 +28,7 @@ pub(all) struct AnfElaborateResult {
 pub impl @prettyprinter.Pretty for AnfElaborateResult
 
 pub(all) struct BuslaneElaborateResult {
-  program : @buslane.BuslaneProgram?
+  program : @buslane.Program?
   diagnostics : Array[@typecheck.TypeCheckDiagnostic]
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for BuslaneElaborateResult

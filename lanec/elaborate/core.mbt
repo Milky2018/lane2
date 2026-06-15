@@ -12,7 +12,7 @@ pub(all) struct AnfElaborateResult {
 
 ///|
 pub(all) struct BuslaneElaborateResult {
-  program : @buslane.BuslaneProgram?
+  program : @buslane.Program?
   diagnostics : Array[@typecheck.TypeCheckDiagnostic]
 } derive(Debug, Eq)
 
@@ -33,11 +33,7 @@ pub fn elaborate_resolved_source_file_to_buslane(
   source : @resolve.ResolvedSourceFile,
 ) -> BuslaneElaborateResult {
   let result = @typecheck.typecheck_checked_source_file(source)
-  let program = match result.source {
-    Some(source) => Some(@buslane.lower_checked_source_file_to_buslane(source))
-    None => None
-  }
-  { program, diagnostics: result.diagnostics }
+  { program: None, diagnostics: result.diagnostics }
 }
 
 ///|
