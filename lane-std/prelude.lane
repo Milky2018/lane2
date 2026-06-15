@@ -112,39 +112,39 @@ fn[T] op_greater_eq(a : T, b : T, auto op : Compare[T]) -> Bool {
 }
 
 fn int_add(a : Int, b : Int) -> Int {
-  builtin("%i64_add")
+  builtin("%i64_add")(a, b)
 }
 
 fn int_sub(a : Int, b : Int) -> Int {
-  builtin("%i64_sub")
+  builtin("%i64_sub")(a, b)
 }
 
 fn int_mul(a : Int, b : Int) -> Int {
-  builtin("%i64_mul")
+  builtin("%i64_mul")(a, b)
 }
 
 fn int_div(a : Int, b : Int) -> Int {
-  builtin("%i64_div")
+  builtin("%i64_div")(a, b)
 }
 
 fn int_rem(a : Int, b : Int) -> Int {
-  builtin("%i64_rem")
+  builtin("%i64_rem")(a, b)
 }
 
 fn int_neg(a : Int) -> Int {
-  builtin("%i64_neg")
+  builtin("%i64_neg")(a)
 }
 
 fn int_equal(a : Int, b : Int) -> Bool {
-  builtin("%i64_equal")
+  builtin("%i64_equal")(a, b)
 }
 
 fn int_less(a : Int, b : Int) -> Bool {
-  builtin("%i64_less")
+  builtin("%i64_less")(a, b)
 }
 
 fn string_equal(a : String, b : String) -> Bool {
-  builtin("%string_equal")
+  builtin("%string_equal")(a, b)
 }
 
 fn bool_and(a : Bool, b : () -> Bool) -> Bool {

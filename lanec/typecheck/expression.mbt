@@ -55,6 +55,17 @@ fn SemanticChecker::check_expr(
     }
     Call(callee~, arguments~, loc~) =>
       self.check_call(scope, callee, arguments, expected, loc)
+    StructLiteral(type_name~, type_arguments~, fields~, loc~) => {
+      let actual = self.synthesize_checked_struct_literal(
+          scope,
+          type_name,
+          type_arguments,
+          fields,
+          Some(expected),
+          loc,
+        ).type_
+      self.expect_type(expected, actual, loc)
+    }
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, loc~) =>
       self.check_function_literal(
         scope, type_parameters, parameters, return_type, body, expected, loc,

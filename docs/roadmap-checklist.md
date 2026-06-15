@@ -220,7 +220,7 @@ and unresolved or ambiguous states before Buslane lowering.
 
 ## 8. Prelude And Conformance
 
-- [ ] Encode and check the v1 prelude as Lane2 source.
+- [x] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial contextual offer environment from prelude-provided
   offered value definitions.
 - [ ] Provide required intrinsic implementations through builtin runtime

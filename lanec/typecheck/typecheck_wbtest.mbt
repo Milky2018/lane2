@@ -232,6 +232,50 @@ test "typecheck builds checked builtin from direct expected type" {
 }
 
 ///|
+test "typecheck builds checked builtin call from expected result" {
+  let expression = expect_checked_let_initializer(
+    (
+      #|let sum : Int = builtin("%i64_add")(1, 2)
+    ),
+    "sum",
+    Primitive(Int),
+  )
+  inspect(
+    @prettyprinter.render(expression),
+    content=(
+      #|builtin("%i64_add")(1, 2) : Int
+    ),
+  )
+}
+
+///|
+test "typecheck prelude primitive operation fragment" {
+  let result = expect_checked_source_result(
+    (
+      #|struct Add[T] {
+      #|  add : (T, T) -> T
+      #|}
+      #|
+      #|fn[T] op_add(a : T, b : T, auto op : Add[T]) -> T {
+      #|  op.add(a, b)
+      #|}
+      #|
+      #|fn int_add(a : Int, b : Int) -> Int {
+      #|  builtin("%i64_add")(a, b)
+      #|}
+      #|
+      #|offer int_add_ops : Add[Int] = Add::{ add: int_add }
+      #|
+      #|let sum : Int = op_add(1, 2)
+    ),
+  )
+  inspect(result.diagnostics.length(), content="0")
+  guard result.source is Some(_) else {
+    abort("expected checked prelude fragment")
+  }
+}
+
+///|
 test "typecheck parses checked int literal as i64 value" {
   let expression = expect_checked_let_initializer(
     (

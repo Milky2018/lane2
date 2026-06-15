@@ -122,6 +122,10 @@ fn SemanticChecker::check_call(
     )
     return
   }
+  if callee is Builtin(_, ..) {
+    self.check_builtin_callee_call(scope, arguments, loc)
+    return
+  }
   let callee_type = self.synthesize_expr(scope, callee)
   let arguments = self.prepare_direct_call_arguments(
     scope,
@@ -139,6 +143,39 @@ fn SemanticChecker::check_call(
     loc,
   )
   self.expect_type(expected, actual, loc)
+}
+
+///|
+fn SemanticChecker::check_builtin_callee_call(
+  self : SemanticChecker,
+  scope : TypeScope,
+  arguments : Array[@desugar.DesugaredCallArgument],
+  loc : SourceSpan,
+) -> Unit {
+  // `builtin` remains opaque. In callee position, the surrounding checked call
+  // supplies the result type while each argument supplies its own local type.
+  // This derives the adjacent function type expected by the unsafe builtin:
+  //
+  //   Gamma |- a_i => P_i
+  //   Gamma |- builtin(s) <= (P_1, ..., P_n) -> Expected
+  //   Gamma |- a_i <= P_i
+  //   ---------------------------------------------------
+  //   Gamma |- builtin(s)(a_1, ..., a_n) <= Expected
+  let parameters = []
+  for argument in arguments {
+    match argument {
+      Positional(expression) =>
+        parameters.push(self.synthesize_expr(scope, expression))
+      Named(name~, value~, loc~) => {
+        self.diagnostics.push({
+          kind: CannotInferExpression("invalid named argument " + name),
+          loc,
+        })
+        parameters.push(self.synthesize_expr(scope, value))
+      }
+    }
+  }
+  self.check_call_arguments(scope, parameters, arguments, loc)
 }
 
 ///|

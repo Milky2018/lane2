@@ -365,7 +365,12 @@ fn SemanticChecker::synthesize_struct_literal(
   loc : SourceSpan,
 ) -> @types.Type {
   self.synthesize_checked_struct_literal(
-    scope, type_name, type_arguments, fields, loc,
+    scope,
+    type_name,
+    type_arguments,
+    fields,
+    None,
+    loc,
   ).type_
 }
 
@@ -376,13 +381,16 @@ fn SemanticChecker::synthesize_checked_struct_literal(
   type_name : String,
   type_arguments : Array[@resolve.ResolvedType],
   fields : Array[@desugar.DesugaredStructLiteralField],
+  expected : @types.Type?,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
   guard self.source.symbols.type_named(type_name) is Some(symbol) else {
     self.diagnostics.push({ kind: UnresolvedType(type_name), loc })
     return checked_expression_none_reported(Error)
   }
-  let arguments = type_arguments.map(fn(type_) { self.check_type(type_) })
+  let arguments = self.struct_literal_type_arguments(
+    symbol, type_arguments, expected,
+  )
   check_type_arity(
     self.source.symbols,
     self.diagnostics,
@@ -457,6 +465,25 @@ fn SemanticChecker::synthesize_checked_struct_literal(
   } else {
     checked_expression_none_reported(type_)
   }
+}
+
+///|
+fn SemanticChecker::struct_literal_type_arguments(
+  self : SemanticChecker,
+  symbol : @symbol.TypeSymbolId,
+  type_arguments : Array[@resolve.ResolvedType],
+  expected : @types.Type?,
+) -> Array[@types.Type] {
+  // Local type inference for `S::{ ... }` is intentionally one-way. If the
+  // adjacent expected type is the same nominal constructor, omitted source type
+  // arguments are copied from that expected type. Explicit source type
+  // arguments are always respected.
+  if type_arguments.is_empty() &&
+    expected is Some(Nominal(expected_symbol, expected_arguments)) &&
+    expected_symbol == symbol {
+    return expected_arguments.copy()
+  }
+  type_arguments.map(fn(type_) { self.check_type(type_) })
 }
 
 ///|

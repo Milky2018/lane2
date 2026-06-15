@@ -210,7 +210,7 @@ test "elaborate builtins through contextual expected types" {
 }
 
 ///|
-test "elaborate reports unimplemented checked expression shape" {
+test "elaborate checked if expression" {
   let result = elaborate_source(
     (
       #|fn choose(value : Bool) -> Int {
@@ -222,10 +222,16 @@ test "elaborate reports unimplemented checked expression shape" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  <no checked source>
-      #|  diagnostics {
-      #|    cannot_infer checked block result @ 2:12-2:28
+      #|  checked {
+      #|    fn choose#0(value#1 : Bool) -> Int {
+      #|      if value#1 {
+      #|        1
+      #|      } else {
+      #|        2
+      #|      }
+      #|    }
       #|  }
+      #|  diagnostics {}
       #|}
     ),
   )
