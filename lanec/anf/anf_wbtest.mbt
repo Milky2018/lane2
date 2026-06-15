@@ -167,54 +167,21 @@ test "pretty prints ANF existential package and opening" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|anf_program {
-      #|  struct type#0 Hide {
-      #|    type tmember#0 tparam#0 T : Type index=0
-      #|    field field#0 val : tparam#0 index=0
+      #|anf {
+      #|  struct Hide#0 {
+      #|    type T#0 : Type
+      #|    val#0 : tparam#0
       #|  }
-      #|  fn : (type#0) -> type#0 value#0 repack {
-      #|    parameters {
-      #|      param : type#0 value#1 h
+      #|  fn repack#0(h#1 : type#0) -> type#0 {
+      #|    let type#0::{
+      #|      type T#0 = T#1
+      #|      val#0: val#2
+      #|    } = h#1
+      #|    let packed#3 : type#0 = type#0::{
+      #|      type T#0 = tparam#1
+      #|      val#0: val#2
       #|    }
-      #|    return : type#0
-      #|    body {
-      #|      let_expr : type#0 {
-      #|        binding {
-      #|          pattern_binding {
-      #|            pattern {
-      #|              struct_pattern : type#0 type#0 {
-      #|                type_pattern tmember#0 tparam#1 T
-      #|                field_pattern field#0 val {
-      #|                  binding : tparam#1 value#2 val
-      #|                }
-      #|              }
-      #|            }
-      #|            initializer {
-      #|              value : type#0 value#1 h
-      #|            }
-      #|          }
-      #|        }
-      #|        body {
-      #|          let_expr : type#0 {
-      #|            binding {
-      #|              binding : type#0 value#3 packed {
-      #|                struct : type#0 type#0 {
-      #|                  type tmember#0 T = tparam#1
-      #|                  field field#0 val {
-      #|                    value : tparam#1 value#2 val
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|            body {
-      #|              atom : type#0 {
-      #|                value : type#0 value#3 packed
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
-      #|    }
+      #|    packed#3
       #|  }
       #|}
     ),
@@ -240,54 +207,21 @@ test "lower checked source existential struct opening to ANF" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|anf_program {
-      #|  struct type#0 Hide {
-      #|    type tmember#0 tparam#0 T : Type index=0
-      #|    field field#0 val : tparam#0 index=0
+      #|anf {
+      #|  struct Hide#0 {
+      #|    type T#0 : Type
+      #|    val#0 : tparam#0
       #|  }
-      #|  fn : (type#0) -> type#0 value#0 repack {
-      #|    parameters {
-      #|      param : type#0 value#1 h
+      #|  fn repack#0(h#1 : type#0) -> type#0 {
+      #|    let type#0::{
+      #|      type T#0 = T#1
+      #|      val#0: val#2
+      #|    } = h#1
+      #|    let temp#0 : type#0 = type#0::{
+      #|      type T#0 = tparam#1
+      #|      val#0: val#2
       #|    }
-      #|    return : type#0
-      #|    body {
-      #|      let_expr : type#0 {
-      #|        binding {
-      #|          pattern_binding {
-      #|            pattern {
-      #|              struct_pattern : type#0 type#0 {
-      #|                type_pattern tmember#0 tparam#1 T
-      #|                field_pattern field#0 val {
-      #|                  binding : tparam#1 value#2 val
-      #|                }
-      #|              }
-      #|            }
-      #|            initializer {
-      #|              value : type#0 value#1 h
-      #|            }
-      #|          }
-      #|        }
-      #|        body {
-      #|          let_expr : type#0 {
-      #|            binding {
-      #|              temp_binding : type#0 temp#0 {
-      #|                struct : type#0 type#0 {
-      #|                  type tmember#0 T = tparam#1
-      #|                  field field#0 val {
-      #|                    value : tparam#1 value#2 val
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|            body {
-      #|              atom : type#0 {
-      #|                temp : type#0 temp#0
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
-      #|    }
+      #|    temp#0
       #|  }
       #|}
     ),
@@ -311,45 +245,15 @@ test "lower checked source existential enum opening to ANF" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|anf_program {
-      #|  enum type#0 Packed {
-      #|    variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
+      #|anf {
+      #|  enum Packed#0 {
+      #|    hide#0[T#0 : Type](tparam#0)
       #|  }
-      #|  fn : (type#0) -> type#0 value#0 repack {
-      #|    parameters {
-      #|      param : type#0 value#1 p
-      #|    }
-      #|    return : type#0
-      #|    body {
-      #|      match : type#0 {
-      #|        scrutinee {
-      #|          value : type#0 value#1 p
-      #|        }
-      #|        arms {
-      #|          arm {
-      #|            pattern {
-      #|              variant_pattern : type#0 variant#0[tparam#1] {
-      #|                binding : tparam#1 value#2 value
-      #|              }
-      #|            }
-      #|            body {
-      #|              let_expr : type#0 {
-      #|                binding {
-      #|                  temp_binding : type#0 temp#0 {
-      #|                    variant : type#0 variant#0[tparam#1] {
-      #|                      value : tparam#1 value#2 value
-      #|                    }
-      #|                  }
-      #|                }
-      #|                body {
-      #|                  atom : type#0 {
-      #|                    temp : type#0 temp#0
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|          }
-      #|        }
+      #|  fn repack#0(p#1 : type#0) -> type#0 {
+      #|    match p#1 {
+      #|      variant#0[tparam#1](value#2) => {
+      #|        let temp#0 : type#0 = variant#0[tparam#1](value#2)
+      #|        temp#0
       #|      }
       #|    }
       #|  }
@@ -371,51 +275,14 @@ test "lower checked source generic call and unsafe builtin to ANF" {
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
-      #|anf_program {
-      #|  fn : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 value#0 id[tparam#0 A : Type] {
-      #|    parameters {
-      #|      param : tparam#0 value#1 value
-      #|    }
-      #|    return : tparam#0
-      #|    body {
-      #|      atom : tparam#0 {
-      #|        value : tparam#0 value#1 value
-      #|      }
-      #|    }
+      #|anf {
+      #|  fn[tparam#0 A : Type] id#0(value#1 : tparam#0) -> tparam#0 {
+      #|    value#1
       #|  }
-      #|  let : Int value#2 answer {
-      #|    let_expr : Int {
-      #|      binding {
-      #|        temp_binding : (Int) -> Int temp#0 {
-      #|          type_application : (Int) -> Int[Int] {
-      #|            callee {
-      #|              value : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 value#0 id
-      #|            }
-      #|          }
-      #|        }
-      #|      }
-      #|      body {
-      #|        let_expr : Int {
-      #|          binding {
-      #|            temp_binding : Int temp#1 {
-      #|              call : Int {
-      #|                callee {
-      #|                  temp : (Int) -> Int temp#0
-      #|                }
-      #|                arguments {
-      #|                  unsafe_builtin "%answer" : Int
-      #|                }
-      #|              }
-      #|            }
-      #|          }
-      #|          body {
-      #|            atom : Int {
-      #|              temp : Int temp#1
-      #|            }
-      #|          }
-      #|        }
-      #|      }
-      #|    }
+      #|  let answer#2 : Int = {
+      #|    let temp#0 : (Int) -> Int = id#0[Int]
+      #|    let temp#1 : Int = temp#0(builtin("%answer"))
+      #|    temp#1
       #|  }
       #|}
     ),
@@ -451,39 +318,14 @@ test "lower buslane function call to ANF" {
     @prettyprinter.render(lower_buslane_program_to_anf(program), width=100),
     content=(
       #|buslane_anf_program {
-      #|  top_letrec {
-      #|    rec value#1 {
-      #|      fn {
-      #|        parameters [value#2]
-      #|        result Int
-      #|        body {
-      #|          atom {
-      #|            ref value#2
-      #|          }
-      #|        }
-      #|      }
+      #|  letrec {
+      #|    value#1 = fn(value#2) -> Int {
+      #|      value#2
       #|    }
       #|  }
-      #|  top_let value#0 {
-      #|    let_expr {
-      #|      binding {
-      #|        temp_binding temp#0 {
-      #|          call {
-      #|            callee {
-      #|              ref value#1
-      #|            }
-      #|            arguments {
-      #|              42
-      #|            }
-      #|          }
-      #|        }
-      #|      }
-      #|      body {
-      #|        atom {
-      #|          temp temp#0
-      #|        }
-      #|      }
-      #|    }
+      #|  let value#0 = {
+      #|    let temp#0 = value#1(42)
+      #|    temp#0
       #|  }
       #|}
     ),

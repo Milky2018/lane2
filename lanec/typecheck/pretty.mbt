@@ -109,9 +109,7 @@ pub impl @prettyprinter.Pretty for CheckedStructDeclaration with fn pretty(
 ) {
   text("struct") +
   space +
-  declaration.symbol.pretty() +
-  space +
-  text(declaration.name) +
+  type_name_doc(declaration.name, declaration.symbol) +
   type_parameters_doc(declaration.type_parameters) +
   space +
   @pretty.braced_block(
@@ -126,18 +124,11 @@ pub impl @prettyprinter.Pretty for CheckedTypeMemberDeclaration with fn pretty(
 ) {
   text("type") +
   space +
-  type_member.symbol.pretty() +
-  space +
-  type_member.type_parameter.id.pretty() +
-  space +
-  text(type_member.name) +
+  type_member_name_doc(type_member.name, type_member.symbol) +
   space +
   text(":") +
   space +
-  type_member.kind.pretty() +
-  space +
-  text("index=") +
-  text(type_member.index.to_string())
+  type_member.kind.pretty()
 }
 
 ///|
@@ -146,9 +137,7 @@ pub impl @prettyprinter.Pretty for CheckedFunctionDeclaration with fn pretty(
 ) {
   text("fn") +
   space +
-  declaration.symbol.pretty() +
-  space +
-  text(declaration.name) +
+  value_name_doc(declaration.name, declaration.symbol) +
   space +
   text(":") +
   space +
@@ -160,12 +149,10 @@ pub impl @prettyprinter.Pretty for CheckedLetDeclaration with fn pretty(
   declaration : CheckedLetDeclaration,
 ) {
   let name = match declaration.name {
-    Some(name) => text(name)
-    None => text("<anonymous>")
+    Some(name) => value_name_doc(name, declaration.symbol)
+    None => text("_") + value_suffix(declaration.symbol)
   }
   text("let") +
-  space +
-  declaration.symbol.pretty() +
   space +
   name +
   space +
@@ -179,19 +166,12 @@ pub impl @prettyprinter.Pretty for CheckedFieldDeclaration with fn pretty(
   field : CheckedFieldDeclaration,
 ) {
   let modifier = if field.is_offered { text("offer") + space } else { empty }
-  text("field") +
-  space +
   modifier +
-  field.symbol.pretty() +
-  space +
-  text(field.name) +
+  field_name_doc(field.name, field.symbol) +
   space +
   text(":") +
   space +
-  field.type_.pretty() +
-  space +
-  text("index=") +
-  text(field.index.to_string())
+  field.type_.pretty()
 }
 
 ///|
@@ -200,9 +180,7 @@ pub impl @prettyprinter.Pretty for CheckedEnumDeclaration with fn pretty(
 ) {
   text("enum") +
   space +
-  declaration.symbol.pretty() +
-  space +
-  text(declaration.name) +
+  type_name_doc(declaration.name, declaration.symbol) +
   type_parameters_doc(declaration.type_parameters) +
   space +
   @pretty.braced_block(
@@ -214,17 +192,7 @@ pub impl @prettyprinter.Pretty for CheckedEnumDeclaration with fn pretty(
 pub impl @prettyprinter.Pretty for CheckedVariantDeclaration with fn pretty(
   variant : CheckedVariantDeclaration,
 ) {
-  text("variant") +
-  space +
-  variant.symbol.pretty() +
-  space +
-  text(variant.name) +
-  space +
-  text("index=") +
-  text(variant.index.to_string()) +
-  space +
-  text("payloads=") +
-  text(variant.payload.length().to_string()) +
+  variant_name_doc(variant.name, variant.symbol) +
   type_parameters_doc(variant.type_parameters) +
   payload_doc(variant.payload)
 }
@@ -302,8 +270,73 @@ fn type_parameters_doc(parameters : Array[@types.TypeParameter]) -> Document {
   if parameters.is_empty() {
     empty
   } else {
-    @pretty.bracketed_inline(parameters.map(@types.TypeParameter::pretty))
+    @pretty.bracketed_inline(parameters.map(type_parameter_doc))
   }
+}
+
+///|
+fn type_parameter_doc(parameter : @types.TypeParameter) -> Document {
+  text(parameter.name) +
+  type_parameter_suffix(parameter.id) +
+  space +
+  text(":") +
+  space +
+  parameter.kind.pretty()
+}
+
+///|
+fn value_name_doc(name : String, symbol : ValueSymbolId) -> Document {
+  text(name) + value_suffix(symbol)
+}
+
+///|
+fn type_name_doc(name : String, symbol : TypeSymbolId) -> Document {
+  text(name) + type_suffix(symbol)
+}
+
+///|
+fn type_member_name_doc(name : String, symbol : TypeMemberSymbolId) -> Document {
+  text(name) + type_member_suffix(symbol)
+}
+
+///|
+fn field_name_doc(name : String, symbol : FieldSymbolId) -> Document {
+  text(name) + field_suffix(symbol)
+}
+
+///|
+fn variant_name_doc(name : String, symbol : VariantSymbolId) -> Document {
+  text(name) + variant_suffix(symbol)
+}
+
+///|
+fn value_suffix(symbol : ValueSymbolId) -> Document {
+  text("#") + text(symbol.index.to_string())
+}
+
+///|
+fn type_suffix(symbol : TypeSymbolId) -> Document {
+  text("#") + text(symbol.index.to_string())
+}
+
+///|
+fn type_member_suffix(symbol : TypeMemberSymbolId) -> Document {
+  text("#") + text(symbol.index.to_string())
+}
+
+///|
+fn type_parameter_suffix(symbol : TypeParameterId) -> Document {
+  text("#") + text(symbol.index.to_string())
+}
+
+///|
+fn field_suffix(symbol : FieldSymbolId) -> Document {
+  text("#") + text(symbol.index.to_string())
+}
+
+///|
+fn variant_suffix(symbol : VariantSymbolId) -> Document {
+  text("#") + text(symbol.index.to_string())
 }
 
 ///|

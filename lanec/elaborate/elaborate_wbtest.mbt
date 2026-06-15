@@ -46,26 +46,14 @@ test "elaborate resolved source into checked source" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    struct type#0 Box {
-      #|      field field#0 value : Int index=0
+      #|  checked {
+      #|    struct Box#0 {
+      #|      value#0 : Int
       #|    }
-      #|    fn : (Int) -> Int value#0 identity {
-      #|      parameters {
-      #|        param : Int value#1 x
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            value : Int value#1 x
-      #|          }
-      #|        }
-      #|      }
+      #|    fn identity#0(x#1 : Int) -> Int {
+      #|      x#1
       #|    }
-      #|    let : Int value#2 answer {
-      #|      int 42 : Int
-      #|    }
+      #|    let answer#2 : Int = 42
       #|  }
       #|  diagnostics {}
       #|}
@@ -165,39 +153,14 @@ test "elaborate resolved source into anf" {
     content=(
       #|anf_elaborate_result {
       #|  buslane_anf_program {
-      #|    top_letrec {
-      #|      rec value#0 {
-      #|        fn {
-      #|          parameters [value#2]
-      #|          result Int
-      #|          body {
-      #|            atom {
-      #|              ref value#2
-      #|            }
-      #|          }
-      #|        }
+      #|    letrec {
+      #|      value#0 = fn(value#2) -> Int {
+      #|        value#2
       #|      }
       #|    }
-      #|    top_let value#1 {
-      #|      let_expr {
-      #|        binding {
-      #|          temp_binding temp#0 {
-      #|            call {
-      #|              callee {
-      #|                ref value#0
-      #|              }
-      #|              arguments {
-      #|                42
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|        body {
-      #|          atom {
-      #|            temp temp#0
-      #|          }
-      #|        }
-      #|      }
+      #|    let value#1 = {
+      #|      let temp#0 = value#0(42)
+      #|      temp#0
       #|    }
       #|  }
       #|  diagnostics {}
@@ -227,54 +190,17 @@ test "elaborate builtins through contextual expected types" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    fn : (Int) -> Int value#0 identity {
-      #|      parameters {
-      #|        param : Int value#3 value
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            value : Int value#3 value
-      #|          }
-      #|        }
-      #|      }
+      #|  checked {
+      #|    fn identity#0(value#3 : Int) -> Int {
+      #|      value#3
       #|    }
-      #|    let : Int value#4 top {
-      #|      unsafe_builtin "%top" : Int
+      #|    let top#4 : Int = builtin("%top")
+      #|    fn direct#1() -> Int {
+      #|      builtin("%direct")
       #|    }
-      #|    fn : () -> Int value#1 direct {
-      #|      parameters {}
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            unsafe_builtin "%direct" : Int
-      #|          }
-      #|        }
-      #|      }
-      #|    }
-      #|    fn : () -> Int value#2 use {
-      #|      parameters {}
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          let : Int value#5 local {
-      #|            unsafe_builtin "%local" : Int
-      #|          }
-      #|          result {
-      #|            call : Int {
-      #|              callee {
-      #|                value : (Int) -> Int value#0 identity
-      #|              }
-      #|              arguments {
-      #|                unsafe_builtin "%argument" : Int
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
+      #|    fn use#2() -> Int {
+      #|      let local#5 : Int = builtin("%local")
+      #|      identity#0(builtin("%argument"))
       #|    }
       #|  }
       #|  diagnostics {}
@@ -322,23 +248,13 @@ test "elaborate top level offer value declarations" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    struct type#0 Box {
-      #|      field field#0 value : Int index=0
+      #|  checked {
+      #|    struct Box#0 {
+      #|      value#0 : Int
       #|    }
-      #|    let : type#0 value#1 box {
-      #|      unsafe_builtin "%box" : type#0
-      #|    }
-      #|    fn : () -> type#0 value#0 use {
-      #|      parameters {}
-      #|      return : type#0
-      #|      body {
-      #|        block : type#0 {
-      #|          result {
-      #|            value : type#0 value#1 box
-      #|          }
-      #|        }
-      #|      }
+      #|    let box#1 : type#0 = builtin("%box")
+      #|    fn use#0() -> type#0 {
+      #|      box#1
       #|    }
       #|  }
       #|  diagnostics {}
@@ -363,39 +279,12 @@ test "elaborate pipeline expression into checked call" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    fn : (Int, Int) -> Int value#0 first {
-      #|      parameters {
-      #|        param : Int value#2 a
-      #|        param : Int value#3 b
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            value : Int value#2 a
-      #|          }
-      #|        }
-      #|      }
+      #|  checked {
+      #|    fn first#0(a#2 : Int, b#3 : Int) -> Int {
+      #|      a#2
       #|    }
-      #|    fn : () -> Int value#1 use {
-      #|      parameters {}
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            call : Int {
-      #|              callee {
-      #|                value : (Int, Int) -> Int value#0 first
-      #|              }
-      #|              arguments {
-      #|                int 1 : Int
-      #|                int 2 : Int
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
+      #|    fn use#1() -> Int {
+      #|      first#0(1, 2)
       #|    }
       #|  }
       #|  diagnostics {}
@@ -420,39 +309,12 @@ test "elaborate direct binary operator alias into checked call" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    fn : (Int, Int) -> Int value#0 op_add {
-      #|      parameters {
-      #|        param : Int value#2 a
-      #|        param : Int value#3 b
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            value : Int value#2 a
-      #|          }
-      #|        }
-      #|      }
+      #|  checked {
+      #|    fn op_add#0(a#2 : Int, b#3 : Int) -> Int {
+      #|      a#2
       #|    }
-      #|    fn : () -> Int value#1 use {
-      #|      parameters {}
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            call : Int {
-      #|              callee {
-      #|                value : (Int, Int) -> Int value#0 op_add
-      #|              }
-      #|              arguments {
-      #|                int 1 : Int
-      #|                int 2 : Int
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
+      #|    fn use#1() -> Int {
+      #|      op_add#0(1, 2)
       #|    }
       #|  }
       #|  diagnostics {}
@@ -477,37 +339,12 @@ test "elaborate direct unary operator alias into checked call" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    fn : (Int) -> Int value#0 op_neg {
-      #|      parameters {
-      #|        param : Int value#2 value
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            value : Int value#2 value
-      #|          }
-      #|        }
-      #|      }
+      #|  checked {
+      #|    fn op_neg#0(value#2 : Int) -> Int {
+      #|      value#2
       #|    }
-      #|    fn : () -> Int value#1 use {
-      #|      parameters {}
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            call : Int {
-      #|              callee {
-      #|                value : (Int) -> Int value#0 op_neg
-      #|              }
-      #|              arguments {
-      #|                int 1 : Int
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
+      #|    fn use#1() -> Int {
+      #|      op_neg#0(1)
       #|    }
       #|  }
       #|  diagnostics {}
@@ -531,36 +368,11 @@ test "elaborate pipeline into function literal call" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    fn : () -> Int value#0 use {
-      #|      parameters {}
-      #|      return : Int
-      #|      body {
-      #|        block : Int {
-      #|          result {
-      #|            call : Int {
-      #|              callee {
-      #|                fn_literal : (Int) -> Int {
-      #|                  parameters {
-      #|                    param : Int value#1 value
-      #|                  }
-      #|                  return : Int
-      #|                  body {
-      #|                    block : Int {
-      #|                      result {
-      #|                        value : Int value#1 value
-      #|                      }
-      #|                    }
-      #|                  }
-      #|                }
-      #|              }
-      #|              arguments {
-      #|                int 1 : Int
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
+      #|  checked {
+      #|    fn use#0() -> Int {
+      #|      fn(value#1 : Int) -> Int {
+      #|        value#1
+      #|      }(1)
       #|    }
       #|  }
       #|  diagnostics {}
@@ -585,48 +397,14 @@ test "elaborate lazy bool operator into thunked checked call" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    fn : (Bool, () -> Bool) -> Bool value#0 op_and {
-      #|      parameters {
-      #|        param : Bool value#2 a
-      #|        param : () -> Bool value#3 b
-      #|      }
-      #|      return : Bool
-      #|      body {
-      #|        block : Bool {
-      #|          result {
-      #|            value : Bool value#2 a
-      #|          }
-      #|        }
-      #|      }
+      #|  checked {
+      #|    fn op_and#0(a#2 : Bool, b#3 : () -> Bool) -> Bool {
+      #|      a#2
       #|    }
-      #|    fn : (Bool, Bool) -> Bool value#1 use {
-      #|      parameters {
-      #|        param : Bool value#4 a
-      #|        param : Bool value#5 b
-      #|      }
-      #|      return : Bool
-      #|      body {
-      #|        block : Bool {
-      #|          result {
-      #|            call : Bool {
-      #|              callee {
-      #|                value : (Bool, () -> Bool) -> Bool value#0 op_and
-      #|              }
-      #|              arguments {
-      #|                value : Bool value#4 a
-      #|                fn_literal : () -> Bool {
-      #|                  parameters {}
-      #|                  return : Bool
-      #|                  body {
-      #|                    value : Bool value#5 b
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|          }
-      #|        }
-      #|      }
+      #|    fn use#1(a#4 : Bool, b#5 : Bool) -> Bool {
+      #|      op_and#0(a#4, fn() -> Bool {
+      #|        b#5
+      #|      })
       #|    }
       #|  }
       #|  diagnostics {}
@@ -663,78 +441,29 @@ test "elaborate existential openings into checked source" {
     @prettyprinter.render(result, width=100),
     content=(
       #|elaborate_result {
-      #|  checked_source {
-      #|    struct type#0 Hide {
-      #|      type tmember#0 tparam#0 T : Type index=0
-      #|      field field#0 val : tparam#0 index=0
+      #|  checked {
+      #|    struct Hide#0 {
+      #|      type T#0 : Type
+      #|      val#0 : tparam#0
       #|    }
-      #|    enum type#1 Packed {
-      #|      variant variant#0 hide index=0 payloads=1[tparam#1 T : Type](tparam#1)
+      #|    enum Packed#1 {
+      #|      hide#0[T#1 : Type](tparam#1)
       #|    }
-      #|    fn : (type#0) -> type#0 value#0 repack_struct {
-      #|      parameters {
-      #|        param : type#0 value#2 h
-      #|      }
-      #|      return : type#0
-      #|      body {
-      #|        block : type#0 {
-      #|          result {
-      #|            block : type#0 {
-      #|              pattern_let {
-      #|                pattern {
-      #|                  struct_pattern : type#0 type#0 {
-      #|                    type_pattern tmember#0 tparam#2 T
-      #|                    field_pattern field#0 val {
-      #|                      binding : tparam#2 value#3 val
-      #|                    }
-      #|                  }
-      #|                }
-      #|                initializer {
-      #|                  value : type#0 value#2 h
-      #|                }
-      #|              }
-      #|              result {
-      #|                struct : type#0 type#0 {
-      #|                  type tmember#0 T = tparam#2
-      #|                  field field#0 val {
-      #|                    value : tparam#2 value#3 val
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|          }
+      #|    fn repack_struct#0(h#2 : type#0) -> type#0 {
+      #|      {
+      #|        let type#0::{
+      #|          type T#0 = T#2
+      #|          val#0: val#3
+      #|        } = h#2
+      #|        type#0::{
+      #|          type T#0 = tparam#2
+      #|          val#0: val#3
       #|        }
       #|      }
       #|    }
-      #|    fn : (type#1) -> type#1 value#1 repack_enum {
-      #|      parameters {
-      #|        param : type#1 value#4 p
-      #|      }
-      #|      return : type#1
-      #|      body {
-      #|        block : type#1 {
-      #|          result {
-      #|            match : type#1 {
-      #|              scrutinee {
-      #|                value : type#1 value#4 p
-      #|              }
-      #|              arms {
-      #|                arm {
-      #|                  pattern {
-      #|                    variant_pattern : type#1 variant#0[tparam#3] {
-      #|                      binding : tparam#3 value#5 value
-      #|                    }
-      #|                  }
-      #|                  body {
-      #|                    variant : type#1 variant#0[tparam#3] {
-      #|                      value : tparam#3 value#5 value
-      #|                    }
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|          }
-      #|        }
+      #|    fn repack_enum#1(p#4 : type#1) -> type#1 {
+      #|      match p#4 {
+      #|        variant#0[tparam#3](value#5) => variant#0[tparam#3](value#5)
       #|      }
       #|    }
       #|  }

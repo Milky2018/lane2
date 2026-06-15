@@ -142,27 +142,27 @@ test "typecheck custom type declaration environment" {
       #|declaration_typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      struct type#0 Box[tparam#0 A : Type] {
-      #|        field field#0 value : tparam#0 index=0
+      #|      struct Box#0[A#0 : Type] {
+      #|        value#0 : tparam#0
       #|      }
-      #|      enum type#1 Option[tparam#1 A : Type] {
-      #|        variant variant#0 none index=0 payloads=0
-      #|        variant variant#1 some index=1 payloads=1(tparam#1)
+      #|      enum Option#1[A#1 : Type] {
+      #|        none#0
+      #|        some#1(tparam#1)
       #|      }
-      #|      struct type#2 Uses {
-      #|        field field#1 boxed : type#0[Int] index=0
-      #|        field field#2 option : type#1[String] index=1
+      #|      struct Uses#2 {
+      #|        boxed#1 : type#0[Int]
+      #|        option#2 : type#1[String]
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {
-      #|      field field#0 value : tparam#0 index=0
-      #|      field field#1 boxed : type#0[Int] index=0
-      #|      field field#2 option : type#1[String] index=1
+      #|      value#0 : tparam#0
+      #|      boxed#1 : type#0[Int]
+      #|      option#2 : type#1[String]
       #|    }
       #|    variants {
-      #|      variant variant#0 none index=0 payloads=0
-      #|      variant variant#1 some index=1 payloads=1(tparam#1)
+      #|      none#0
+      #|      some#1(tparam#1)
       #|    }
       #|  }
       #|  diagnostics {}
@@ -190,22 +190,22 @@ test "typecheck preserves existential declaration metadata" {
       #|declaration_typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      struct type#0 HideF {
-      #|        type tmember#0 tparam#0 F : Type -> Type index=0
-      #|        field field#0 val : tparam#0 index=0
+      #|      struct HideF#0 {
+      #|        type F#0 : Type -> Type
+      #|        val#0 : tparam#0
       #|      }
-      #|      enum type#1 Packed {
-      #|        variant variant#0 hide index=0 payloads=1[tparam#1 T : Type](tparam#1)
+      #|      enum Packed#1 {
+      #|        hide#0[T#1 : Type](tparam#1)
       #|      }
       #|    }
       #|    type_members {
-      #|      type tmember#0 tparam#0 F : Type -> Type index=0
+      #|      type F#0 : Type -> Type
       #|    }
       #|    fields {
-      #|      field field#0 val : tparam#0 index=0
+      #|      val#0 : tparam#0
       #|    }
       #|    variants {
-      #|      variant variant#0 hide index=0 payloads=1[tparam#1 T : Type](tparam#1)
+      #|      hide#0[T#1 : Type](tparam#1)
       #|    }
       #|  }
       #|  diagnostics {}
@@ -225,7 +225,9 @@ test "typecheck builds checked builtin from direct expected type" {
   )
   inspect(
     @prettyprinter.render(expression),
-    content="unsafe_builtin \"%host_value\" : Int",
+    content=(
+      #|builtin("%host_value") : Int
+    ),
   )
 }
 
@@ -277,20 +279,7 @@ test "typecheck inserts contextual auto argument" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|call : Int {
-      #|  callee {
-      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
-      #|      callee {
-      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
-      #|      }
-      #|    }
-      #|  }
-      #|  arguments {
-      #|    int 1 : Int
-      #|    int 2 : Int
-      #|    value : type#0[Int] value#4 int_add_ops
-      #|  }
-      #|}
+      #|op_add#0[Int](1, 2, int_add_ops#4) : Int
     ),
   )
 }
@@ -314,20 +303,7 @@ test "typecheck accepts explicit named contextual argument" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|call : Int {
-      #|  callee {
-      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
-      #|      callee {
-      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
-      #|      }
-      #|    }
-      #|  }
-      #|  arguments {
-      #|    int 1 : Int
-      #|    int 2 : Int
-      #|    value : type#0[Int] value#4 custom_add
-      #|  }
-      #|}
+      #|op_add#0[Int](1, 2, custom_add#4) : Int
     ),
   )
 }
@@ -351,20 +327,7 @@ test "typecheck offer value declaration supplies contextual argument" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|call : Int {
-      #|  callee {
-      #|    type_application : (Int, Int, type#0[Int]) -> Int[Int] {
-      #|      callee {
-      #|        value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
-      #|      }
-      #|    }
-      #|  }
-      #|  arguments {
-      #|    int 1 : Int
-      #|    int 2 : Int
-      #|    value : type#0[Int] value#4 int_add_ops
-      #|  }
-      #|}
+      #|op_add#0[Int](1, 2, int_add_ops#4) : Int
     ),
   )
 }
@@ -392,23 +355,21 @@ test "typecheck auto offer parameter is visible in function body" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      struct type#0 Add[tparam#0 A : Type] {
-      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      struct Add#0[A#0 : Type] {
+      #|        add#0 : (tparam#0, tparam#0) -> tparam#0
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {
-      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      add#0 : (tparam#0, tparam#0) -> tparam#0
       #|    }
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 op_add : forall [
-      #|      tparam#1 A : Type
-      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
-      #|    fn value#1 twice : forall [tparam#2 A : Type]. (tparam#2, type#0[tparam#2]) -> tparam#2
-      #|    let value#7 int_add_ops : type#0[Int]
-      #|    let value#8 answer : Int
+      #|    fn op_add#0 : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    fn twice#1 : forall [tparam#2 A : Type]. (tparam#2, type#0[tparam#2]) -> tparam#2
+      #|    let int_add_ops#7 : type#0[Int]
+      #|    let answer#8 : Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -438,24 +399,7 @@ test "typecheck forwards offered struct fields" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|call : Bool {
-      #|  callee {
-      #|    type_application : (Int, Int, type#0[Int]) -> Bool[Int] {
-      #|      callee {
-      #|        value : forall [tparam#2 A : Type]. (tparam#2, tparam#2, type#0[tparam#2]) -> Bool value#0 op_equal
-      #|      }
-      #|    }
-      #|  }
-      #|  arguments {
-      #|    int 1 : Int
-      #|    int 2 : Int
-      #|    field : type#0[Int] field#1 equal_impl {
-      #|      base {
-      #|        value : type#1[Int] value#4 int_compare_ops
-      #|      }
-      #|    }
-      #|  }
-      #|}
+      #|op_equal#0[Int](1, 2, int_compare_ops#4.equal_impl#1) : Bool
     ),
   )
 }
@@ -481,27 +425,10 @@ test "typecheck local offer value declaration supplies contextual argument" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|block : Int {
-      #|  let : type#0[Int] value#4 int_add_ops {
-      #|    unsafe_builtin "%int_add_ops" : type#0[Int]
-      #|  }
-      #|  result {
-      #|    call : Int {
-      #|      callee {
-      #|        type_application : (Int, Int, type#0[Int]) -> Int[Int] {
-      #|          callee {
-      #|            value : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1 value#0 op_add
-      #|          }
-      #|        }
-      #|      }
-      #|      arguments {
-      #|        int 1 : Int
-      #|        int 2 : Int
-      #|        value : type#0[Int] value#4 int_add_ops
-      #|      }
-      #|    }
-      #|  }
-      #|}
+      #|{
+      #|  let int_add_ops#4 : type#0[Int] = builtin("%int_add_ops")
+      #|  op_add#0[Int](1, 2, int_add_ops#4)
+      #|} : Int
     ),
   )
 }
@@ -525,21 +452,19 @@ test "typecheck reports missing contextual offer" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      struct type#0 Add[tparam#0 A : Type] {
-      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      struct Add#0[A#0 : Type] {
+      #|        add#0 : (tparam#0, tparam#0) -> tparam#0
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {
-      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      add#0 : (tparam#0, tparam#0) -> tparam#0
       #|    }
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 op_add : forall [
-      #|      tparam#1 A : Type
-      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
-      #|    let value#4 answer : Int
+      #|    fn op_add#0 : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    let answer#4 : Int
       #|  }
       #|  diagnostics {
       #|    cannot_infer missing contextual offer @ 7:24-7:25
@@ -570,23 +495,21 @@ test "typecheck reports ambiguous contextual offer" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      struct type#0 Add[tparam#0 A : Type] {
-      #|        field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      struct Add#0[A#0 : Type] {
+      #|        add#0 : (tparam#0, tparam#0) -> tparam#0
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {
-      #|      field field#0 add : (tparam#0, tparam#0) -> tparam#0 index=0
+      #|      add#0 : (tparam#0, tparam#0) -> tparam#0
       #|    }
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 op_add : forall [
-      #|      tparam#1 A : Type
-      #|    ]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
-      #|    let value#4 add_a : type#0[Int]
-      #|    let value#5 add_b : type#0[Int]
-      #|    let value#6 answer : Int
+      #|    fn op_add#0 : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
+      #|    let add_a#4 : type#0[Int]
+      #|    let add_b#5 : type#0[Int]
+      #|    let answer#6 : Int
       #|  }
       #|  diagnostics {
       #|    cannot_infer ambiguous contextual offer @ 9:24-9:25
@@ -620,9 +543,9 @@ test "typecheck top level values and direct calls" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 id : (Int) -> Int
-      #|    fn value#1 use_answer : () -> Int
-      #|    let value#3 answer : Int
+      #|    fn id#0 : (Int) -> Int
+      #|    fn use_answer#1 : () -> Int
+      #|    let answer#3 : Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -658,11 +581,11 @@ test "typecheck top level functions recurse and values stay ordered" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 first : (Int) -> Int
-      #|    fn value#1 second : (Int) -> Int
-      #|    fn value#2 use : () -> Int
-      #|    let value#4 base : Int
-      #|    let value#6 copied : Int
+      #|    fn first#0 : (Int) -> Int
+      #|    fn second#1 : (Int) -> Int
+      #|    fn use#2 : () -> Int
+      #|    let base#4 : Int
+      #|    let copied#6 : Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -710,7 +633,7 @@ test "typecheck local bindings are sequential and local functions see prior scop
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 use : () -> Int
+      #|    fn use#0 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -743,7 +666,7 @@ test "typecheck local function can call itself after declaration" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 use : () -> Int
+      #|    fn use#0 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -797,7 +720,7 @@ test "typecheck local generic function after declaration" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 use : () -> Int
+      #|    fn use#0 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -828,8 +751,8 @@ test "typecheck direct binary operator alias" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 op_add : (Int, Int) -> Int
-      #|    fn value#1 use : () -> Int
+      #|    fn op_add#0 : (Int, Int) -> Int
+      #|    fn use#1 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -878,8 +801,8 @@ test "typecheck direct unary operator alias" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 op_neg : (Int) -> Int
-      #|    fn value#1 use : () -> Int
+      #|    fn op_neg#0 : (Int) -> Int
+      #|    fn use#1 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -912,8 +835,8 @@ test "typecheck function literal parameters from expected function type" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 apply : ((Int) -> Int) -> Int
-      #|    fn value#1 use : () -> Int
+      #|    fn apply#0 : ((Int) -> Int) -> Int
+      #|    fn use#1 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -944,8 +867,8 @@ test "typecheck pipeline expression as first argument call" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 first : (Int, Int) -> Int
-      #|    fn value#1 use : () -> Int
+      #|    fn first#0 : (Int, Int) -> Int
+      #|    fn use#1 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -975,7 +898,7 @@ test "typecheck pipeline expression into function literal" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 use : () -> Int
+      #|    fn use#0 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -1006,8 +929,8 @@ test "typecheck generic function literal parameters from expected forall type" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 use : () -> Int
-      #|    let value#2 id : forall [tparam#1 A : Type]. (tparam#1) -> tparam#1
+      #|    fn use#0 : () -> Int
+      #|    let id#2 : forall [tparam#1 A : Type]. (tparam#1) -> tparam#1
       #|  }
       #|  diagnostics {}
       #|}
@@ -1068,8 +991,8 @@ test "typecheck synthesizes direct generic call from argument type" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 id : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0
-      #|    fn value#1 use : () -> Int
+      #|    fn id#0 : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0
+      #|    fn use#1 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -1100,8 +1023,8 @@ test "typecheck generic call uses expected result type" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 make : forall [tparam#0 A : Type]. () -> tparam#0
-      #|    fn value#1 use : () -> Int
+      #|    fn make#0 : forall [tparam#0 A : Type]. () -> tparam#0
+      #|    fn use#1 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -1134,8 +1057,8 @@ test "typecheck generic call drives function literal argument" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 apply : forall [tparam#0 A : Type]. ((tparam#0) -> tparam#0, tparam#0) -> tparam#0
-      #|    fn value#1 use : () -> Int
+      #|    fn apply#0 : forall [tparam#0 A : Type]. ((tparam#0) -> tparam#0, tparam#0) -> tparam#0
+      #|    fn use#1 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -1169,11 +1092,11 @@ test "typecheck polymorphic function parameter instantiation" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 apply : forall [
+      #|    fn apply#0 : forall [
       #|      tparam#0 B : Type
       #|    ]. (forall [tparam#1 A : Type]. (tparam#1) -> tparam#1, tparam#0) -> tparam#0
-      #|    fn value#1 id : forall [tparam#2 A : Type]. (tparam#2) -> tparam#2
-      #|    fn value#2 use : () -> Int
+      #|    fn id#1 : forall [tparam#2 A : Type]. (tparam#2) -> tparam#2
+      #|    fn use#2 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -1223,18 +1146,18 @@ test "typecheck generic struct construction and field access" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      struct type#0 Box[tparam#0 A : Type] {
-      #|        field field#0 value : tparam#0 index=0
+      #|      struct Box#0[A#0 : Type] {
+      #|        value#0 : tparam#0
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {
-      #|      field field#0 value : tparam#0 index=0
+      #|      value#0 : tparam#0
       #|    }
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn value#0 use : () -> Int
+      #|    fn use#0 : () -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -1257,18 +1180,14 @@ test "typecheck existential struct construction with type witness" {
     @prettyprinter.render(result, width=100),
     content=(
       #|checked_source_typecheck_result {
-      #|  checked_source {
-      #|    struct type#0 Hide {
-      #|      type tmember#0 tparam#0 T : Type index=0
-      #|      field field#0 val : tparam#0 index=0
+      #|  checked {
+      #|    struct Hide#0 {
+      #|      type T#0 : Type
+      #|      val#0 : tparam#0
       #|    }
-      #|    let : type#0 value#0 hidden {
-      #|      struct : type#0 type#0 {
-      #|        type tmember#0 T = Int
-      #|        field field#0 val {
-      #|          int 1 : Int
-      #|        }
-      #|      }
+      #|    let hidden#0 : type#0 = type#0::{
+      #|      type T#0 = Int
+      #|      val#0: 1
       #|    }
       #|  }
       #|  diagnostics {}
@@ -1333,21 +1252,21 @@ test "typecheck qualified enum variant construction" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      enum type#0 Option[tparam#0 A : Type] {
-      #|        variant variant#0 none index=0 payloads=0
-      #|        variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      enum Option#0[A#0 : Type] {
+      #|        none#0
+      #|        some#1(tparam#0)
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {}
       #|    variants {
-      #|      variant variant#0 none index=0 payloads=0
-      #|      variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      none#0
+      #|      some#1(tparam#0)
       #|    }
       #|  }
       #|  checked_values {
-      #|    fn value#0 wrap : (Int) -> type#0[Int]
-      #|    fn value#1 empty : () -> type#0[Int]
+      #|    fn wrap#0 : (Int) -> type#0[Int]
+      #|    fn empty#1 : () -> type#0[Int]
       #|  }
       #|  diagnostics {}
       #|}
@@ -1369,15 +1288,11 @@ test "typecheck existential enum variant construction with explicit witness" {
     @prettyprinter.render(result, width=100),
     content=(
       #|checked_source_typecheck_result {
-      #|  checked_source {
-      #|    enum type#0 Packed {
-      #|      variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
+      #|  checked {
+      #|    enum Packed#0 {
+      #|      hide#0[T#0 : Type](tparam#0)
       #|    }
-      #|    let : type#0 value#0 packed {
-      #|      variant : type#0 variant#0[Int] {
-      #|        int 1 : Int
-      #|      }
-      #|    }
+      #|    let packed#0 : type#0 = variant#0[Int](1)
       #|  }
       #|  diagnostics {}
       #|}
@@ -1399,15 +1314,11 @@ test "typecheck existential enum variant construction infers witness" {
     @prettyprinter.render(result, width=100),
     content=(
       #|checked_source_typecheck_result {
-      #|  checked_source {
-      #|    enum type#0 Packed {
-      #|      variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
+      #|  checked {
+      #|    enum Packed#0 {
+      #|      hide#0[T#0 : Type](tparam#0)
       #|    }
-      #|    let : type#0 value#0 packed {
-      #|      variant : type#0 variant#0[Int] {
-      #|        int 1 : Int
-      #|      }
-      #|    }
+      #|    let packed#0 : type#0 = variant#0[Int](1)
       #|  }
       #|  diagnostics {}
       #|}
@@ -1433,9 +1344,7 @@ test "typecheck existential enum pattern opens witness" {
   inspect(
     @prettyprinter.render(pattern, width=100),
     content=(
-      #|variant_pattern : type#0 variant#0[tparam#1] {
-      #|  binding : tparam#1 value#2 value
-      #|}
+      #|variant#0[tparam#1](value#2)
     ),
   )
 }
@@ -1479,11 +1388,9 @@ test "typecheck existential struct pattern opens type binder" {
   inspect(
     @prettyprinter.render(pattern, width=100),
     content=(
-      #|struct_pattern : type#0 type#0 {
-      #|  type_pattern tmember#0 tparam#1 T
-      #|  field_pattern field#0 val {
-      #|    binding : tparam#1 value#2 val
-      #|  }
+      #|type#0::{
+      #|  type T#0 = T#1
+      #|  val#0: val#2
       #|}
     ),
   )
@@ -1508,11 +1415,9 @@ test "typecheck existential struct pattern opens wildcard witness" {
   inspect(
     @prettyprinter.render(pattern, width=100),
     content=(
-      #|struct_pattern : type#0 type#0 {
-      #|  type_pattern tmember#0 _
-      #|  field_pattern field#0 val {
-      #|    binding : tparam#1 value#2 val
-      #|  }
+      #|type#0::{
+      #|  type tmember#0 = _
+      #|  val#0: val#2
       #|}
     ),
   )
@@ -1539,15 +1444,11 @@ test "typecheck existential struct pattern assigns multiple wildcards by order" 
   inspect(
     @prettyprinter.render(pattern, width=100),
     content=(
-      #|struct_pattern : type#0 type#0 {
-      #|  type_pattern tmember#0 _
-      #|  type_pattern tmember#1 _
-      #|  field_pattern field#0 left {
-      #|    binding : tparam#2 value#2 left
-      #|  }
-      #|  field_pattern field#1 right {
-      #|    binding : tparam#3 value#3 right
-      #|  }
+      #|type#0::{
+      #|  type tmember#0 = _
+      #|  type tmember#1 = _
+      #|  left#0: left#2
+      #|  right#1: right#3
       #|}
     ),
   )
@@ -1678,43 +1579,20 @@ test "typecheck checked source preserves existential struct pattern let" {
     @prettyprinter.render(result, width=100),
     content=(
       #|checked_source_typecheck_result {
-      #|  checked_source {
-      #|    struct type#0 Hide {
-      #|      type tmember#0 tparam#0 T : Type index=0
-      #|      field field#0 val : tparam#0 index=0
+      #|  checked {
+      #|    struct Hide#0 {
+      #|      type T#0 : Type
+      #|      val#0 : tparam#0
       #|    }
-      #|    fn : (type#0) -> type#0 value#0 repack {
-      #|      parameters {
-      #|        param : type#0 value#1 h
-      #|      }
-      #|      return : type#0
-      #|      body {
-      #|        block : type#0 {
-      #|          result {
-      #|            block : type#0 {
-      #|              pattern_let {
-      #|                pattern {
-      #|                  struct_pattern : type#0 type#0 {
-      #|                    type_pattern tmember#0 tparam#1 T
-      #|                    field_pattern field#0 val {
-      #|                      binding : tparam#1 value#2 val
-      #|                    }
-      #|                  }
-      #|                }
-      #|                initializer {
-      #|                  value : type#0 value#1 h
-      #|                }
-      #|              }
-      #|              result {
-      #|                struct : type#0 type#0 {
-      #|                  type tmember#0 T = tparam#1
-      #|                  field field#0 val {
-      #|                    value : tparam#1 value#2 val
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|          }
+      #|    fn repack#0(h#1 : type#0) -> type#0 {
+      #|      {
+      #|        let type#0::{
+      #|          type T#0 = T#1
+      #|          val#0: val#2
+      #|        } = h#1
+      #|        type#0::{
+      #|          type T#0 = tparam#1
+      #|          val#0: val#2
       #|        }
       #|      }
       #|    }
@@ -1743,39 +1621,13 @@ test "typecheck checked source preserves existential enum match pattern" {
     @prettyprinter.render(result, width=100),
     content=(
       #|checked_source_typecheck_result {
-      #|  checked_source {
-      #|    enum type#0 Packed {
-      #|      variant variant#0 hide index=0 payloads=1[tparam#0 T : Type](tparam#0)
+      #|  checked {
+      #|    enum Packed#0 {
+      #|      hide#0[T#0 : Type](tparam#0)
       #|    }
-      #|    fn : (type#0) -> type#0 value#0 repack {
-      #|      parameters {
-      #|        param : type#0 value#1 p
-      #|      }
-      #|      return : type#0
-      #|      body {
-      #|        block : type#0 {
-      #|          result {
-      #|            match : type#0 {
-      #|              scrutinee {
-      #|                value : type#0 value#1 p
-      #|              }
-      #|              arms {
-      #|                arm {
-      #|                  pattern {
-      #|                    variant_pattern : type#0 variant#0[tparam#1] {
-      #|                      binding : tparam#1 value#2 value
-      #|                    }
-      #|                  }
-      #|                  body {
-      #|                    variant : type#0 variant#0[tparam#1] {
-      #|                      value : tparam#1 value#2 value
-      #|                    }
-      #|                  }
-      #|                }
-      #|              }
-      #|            }
-      #|          }
-      #|        }
+      #|    fn repack#0(p#1 : type#0) -> type#0 {
+      #|      match p#1 {
+      #|        variant#0[tparam#1](value#2) => variant#0[tparam#1](value#2)
       #|      }
       #|    }
       #|  }
@@ -1807,21 +1659,21 @@ test "typecheck unqualified enum variant construction" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      enum type#0 Option[tparam#0 A : Type] {
-      #|        variant variant#0 none index=0 payloads=0
-      #|        variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      enum Option#0[A#0 : Type] {
+      #|        none#0
+      #|        some#1(tparam#0)
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {}
       #|    variants {
-      #|      variant variant#0 none index=0 payloads=0
-      #|      variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      none#0
+      #|      some#1(tparam#0)
       #|    }
       #|  }
       #|  checked_values {
-      #|    fn value#0 wrap : (Int) -> type#0[Int]
-      #|    fn value#1 empty : () -> type#0[Int]
+      #|    fn wrap#0 : (Int) -> type#0[Int]
+      #|    fn empty#1 : () -> type#0[Int]
       #|  }
       #|  diagnostics {}
       #|}
@@ -1932,20 +1784,20 @@ test "typecheck exhaustive enum match" {
       #|typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      enum type#0 Option[tparam#0 A : Type] {
-      #|        variant variant#0 none index=0 payloads=0
-      #|        variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      enum Option#0[A#0 : Type] {
+      #|        none#0
+      #|        some#1(tparam#0)
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {}
       #|    variants {
-      #|      variant variant#0 none index=0 payloads=0
-      #|      variant variant#1 some index=1 payloads=1(tparam#0)
+      #|      none#0
+      #|      some#1(tparam#0)
       #|    }
       #|  }
       #|  checked_values {
-      #|    fn value#0 unwrap : (type#0[Int], Int) -> Int
+      #|    fn unwrap#0 : (type#0[Int], Int) -> Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -2067,13 +1919,9 @@ test "typecheck produces checked struct pattern fields in declaration order" {
   inspect(
     @prettyprinter.render(pattern, width=100),
     content=(
-      #|struct_pattern : type#0 type#0 {
-      #|  field_pattern field#0 x {
-      #|    binding : Int value#3 x
-      #|  }
-      #|  field_pattern field#1 y {
-      #|    binding : Int value#2 y
-      #|  }
+      #|type#0::{
+      #|  x#0: x#3
+      #|  y#1: y#2
       #|}
     ),
   )
@@ -2146,13 +1994,13 @@ test "typecheck keeps unresolved type as error type" {
       #|declaration_typecheck_result {
       #|  checked_declarations {
       #|    types {
-      #|      struct type#0 Bad {
-      #|        field field#0 missing : <error> index=0
+      #|      struct Bad#0 {
+      #|        missing#0 : <error>
       #|      }
       #|    }
       #|    type_members {}
       #|    fields {
-      #|      field field#0 missing : <error> index=0
+      #|      missing#0 : <error>
       #|    }
       #|    variants {}
       #|  }

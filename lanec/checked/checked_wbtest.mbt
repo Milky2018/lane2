@@ -60,17 +60,8 @@ test "pretty prints checked source without surface-only syntax" {
   inspect(
     @prettyprinter.render(source),
     content=(
-      #|checked_source {
-      #|  let : Int value#2 answer {
-      #|    call : Int {
-      #|      callee {
-      #|        value : (Int) -> Int value#1 increment
-      #|      }
-      #|      arguments {
-      #|        value : Int value#0 x
-      #|      }
-      #|    }
-      #|  }
+      #|checked {
+      #|  let answer#2 : Int = increment#1(x#0)
       #|}
     ),
   )
@@ -117,21 +108,9 @@ test "pretty prints checked thunked short circuit call shape" {
   inspect(
     @prettyprinter.render(call),
     content=(
-      #|call : Bool {
-      #|  callee {
-      #|    value : (Bool, () -> Bool) -> Bool value#0 op_and
-      #|  }
-      #|  arguments {
-      #|    bool true : Bool
-      #|    fn_literal : () -> Bool {
-      #|      parameters {}
-      #|      return : Bool
-      #|      body {
-      #|        bool false : Bool
-      #|      }
-      #|    }
-      #|  }
-      #|}
+      #|op_and#0(true, fn() -> Bool {
+      #|  false
+      #|}) : Bool
     ),
   )
 }
@@ -188,27 +167,11 @@ test "pretty prints checked match with resolved patterns" {
   inspect(
     @prettyprinter.render(match_expr),
     content=(
-      #|match : Int {
-      #|  scrutinee {
-      #|    value : type#0[type#1[Int]] value#1 value
-      #|  }
-      #|  arms {
-      #|    arm {
-      #|      pattern {
-      #|        variant_pattern : type#0[type#1[Int]] variant#0 {
-      #|          struct_pattern : type#1[Int] type#1 {
-      #|            field_pattern field#0 value {
-      #|              binding : Int value#0 x
-      #|            }
-      #|          }
-      #|        }
-      #|      }
-      #|      body {
-      #|        value : Int value#0 x
-      #|      }
-      #|    }
-      #|  }
-      #|}
+      #|match value#1 {
+      #|  variant#0(type#1::{
+      #|    value#0: x#0
+      #|  }) => x#0
+      #|} : Int
     ),
   )
 }
