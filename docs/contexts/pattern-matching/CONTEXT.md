@@ -10,7 +10,7 @@ A pattern form limited to wildcard, variable, literal, enum variant, or struct d
 _Avoid_: guard pattern, or-pattern, as-pattern
 
 **Checked Pattern**:
-A pattern in Buslane or ANF whose constructors, binders, and covered type have been checked.
+A source-level pattern whose constructors, binders, and covered type have been checked before Buslane lowering.
 _Avoid_: parse pattern, decision tree
 
 **Declaration-Order Struct Pattern**:
@@ -37,6 +37,22 @@ _Avoid_: ad hoc arm scan, runtime matcher
 A lowered representation of pattern matching as explicit tests and branches.
 _Avoid_: source pattern, checked pattern
 
+**One-Level Core Match**:
+A core match that branches only on the immediate literal, constructor, or default case for one scrutinee.
+_Avoid_: nested source pattern, pattern matrix row, full decision tree
+
+**Core Match Binder**:
+The binder for the evaluated scrutinee that is available while checking or lowering one-level match alternatives.
+_Avoid_: source pattern binder, duplicated scrutinee
+
+**Core Alternative Constructor**:
+The branch key of a one-level core match: default, primitive literal, or data constructor.
+_Avoid_: nested source pattern
+
+**Positional Alternative Binder**:
+A core alternative binder whose meaning is determined by data-constructor payload position.
+_Avoid_: source field binder, labeled payload binder
+
 **Exhaustive Match**:
 A match expression whose arms cover every possible value of the matched type.
 _Avoid_: best-effort match, runtime match failure
@@ -61,14 +77,19 @@ _Avoid_: case arm, arrow statement
 - A payloadless **Qualified Variant Pattern** is written without parentheses.
 - Struct patterns support punning and explicit field renaming, but not rest or spread.
 - Struct patterns must list all fields of the matched struct.
-- Buslane and ANF represent struct patterns as **Declaration-Order Struct Patterns**.
-- Buslane and ANF represent enum patterns as **Resolved Variant Patterns**.
+- Source struct and enum patterns lower to data-constructor alternatives before entering Buslane.
 - A match expression must be an **Exhaustive Match**.
 - Every match arm must be a **Useful Match Arm**.
 - Match arm usefulness is checked over nested patterns, not only top-level patterns.
 - **Pattern Binder Uniqueness** is required.
 - Pattern binders may shadow outer value names and are scoped only over their match arm body.
 - Match evaluation uses **First-Match Arm Order**.
+- Buslane uses **One-Level Core Matches**, not nested source patterns.
+- A Buslane match introduces a **Core Match Binder** for the evaluated scrutinee.
+- **Core Alternative Constructors** are default, primitive literals, or Buslane data constructors.
+- Data-constructor alternatives bind payloads with **Positional Alternative Binders**.
+- Buslane matches are exhaustive; default alternatives are optional and must be last when present.
+- Nested source patterns are compiled before entering Buslane while preserving **First-Match Arm Order**.
 - **Decision Trees** are a lowered execution model, not the Buslane representation.
 
 ## Example dialogue

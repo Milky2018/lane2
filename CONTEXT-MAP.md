@@ -18,5 +18,5 @@ topic instead of loading every glossary at once.
 - **Language Surface -> Type System**: source forms are checked using local type inference and nominal type rules.
 - **Language Surface -> Contextual Resolution**: operator syntax and omitted contextual arguments elaborate through contextual resolution.
 - **Type System -> Compiler Pipeline**: checked type objects and symbol identities are carried through Checked Source, Buslane, and ANF.
-- **Pattern Matching -> Compiler Pipeline**: checked patterns remain in Buslane and ANF; decision trees are reserved for later execution IR.
+- **Pattern Matching -> Compiler Pipeline**: checked patterns are analyzed before Buslane; Buslane uses one-level matches, while decision trees are reserved for later execution IR.
 - **Compiler Pipeline -> Runtime And Execution**: Buslane defines the semantic core; ANF currently feeds the reference interpreter.

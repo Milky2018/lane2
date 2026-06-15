@@ -105,6 +105,10 @@ _Avoid_: rest pattern, spread pattern
 Reading a named field from a struct value with dot syntax.
 _Avoid_: field update, copy update
 
+**Selector Lowering**:
+The compiler lowering that turns source field access into a generated Buslane function call.
+_Avoid_: source-visible selector, Buslane field primitive
+
 **Qualified Variant**:
 An enum variant referred to through its enum type name using `Type::variant`.
 _Avoid_: globally unique variant, dotted variant
@@ -140,6 +144,7 @@ _Avoid_: enum variant, nominal constructor
 - Local value names may shadow earlier value names; ordinary value bindings in the same scope must have distinct names.
 - Lane2 functions are **Uncurried Functions** and may still be **First-Class Function Values**.
 - Enum variants in expressions may be **Qualified Variants** or unambiguous **Unqualified Variants**.
+- **Field Access** is source syntax and lowers through **Selector Lowering** before Buslane.
 - A **Pipeline Expression** is source syntax and does not survive into Buslane or ANF.
 
 ## Example dialogue

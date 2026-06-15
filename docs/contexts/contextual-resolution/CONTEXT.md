@@ -85,9 +85,13 @@ _Avoid_: special operator node, primitive operator
 An intrinsic expression whose meaning is supplied outside Lane2, whose type is taken from direct context, and whose incorrect use can produce undefined behavior.
 _Avoid_: typed intrinsic, safe primitive
 
-**Typed Unsafe Builtin**:
-A Buslane representation of an unsafe builtin whose intrinsic name is uninterpreted but whose expected type is explicit.
-_Avoid_: intrinsic lookup during type checking, safe builtin
+**Checked Builtin Request**:
+A checked-source builtin expression whose intrinsic name is uninterpreted but whose expected type is explicit.
+_Avoid_: intrinsic lookup during type checking, safe builtin, Buslane builtin expression
+
+**External Builtin Value**:
+A Buslane external value produced from Lane builtin syntax and supplied by a runtime plugin or linker.
+_Avoid_: Buslane builtin expression, checked intrinsic call
 
 **Required Intrinsic**:
 An intrinsic name that every conforming Lane2/Core v1 implementation must provide for portable programs.
@@ -106,7 +110,8 @@ _Avoid_: placeholder builtin, implementation-only primitive
 - **Operator Aliases** are fixed mappings to **Operation Names**.
 - `&&` and `||` are **Short-Circuit Boolean Operations** and elaborate to **Thunked Operator Calls**.
 - Ordinary calls to `op_and` and `op_or` are strict.
-- A **Typed Unsafe Builtin** carries an uninterpreted intrinsic name and an expected type.
+- Lane builtin syntax lowers to an **External Builtin Value** before entering Buslane.
+- Builtin intrinsic strings belong to compiler, linker, or runtime side tables rather than Buslane metadata.
 
 ## Example dialogue
 

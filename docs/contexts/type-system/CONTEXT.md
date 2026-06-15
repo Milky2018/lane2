@@ -13,13 +13,33 @@ _Avoid_: source type syntax, parser type node
 A classifier of type-level expressions, with v1 supporting only the `Type` kind.
 _Avoid_: runtime type, trait constraint
 
+**Higher-Kind-Ready Parameter**:
+A type parameter whose metadata records a kind even though v1 supports only `Type`.
+_Avoid_: unkinded parameter, implemented higher-kinded type function
+
+**Buslane Type Parameter Identity**:
+A globally unique Buslane identity for a type parameter introduced by a forall or type lambda binder.
+_Avoid_: source generic parameter name, de Bruijn index, compiler-front-end type variable
+
 **Primitive Type**:
 A built-in type provided by the language core: `Int`, `Bool`, `String`, or `Unit`.
 _Avoid_: standard library type, numeric tower
 
+**Primitive Literal**:
+A direct inhabitant of a primitive type, such as `true`, `42`, `"abc"`, or `()`.
+_Avoid_: enum variant, nominal constructor
+
+**Normalized Int Literal**:
+A Buslane integer literal stored as a signed 64-bit value.
+_Avoid_: decimal source spelling, arbitrary precision literal
+
 **ASCII String**:
 An immutable sequence of ASCII bytes.
 _Avoid_: Unicode string, UTF-16 string
+
+**Normalized String Literal**:
+A Buslane string literal stored as an ASCII byte sequence rather than source spelling.
+_Avoid_: escaped source spelling, Unicode string literal
 
 **Nominal Type**:
 A type whose identity comes from its declaration name rather than from having the same structure as another type.
@@ -42,12 +62,28 @@ A function type whose explicit type parameter list precedes its parenthesized va
 _Avoid_: implicit forall, top-level-only polymorphic type
 
 **Forall Type**:
-A type object that binds type parameters over another type.
-_Avoid_: function-owned generic parameter list, implicit polymorphic wrapper
+A type object that binds Buslane type parameter identities over another type.
+_Avoid_: function-owned generic parameter list, implicit polymorphic wrapper, separate type-object binder identity
+
+**Rank-N Type**:
+A type where a forall may appear below another type constructor or function boundary.
+_Avoid_: top-level-only polymorphism, implicit generic lifting
+
+**Nominal Existential Member**:
+A hidden type member declared inside a nominal struct or enum declaration.
+_Avoid_: structural existential type, anonymous package field
 
 **Type Alpha-Equivalence**:
-The rule that types differing only by bound type parameter names are equal.
+The rule that types differing only by consistent renaming of bound type parameter identities are equal.
 _Avoid_: display-name equality, raw binder identity equality
+
+**Buslane Type Logic**:
+The Buslane-owned implementation of type well-formedness, kind checking, equality, and alpha-equivalence.
+_Avoid_: compiler-front-end type checker, source type syntax
+
+**Core Coercion**:
+A proof or expression that converts between types not equal by ordinary Buslane type equality.
+_Avoid_: alpha-equivalence, nominal type equality
 
 **Local Type Inference**:
 The bidirectional rule that type information may be synthesized upward or checked downward between adjacent syntax nodes without global constraint solving.
@@ -96,13 +132,26 @@ _Avoid_: monomorphized value layout, type-specialized runtime
 ## Relationships
 
 - **Type Objects** are distinct from source type syntax.
-- Every type parameter identity has a **Kind**; v1 supports only `Type`.
+- Every **Buslane Type Parameter Identity** has a **Kind**; v1 supports only `Type`.
+- **Buslane Type Parameter Identities** are globally unique; source-level generic parameter shadowing is resolved before Buslane.
+- Type parameter metadata is **Higher-Kind-Ready**, but v1 has no type-level lambda.
 - Lane2 v1 has four **Primitive Types**: `Int`, `Bool`, `String`, and `Unit`.
+- **Primitive Literals** are not nominal data constructors.
+- Buslane stores primitive literals as normalized values rather than source spelling.
+- A **Normalized Int Literal** is a signed 64-bit value.
+- A **Normalized String Literal** is an ASCII byte sequence.
 - **Enum Types** and **Struct Types** create **Nominal Types**.
 - A generic struct or enum uses **Generic Type Definition** syntax and is used with **Generic Type Application** syntax.
 - Lane2 function types use **Parameter-List Function Type** syntax.
 - **Generic Function Type** syntax elaborates to a **Forall Type**.
-- **Forall Types** use **Type Alpha-Equivalence** for equality.
+- **Forall Types** and **Type Lambdas** use the same **Buslane Type Parameter Identity** model.
+- **Forall Types** use **Type Alpha-Equivalence** for equality; globally unique identities do not make raw binder identity equality the type-equality rule.
+- **Buslane Type Logic** is owned by Buslane and does not depend on compiler-front-end type objects.
+- V1 has no **Core Coercion**; type conversion requires ordinary Buslane type equality.
+- Buslane can represent **Rank-N Types** by allowing **Forall Types** in ordinary type positions.
+- A **Type Lambda** may be bound by an ordinary Buslane value binding; Buslane does not perform implicit let-generalization.
+- Runtime type erasure happens after Buslane, not during Buslane construction.
+- **Nominal Existential Members** do not create a standalone `Exists` type constructor.
 - **Local Type Inference** uses **Direct Context Inference** and does not infer a local function's parameters from later calls.
 - Generic functions and data constructors use **Implicit Generic Instantiation**.
 - Lane2 v1 has no **Runtime Typecase**.

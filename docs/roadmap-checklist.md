@@ -120,7 +120,7 @@ ordinary local typing has determined their target types.
     binder uniqueness, binder scope, and unreachable arms.
   - [x] Produce checked patterns with resolved variants, resolved struct
     fields, declaration-order struct fields, and typed binders.
-  - [x] Keep checked patterns available for Buslane Core Language.
+  - [x] Keep checked patterns available as input to Buslane lowering.
   - [x] Defer decision tree generation to later lowered IR or VM work.
   - [x] Existential: type check enum and struct pattern elimination by
     introducing fresh abstract type binders into the arm or remaining local
@@ -153,7 +153,7 @@ and unresolved or ambiguous states before Buslane lowering.
 - [x] Desugar struct field punning into explicit field values.
 - [x] Desugar qualified and unqualified enum variant expressions into one
   variant-call expression shape.
-- [x] Elaborate builtin expressions into typed unsafe builtins without
+- [x] Elaborate builtin expressions into checked builtin requests without
   interpreting intrinsic names.
 - [x] Integrate checked-source lowering with the resolved-to-checked source
   elaboration pipeline.
@@ -164,19 +164,25 @@ and unresolved or ambiguous states before Buslane lowering.
 
 ## 5. Buslane Core Language
 
-- [x] Define the Buslane Core Language program representation after the
-  source-level elaborator has a closed typed result.
-- [x] Lower Checked Source semantics into typed expression-tree core nodes with
-  origin spans.
-- [x] Preserve nominal data, first-class functions, type lambdas, type
-  applications, existential packages, checked patterns, and typed unsafe
-  builtins.
-- [x] Remove source-only constructs such as pipeline, contextual offer lookup,
-  omitted contextual arguments, and ordinary operator aliases.
-- [x] Existential: lower checked existential packages and unpack/opened-type
-  scopes without depending on source syntax.
-- [x] Provide a Buslane Core Language pretty printer and tests based on Buslane
-  output.
+- [x] Consolidate the Buslane Core Language design in
+  `docs/buslane-core.md`.
+- [ ] Replace the current `lanec/buslane` package with an independent Buslane
+  model that owns its own identities, types, metadata, expressions, literals,
+  and diagnostics.
+- [ ] Represent Buslane programs as a metadata registry plus a top-level term
+  declaration sequence.
+- [ ] Remove source spans, display names, checked-source nodes, compiler symbol
+  ids, compiler type objects, field nodes, `if` nodes, and unsafe-builtin nodes
+  from Buslane.
+- [ ] Lower Checked Source into Buslane expression-tree core: nominal data
+  construction, first-class calls, functions, type lambdas, type applications,
+  local `let`, `let-rec`, one-level matches, external values, and existential
+  witnesses.
+- [ ] Provide a program-level Buslane verifier for metadata, type
+  well-formedness, scope, typing, constructor arity, match exhaustiveness, and
+  let-rec RHS shape.
+- [ ] Provide a pure Buslane pretty printer and tests based on stable Buslane
+  identity output.
 
 ## 6. ANF IR
 
