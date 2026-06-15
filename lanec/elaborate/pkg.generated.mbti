@@ -24,7 +24,7 @@ pub fn lower_checked_source_file_to_buslane(@checked.CheckedSourceFile) -> @busl
 
 // Types and methods
 pub(all) struct AnfElaborateResult {
-  program : @anf.AnfProgram?
+  program : @anf.BuslaneAnfProgram?
   diagnostics : Array[@typecheck.TypeCheckDiagnostic]
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for AnfElaborateResult

@@ -6,7 +6,7 @@ pub(all) struct ElaborateResult {
 
 ///|
 pub(all) struct AnfElaborateResult {
-  program : @anf.AnfProgram?
+  program : @anf.BuslaneAnfProgram?
   diagnostics : Array[@typecheck.TypeCheckDiagnostic]
 } derive(Debug, Eq)
 
@@ -41,14 +41,19 @@ pub fn elaborate_resolved_source_file_to_buslane(
 }
 
 ///|
-/// Elaborates a resolved source file into ANF IR when Checked Source
-/// construction succeeds.
+/// Elaborates a resolved source file into ANF IR through Buslane Core Language
+/// when Checked Source construction succeeds.
 pub fn elaborate_resolved_source_file_to_anf(
   source : @resolve.ResolvedSourceFile,
 ) -> AnfElaborateResult {
   let result = @typecheck.typecheck_checked_source_file(source)
   let program = match result.source {
-    Some(source) => Some(@anf.lower_checked_source_file_to_anf(source))
+    Some(source) =>
+      Some(
+        @anf.lower_buslane_program_to_anf(
+          lower_checked_source_file_to_buslane(source),
+        ),
+      )
     None => None
   }
   { program, diagnostics: result.diagnostics }

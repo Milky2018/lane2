@@ -421,3 +421,71 @@ test "lower checked source generic call and unsafe builtin to ANF" {
     ),
   )
 }
+
+///|
+test "lower buslane function call to ANF" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let result = metadata.define_value(Value, Primitive(Int))
+  let function = metadata.define_value(
+    Function,
+    Function([Primitive(Int)], Primitive(Int)),
+  )
+  let parameter = metadata.define_value(Parameter, Primitive(Int))
+  let program = @buslane.Program::{
+    metadata,
+    terms: [
+      LetRec([
+        {
+          id: function,
+          rhs: Function({
+            parameters: [parameter],
+            result_type: Primitive(Int),
+            body: Ref(parameter),
+          }),
+        },
+      ]),
+      Let(result, Call(Ref(function), [Literal(Int(42L))])),
+    ],
+  }
+  inspect(
+    @prettyprinter.render(lower_buslane_program_to_anf(program), width=100),
+    content=(
+      #|buslane_anf_program {
+      #|  top_letrec {
+      #|    rec value#1 {
+      #|      fn {
+      #|        parameters [value#2]
+      #|        result Int
+      #|        body {
+      #|          atom {
+      #|            ref value#2
+      #|          }
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|  top_let value#0 {
+      #|    let_expr {
+      #|      binding {
+      #|        temp_binding temp#0 {
+      #|          call {
+      #|            callee {
+      #|              ref value#1
+      #|            }
+      #|            arguments {
+      #|              int 42
+      #|            }
+      #|          }
+      #|        }
+      #|      }
+      #|      body {
+      #|        atom {
+      #|          temp temp#0
+      #|        }
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}

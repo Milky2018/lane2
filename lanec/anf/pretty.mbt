@@ -232,6 +232,202 @@ pub impl @prettyprinter.Pretty for AnfTempId with fn pretty(id : AnfTempId) {
 }
 
 ///|
+pub impl @prettyprinter.Pretty for BuslaneAnfProgram with fn pretty(
+  program : BuslaneAnfProgram,
+) {
+  text("buslane_anf_program") +
+  space +
+  @pretty.braced_block(program.terms.map(BuslaneAnfTopTerm::pretty))
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfTopTerm with fn pretty(
+  term : BuslaneAnfTopTerm,
+) {
+  match term {
+    Let(id, expr) =>
+      text("top_let") +
+      space +
+      id.pretty() +
+      space +
+      @pretty.braced_block([expr.pretty()])
+    LetRec(bindings) =>
+      text("top_letrec") +
+      space +
+      @pretty.braced_block(bindings.map(BuslaneAnfRecursiveBinding::pretty))
+    External(id) => text("external") + space + id.pretty()
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfRecursiveBinding with fn pretty(
+  binding : BuslaneAnfRecursiveBinding,
+) {
+  text("rec") +
+  space +
+  binding.id.pretty() +
+  space +
+  @pretty.braced_block([binding.rhs.pretty()])
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfExpr with fn pretty(
+  expr : BuslaneAnfExpr,
+) {
+  match expr {
+    Atom(atom) => text("atom") + space + @pretty.braced_block([atom.pretty()])
+    Let(binding, body) =>
+      text("let_expr") +
+      space +
+      @pretty.braced_block([
+        @pretty.section("binding", [binding.pretty()]),
+        @pretty.section("body", [body.pretty()]),
+      ])
+    LetRec(bindings, body) =>
+      text("letrec_expr") +
+      space +
+      @pretty.braced_block([
+        @pretty.section(
+          "bindings",
+          bindings.map(BuslaneAnfRecursiveBinding::pretty),
+        ),
+        @pretty.section("body", [body.pretty()]),
+      ])
+    Match(match_) => match_.pretty()
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfBinding with fn pretty(
+  binding : BuslaneAnfBinding,
+) {
+  match binding {
+    Value(id~, rhs~) =>
+      text("value_binding") +
+      space +
+      id.pretty() +
+      space +
+      @pretty.braced_block([rhs.pretty()])
+    Temp(temp~, rhs~) =>
+      text("temp_binding") +
+      space +
+      temp.pretty() +
+      space +
+      @pretty.braced_block([rhs.pretty()])
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfRhs with fn pretty(
+  rhs : BuslaneAnfRhs,
+) {
+  match rhs {
+    Atom(atom) => atom.pretty()
+    Call(callee~, arguments~) =>
+      text("call") +
+      space +
+      @pretty.braced_block([
+        @pretty.section("callee", [callee.pretty()]),
+        @pretty.section("arguments", arguments.map(BuslaneAnfAtom::pretty)),
+      ])
+    TypeApply(callee~, arguments~) =>
+      text("type_apply") +
+      buslane_type_arguments_doc(arguments) +
+      space +
+      @pretty.braced_block([@pretty.section("callee", [callee.pretty()])])
+    Construct(construct) => construct.pretty()
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfConstruct with fn pretty(
+  construct : BuslaneAnfConstruct,
+) {
+  text("construct") +
+  space +
+  construct.data_constructor.pretty() +
+  buslane_type_arguments_doc(construct.type_arguments) +
+  buslane_hidden_witnesses_doc(construct.hidden_witnesses) +
+  space +
+  @pretty.braced_block(construct.payloads.map(BuslaneAnfAtom::pretty))
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfAtom with fn pretty(
+  atom : BuslaneAnfAtom,
+) {
+  match atom {
+    Literal(literal) => literal.pretty()
+    Ref(id) => text("ref") + space + id.pretty()
+    Temp(temp) => text("temp") + space + temp.pretty()
+    Function(function) => function.pretty()
+    TypeLambda(type_parameters~, body~) =>
+      text("type_lambda") +
+      space +
+      @pretty.bracketed_inline(
+        type_parameters.map(@buslane.TypeParameterId::pretty),
+      ) +
+      space +
+      @pretty.braced_block([body.pretty()])
+  }
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfFunction with fn pretty(
+  function : BuslaneAnfFunction,
+) {
+  text("fn") +
+  space +
+  @pretty.braced_block([
+    text("parameters") +
+    space +
+    @pretty.bracketed_inline(function.parameters.map(@buslane.ValueId::pretty)),
+    text("result") + space + function.result_type.pretty(),
+    @pretty.section("body", [function.body.pretty()]),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfMatch with fn pretty(
+  match_ : BuslaneAnfMatch,
+) {
+  text("match") +
+  space +
+  @pretty.braced_block([
+    @pretty.section("scrutinee", [match_.scrutinee.pretty()]),
+    text("binder") + space + match_.binder.pretty(),
+    text("result") + space + match_.result_type.pretty(),
+    @pretty.section(
+      "alternatives",
+      match_.alternatives.map(BuslaneAnfAlternative::pretty),
+    ),
+  ])
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneAnfAlternative with fn pretty(
+  alternative : BuslaneAnfAlternative,
+) {
+  text("alt") +
+  space +
+  alternative.alt_constructor.pretty() +
+  space +
+  @pretty.braced_block([
+    text("type_binders") +
+    space +
+    @pretty.bracketed_inline(
+      alternative.type_binders.map(@buslane.TypeParameterId::pretty),
+    ),
+    text("value_binders") +
+    space +
+    @pretty.bracketed_inline(
+      alternative.value_binders.map(@buslane.ValueId::pretty),
+    ),
+    @pretty.section("body", [alternative.body.pretty()]),
+  ])
+}
+
+///|
 fn typed_header(label : String, type_ : @types.Type) -> Document {
   text(label) + space + text(":") + space + type_.pretty()
 }
@@ -256,6 +452,25 @@ fn type_arguments_doc(arguments : Array[@types.Type]) -> Document {
     empty
   } else {
     @pretty.bracketed_inline(arguments.map(@types.Type::pretty))
+  }
+}
+
+///|
+fn buslane_type_arguments_doc(arguments : Array[@buslane.Type]) -> Document {
+  if arguments.is_empty() {
+    empty
+  } else {
+    @pretty.bracketed_inline(arguments.map(@buslane.Type::pretty))
+  }
+}
+
+///|
+fn buslane_hidden_witnesses_doc(arguments : Array[@buslane.Type]) -> Document {
+  if arguments.is_empty() {
+    empty
+  } else {
+    text(" exists") +
+    @pretty.bracketed_inline(arguments.map(@buslane.Type::pretty))
   }
 }
 

@@ -195,35 +195,37 @@ test "elaborate resolved source into anf" {
     @prettyprinter.render(result, width=100),
     content=(
       #|anf_elaborate_result {
-      #|  anf_program {
-      #|    fn : (Int) -> Int value#0 identity {
-      #|      parameters {
-      #|        param : Int value#1 x
-      #|      }
-      #|      return : Int
-      #|      body {
-      #|        atom : Int {
-      #|          value : Int value#1 x
+      #|  buslane_anf_program {
+      #|    top_letrec {
+      #|      rec value#0 {
+      #|        fn {
+      #|          parameters [value#2]
+      #|          result Int
+      #|          body {
+      #|            atom {
+      #|              ref value#2
+      #|            }
+      #|          }
       #|        }
       #|      }
       #|    }
-      #|    let : Int value#2 answer {
-      #|      let_expr : Int {
+      #|    top_let value#1 {
+      #|      let_expr {
       #|        binding {
-      #|          temp_binding : Int temp#0 {
-      #|            call : Int {
+      #|          temp_binding temp#0 {
+      #|            call {
       #|              callee {
-      #|                value : (Int) -> Int value#0 identity
+      #|                ref value#0
       #|              }
       #|              arguments {
-      #|                int 42 : Int
+      #|                int 42
       #|              }
       #|            }
       #|          }
       #|        }
       #|        body {
-      #|          atom : Int {
-      #|            temp : Int temp#0
+      #|          atom {
+      #|            temp temp#0
       #|          }
       #|        }
       #|      }

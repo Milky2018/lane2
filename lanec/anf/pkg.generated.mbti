@@ -3,6 +3,7 @@ package "Milky2018/lane2/anf"
 
 import {
   "Milky2018/lane2/basic",
+  "Milky2018/lane2/buslane",
   "Milky2018/lane2/checked",
   "Milky2018/lane2/symbol",
   "Milky2018/lane2/types",
@@ -11,6 +12,8 @@ import {
 }
 
 // Values
+pub fn lower_buslane_program_to_anf(@buslane.Program) -> BuslaneAnfProgram
+
 pub fn lower_checked_source_file_to_anf(@checked.CheckedSourceFile) -> AnfProgram
 
 // Errors
@@ -111,6 +114,87 @@ pub(all) enum AnfTopLevelDeclaration {
   Let(AnfLetDeclaration)
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for AnfTopLevelDeclaration
+
+pub(all) struct BuslaneAnfAlternative {
+  alt_constructor : @buslane.AltCon
+  type_binders : Array[@buslane.TypeParameterId]
+  value_binders : Array[@buslane.ValueId]
+  body : BuslaneAnfExpr
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfAlternative
+
+pub(all) enum BuslaneAnfAtom {
+  Literal(@buslane.Literal)
+  Ref(@buslane.ValueId)
+  Temp(AnfTempId)
+  Function(BuslaneAnfFunction)
+  TypeLambda(type_parameters~ : Array[@buslane.TypeParameterId], body~ : BuslaneAnfExpr)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfAtom
+
+pub(all) enum BuslaneAnfBinding {
+  Value(id~ : @buslane.ValueId, rhs~ : BuslaneAnfRhs)
+  Temp(temp~ : AnfTempId, rhs~ : BuslaneAnfRhs)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfBinding
+
+pub(all) struct BuslaneAnfConstruct {
+  data_constructor : @buslane.DataConId
+  type_arguments : Array[@buslane.Type]
+  hidden_witnesses : Array[@buslane.Type]
+  payloads : Array[BuslaneAnfAtom]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfConstruct
+
+pub(all) enum BuslaneAnfExpr {
+  Atom(BuslaneAnfAtom)
+  Let(BuslaneAnfBinding, BuslaneAnfExpr)
+  LetRec(Array[BuslaneAnfRecursiveBinding], BuslaneAnfExpr)
+  Match(BuslaneAnfMatch)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfExpr
+
+pub(all) struct BuslaneAnfFunction {
+  parameters : Array[@buslane.ValueId]
+  result_type : @buslane.Type
+  body : BuslaneAnfExpr
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfFunction
+
+pub(all) struct BuslaneAnfMatch {
+  scrutinee : BuslaneAnfAtom
+  binder : @buslane.ValueId
+  result_type : @buslane.Type
+  alternatives : Array[BuslaneAnfAlternative]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfMatch
+
+pub(all) struct BuslaneAnfProgram {
+  metadata : @buslane.MetadataRegistry
+  terms : Array[BuslaneAnfTopTerm]
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfProgram
+
+pub(all) struct BuslaneAnfRecursiveBinding {
+  id : @buslane.ValueId
+  rhs : BuslaneAnfAtom
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfRecursiveBinding
+
+pub(all) enum BuslaneAnfRhs {
+  Atom(BuslaneAnfAtom)
+  Call(callee~ : BuslaneAnfAtom, arguments~ : Array[BuslaneAnfAtom])
+  TypeApply(callee~ : BuslaneAnfAtom, arguments~ : Array[@buslane.Type])
+  Construct(BuslaneAnfConstruct)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfRhs
+
+pub(all) enum BuslaneAnfTopTerm {
+  Let(@buslane.ValueId, BuslaneAnfExpr)
+  LetRec(Array[BuslaneAnfRecursiveBinding])
+  External(@buslane.ValueId)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneAnfTopTerm
 
 // Type aliases
 
