@@ -166,22 +166,22 @@ and unresolved or ambiguous states before Buslane lowering.
 
 - [x] Consolidate the Buslane Core Language design in
   `docs/buslane-core.md`.
-- [ ] Replace the current `lanec/buslane` package with an independent Buslane
+- [x] Replace the current `lanec/buslane` package with an independent Buslane
   model that owns its own identities, types, metadata, expressions, literals,
   and diagnostics.
-- [ ] Represent Buslane programs as a metadata registry plus a top-level term
+- [x] Represent Buslane programs as a metadata registry plus a top-level term
   declaration sequence.
-- [ ] Remove source spans, display names, checked-source nodes, compiler symbol
+- [x] Remove source spans, display names, checked-source nodes, compiler symbol
   ids, compiler type objects, field nodes, `if` nodes, and unsafe-builtin nodes
   from Buslane.
-- [ ] Lower Checked Source into Buslane expression-tree core: nominal data
+- [x] Lower Checked Source into Buslane expression-tree core: nominal data
   construction, first-class calls, functions, type lambdas, type applications,
   local `let`, `let-rec`, one-level matches, external values, and existential
   witnesses.
-- [ ] Provide a program-level Buslane verifier for metadata, type
+- [x] Provide a program-level Buslane verifier for metadata, type
   well-formedness, scope, typing, constructor arity, match exhaustiveness, and
   let-rec RHS shape.
-- [ ] Provide a pure Buslane pretty printer and tests based on stable Buslane
+- [x] Provide a pure Buslane pretty printer and tests based on stable Buslane
   identity output.
 
 ## 6. ANF IR
@@ -208,6 +208,9 @@ and unresolved or ambiguous states before Buslane lowering.
 - [x] Existential: evaluate packages and unpacking with runtime type erasure
   while preserving the checked scope discipline.
 - [x] Define the builtin runtime plugin contract and runtime error reports.
+- [x] Provide a Buslane reference interpreter with erased type applications,
+  nominal data, one-level matches, closures, let-rec groups, and external value
+  handlers.
 - [ ] Use the interpreter as the semantic oracle for later execution targets.
 
 ## 8. Prelude And Conformance
