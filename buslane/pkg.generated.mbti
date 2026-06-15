@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/buslane"
+package "Milky2018/buslane"
 
 import {
   "moonbit-community/prettyprinter",

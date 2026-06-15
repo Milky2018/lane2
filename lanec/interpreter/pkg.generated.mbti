@@ -2,8 +2,8 @@
 package "Milky2018/lane2/interpreter"
 
 import {
+  "Milky2018/buslane",
   "Milky2018/lane2/anf",
-  "Milky2018/lane2/buslane",
   "Milky2018/lane2/symbol",
   "Milky2018/lane2/types",
   "moonbit-community/prettyprinter",

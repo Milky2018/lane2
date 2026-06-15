@@ -1,4 +1,3 @@
 import {
-  "Milky2018/lane2/pretty",
   "moonbit-community/prettyprinter",
 }
