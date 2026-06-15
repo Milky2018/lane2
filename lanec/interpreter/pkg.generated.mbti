@@ -3,6 +3,7 @@ package "Milky2018/lane2/interpreter"
 
 import {
   "Milky2018/lane2/anf",
+  "Milky2018/lane2/buslane",
   "Milky2018/lane2/symbol",
   "Milky2018/lane2/types",
   "moonbit-community/prettyprinter",
@@ -12,7 +13,18 @@ import {
 // Values
 pub fn evaluate_anf_program(@anf.AnfProgram, BuiltinRuntime) -> RuntimeProgram raise RuntimeError
 
+pub fn evaluate_buslane_program(@buslane.Program, BuslaneExternalRuntime) -> BuslaneRuntimeProgram raise BuslaneRuntimeError
+
 // Errors
+pub suberror BuslaneRuntimeError {
+  InvalidProgram(Array[@buslane.VerifyDiagnostic])
+  UnboundValue(@buslane.ValueId)
+  MissingExternal(@buslane.ValueId)
+  ExternalFailure(id~ : @buslane.ValueId, message~ : String)
+  InvalidValue(message~ : String)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneRuntimeError
+
 pub suberror RuntimeError {
   UnboundValue(@symbol.ValueSymbolId)
   UnboundTemp(@anf.AnfTempId)
@@ -29,6 +41,43 @@ pub struct BuiltinRuntime {
 pub fn BuiltinRuntime::BuiltinRuntime() -> Self
 pub fn BuiltinRuntime::add_handler(Self, (String, @types.Type, Array[RuntimeValue]) -> RuntimeValue raise RuntimeError) -> Unit
 pub fn BuiltinRuntime::invoke(Self, String, @types.Type, Array[RuntimeValue]) -> RuntimeValue raise RuntimeError
+
+pub struct BuslaneExternalRuntime {
+  handlers : Array[(@buslane.ValueId, Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError]
+}
+pub fn BuslaneExternalRuntime::BuslaneExternalRuntime() -> Self
+pub fn BuslaneExternalRuntime::add_handler(Self, (@buslane.ValueId, Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError) -> Unit
+pub fn BuslaneExternalRuntime::invoke(Self, @buslane.ValueId, Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError
+
+type BuslaneRuntimeBinding derive(Eq, @debug.Debug)
+
+pub struct BuslaneRuntimeEnvironment {
+  values : Array[BuslaneRuntimeBinding]
+} derive(Eq, @debug.Debug)
+pub fn BuslaneRuntimeEnvironment::BuslaneRuntimeEnvironment() -> Self
+pub fn BuslaneRuntimeEnvironment::bind(Self, @buslane.ValueId, BuslaneRuntimeValue) -> Unit
+pub fn BuslaneRuntimeEnvironment::copy(Self) -> Self
+pub fn BuslaneRuntimeEnvironment::lookup(Self, @buslane.ValueId) -> BuslaneRuntimeValue raise BuslaneRuntimeError
+pub impl @prettyprinter.Pretty for BuslaneRuntimeEnvironment
+
+pub struct BuslaneRuntimeProgram {
+  globals : BuslaneRuntimeEnvironment
+} derive(Eq, @debug.Debug)
+pub fn BuslaneRuntimeProgram::BuslaneRuntimeProgram(BuslaneRuntimeEnvironment) -> Self
+pub fn BuslaneRuntimeProgram::lookup(Self, @buslane.ValueId) -> BuslaneRuntimeValue raise BuslaneRuntimeError
+pub impl @prettyprinter.Pretty for BuslaneRuntimeProgram
+
+pub(all) enum BuslaneRuntimeValue {
+  Int(Int64)
+  Bool(Bool)
+  String(String)
+  Unit
+  Data(data_constructor~ : @buslane.DataConId, arguments~ : Array[BuslaneRuntimeValue])
+  Closure(parameters~ : Array[@buslane.ValueId], body~ : @buslane.Expr, environment~ : BuslaneRuntimeEnvironment)
+  TypeClosure(type_parameters~ : Array[@buslane.TypeParameterId], body~ : @buslane.Expr, environment~ : BuslaneRuntimeEnvironment)
+  External(@buslane.ValueId)
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for BuslaneRuntimeValue
 
 type RuntimeBinding derive(Eq, @debug.Debug)
 
@@ -80,6 +129,8 @@ pub impl @prettyprinter.Pretty for RuntimeValue
 
 // Type aliases
 pub type BuiltinHandler = (String, @types.Type, Array[RuntimeValue]) -> RuntimeValue raise RuntimeError
+
+pub type BuslaneExternalHandler = (@buslane.ValueId, Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError
 
 // Traits
 

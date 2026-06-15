@@ -211,3 +211,77 @@ test "evaluate existential struct pattern opening and repack" {
     ),
   )
 }
+
+///|
+test "evaluate buslane external call" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let external = metadata.define_value(External, Function([], Primitive(Int)))
+  let result = metadata.define_value(Value, Primitive(Int))
+  let program = @buslane.Program::{
+    metadata,
+    terms: [External(external), Let(result, Call(Ref(external), []))],
+  }
+  let runtime = BuslaneExternalRuntime::BuslaneExternalRuntime()
+  runtime.add_handler((id, arguments) => {
+    guard id == external else { raise MissingExternal(id) }
+    guard arguments.is_empty() else {
+      raise ExternalFailure(id~, message="expected no arguments")
+    }
+    Int(42L)
+  })
+  let evaluated = evaluate_buslane_program(program, runtime)
+  inspect(
+    @prettyprinter.render(evaluated.lookup(result), width=80),
+    content="int 42",
+  )
+}
+
+///|
+test "evaluate buslane nominal data match" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let option_parameter = metadata.define_type_parameter(Type)
+  let option_type = metadata.define_type([option_parameter])
+  let some = metadata.define_data_constructor(option_type, [], [
+    Parameter(option_parameter),
+  ])
+  let option_int = @buslane.Type::Nominal(option_type, [Primitive(Int)])
+  let scrutinee = metadata.define_value(Value, option_int)
+  let result = metadata.define_value(Value, Primitive(Int))
+  let binder = metadata.define_value(MatchBinder, option_int)
+  let payload = metadata.define_value(MatchBinder, Primitive(Int))
+  let program = @buslane.Program::{
+    metadata,
+    terms: [
+      Let(
+        scrutinee,
+        Construct({
+          data_constructor: some,
+          type_arguments: [Primitive(Int)],
+          hidden_witnesses: [],
+          payloads: [Literal(Int(7L))],
+        }),
+      ),
+      Let(
+        result,
+        Match({
+          scrutinee: Ref(scrutinee),
+          binder,
+          result_type: Primitive(Int),
+          alternatives: [
+            {
+              alt_constructor: DataCon(some),
+              type_binders: [],
+              value_binders: [payload],
+              body: Ref(payload),
+            },
+          ],
+        }),
+      ),
+    ],
+  }
+  let evaluated = evaluate_buslane_program(program, BuslaneExternalRuntime())
+  inspect(
+    @prettyprinter.render(evaluated.lookup(result), width=80),
+    content="int 7",
+  )
+}

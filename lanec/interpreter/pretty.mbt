@@ -124,6 +124,88 @@ pub impl @prettyprinter.Pretty for RuntimeError with fn pretty(
 }
 
 ///|
+pub impl @prettyprinter.Pretty for BuslaneRuntimeValue with fn pretty(
+  value : BuslaneRuntimeValue,
+) {
+  match value {
+    Int(value) => text("int") + space + text(value.to_string())
+    Bool(value) => text("bool") + space + text(value.to_string())
+    String(value) => text("string") + space + quoted(value)
+    Unit => text("unit")
+    Data(data_constructor~, arguments~) =>
+      text("data_value") +
+      space +
+      data_constructor.pretty() +
+      space +
+      @pretty.braced_block(arguments.map(BuslaneRuntimeValue::pretty))
+    Closure(parameters~, environment~, ..) =>
+      text("buslane_closure") +
+      space +
+      @pretty.braced_block([
+        @pretty.section("parameters", parameters.map(@buslane.ValueId::pretty)),
+        @pretty.section("environment", [environment.pretty()]),
+      ])
+    TypeClosure(type_parameters~, environment~, ..) =>
+      text("buslane_type_closure") +
+      space +
+      @pretty.braced_block([
+        @pretty.section(
+          "type_parameters",
+          type_parameters.map(@buslane.TypeParameterId::pretty),
+        ),
+        @pretty.section("environment", [environment.pretty()]),
+      ])
+    External(id) => text("external_value") + space + id.pretty()
+  }
+}
+
+///|
+impl @prettyprinter.Pretty for BuslaneRuntimeBinding with fn pretty(
+  binding : BuslaneRuntimeBinding,
+) {
+  text("value") +
+  space +
+  binding.id.pretty() +
+  space +
+  @pretty.braced_block([binding.value.pretty()])
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneRuntimeEnvironment with fn pretty(
+  environment : BuslaneRuntimeEnvironment,
+) {
+  text("buslane_environment") +
+  space +
+  @pretty.braced_block(environment.values.map(BuslaneRuntimeBinding::pretty))
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneRuntimeProgram with fn pretty(
+  program : BuslaneRuntimeProgram,
+) {
+  text("buslane_runtime_program") +
+  space +
+  @pretty.braced_block([@pretty.section("globals", [program.globals.pretty()])])
+}
+
+///|
+pub impl @prettyprinter.Pretty for BuslaneRuntimeError with fn pretty(
+  error : BuslaneRuntimeError,
+) {
+  match error {
+    InvalidProgram(diagnostics) =>
+      text("invalid_program") +
+      space +
+      @pretty.braced_block(diagnostics.map(@buslane.VerifyDiagnostic::pretty))
+    UnboundValue(id) => text("unbound_value") + space + id.pretty()
+    MissingExternal(id) => text("missing_external") + space + id.pretty()
+    ExternalFailure(id~, message~) =>
+      text("external_failure") + space + id.pretty() + space + quoted(message)
+    InvalidValue(message~) => text("invalid_value") + space + quoted(message)
+  }
+}
+
+///|
 fn quoted(value : String) -> Document {
   text("\"") + text(value) + text("\"")
 }
