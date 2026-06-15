@@ -317,6 +317,59 @@ pub impl @prettyprinter.Pretty for AltCon with fn pretty(alt : AltCon) {
 }
 
 ///|
+pub impl @prettyprinter.Pretty for VerifyResult with fn pretty(
+  result : VerifyResult,
+) {
+  text("verify_result") +
+  space +
+  @pretty.braced_block(result.diagnostics.map(VerifyDiagnostic::pretty))
+}
+
+///|
+pub impl @prettyprinter.Pretty for VerifyDiagnostic with fn pretty(
+  diagnostic : VerifyDiagnostic,
+) {
+  diagnostic.kind.pretty()
+}
+
+///|
+pub impl @prettyprinter.Pretty for VerifyDiagnosticKind with fn pretty(
+  kind : VerifyDiagnosticKind,
+) {
+  match kind {
+    UnknownType(id) => text("unknown_type") + space + id.pretty()
+    UnknownTypeParameter(id) =>
+      text("unknown_type_parameter") + space + id.pretty()
+    UnknownValue(id) => text("unknown_value") + space + id.pretty()
+    UnknownDataConstructor(id) =>
+      text("unknown_data_constructor") + space + id.pretty()
+    TypeMismatch(expected~, actual~) =>
+      text("type_mismatch") +
+      space +
+      @pretty.braced_block([
+        text("expected ") + expected.pretty(),
+        text("actual ") + actual.pretty(),
+      ])
+    NotFunction(type_) => text("not_function") + space + type_.pretty()
+    NotForall(type_) => text("not_forall") + space + type_.pretty()
+    ArityMismatch(expected~, actual~) =>
+      text("arity_mismatch") +
+      space +
+      @pretty.braced_block([
+        text("expected ") + text(expected.to_string()),
+        text("actual ") + text(actual.to_string()),
+      ])
+    InvalidExternal(id) => text("invalid_external") + space + id.pretty()
+    InvalidLetRecRhs(id) => text("invalid_letrec_rhs") + space + id.pretty()
+    InvalidAlternativeBinderCount => text("invalid_alternative_binder_count")
+    DuplicateDefaultAlternative => text("duplicate_default_alternative")
+    DefaultAlternativeNotLast => text("default_alternative_not_last")
+    DuplicateAlternative => text("duplicate_alternative")
+    NonExhaustiveMatch => text("non_exhaustive_match")
+  }
+}
+
+///|
 fn type_arguments_doc(arguments : Array[Type]) -> Document {
   if arguments.is_empty() {
     empty

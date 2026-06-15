@@ -4,6 +4,11 @@ fn int_type() -> Type {
 }
 
 ///|
+fn bool_type() -> Type {
+  Primitive(Bool)
+}
+
+///|
 test "buslane metadata owns nominal data shape" {
   let metadata = MetadataRegistry::MetadataRegistry()
   let option_param = metadata.define_type_parameter(Type)
@@ -203,6 +208,81 @@ test "pretty buslane construct and one-level match" {
       #|      }
       #|    }
       #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "verify buslane function call program" {
+  let metadata = MetadataRegistry::MetadataRegistry()
+  let value = metadata.define_value(Value, int_type())
+  let function = metadata.define_value(
+    Function,
+    Function([int_type()], int_type()),
+  )
+  let parameter = metadata.define_value(Parameter, int_type())
+  let program = Program::{
+    metadata,
+    terms: [
+      LetRec([
+        {
+          id: function,
+          rhs: Function({
+            parameters: [parameter],
+            result_type: int_type(),
+            body: Ref(parameter),
+          }),
+        },
+      ]),
+      Let(value, Call(Ref(function), [Literal(Int(42L))])),
+    ],
+  }
+  inspect(
+    @prettyprinter.render(verify_program(program), width=100),
+    content=(
+      #|verify_result {}
+    ),
+  )
+}
+
+///|
+test "verify buslane reports structural errors" {
+  let metadata = MetadataRegistry::MetadataRegistry()
+  let value = metadata.define_value(Value, int_type())
+  let binder = metadata.define_value(MatchBinder, bool_type())
+  let program = Program::{
+    metadata,
+    terms: [
+      Let(value, Call(Literal(Int(1L)), [])),
+      Let(
+        value,
+        Match({
+          scrutinee: Literal(Bool(true)),
+          binder,
+          result_type: int_type(),
+          alternatives: [
+            {
+              alt_constructor: Literal(Bool(true)),
+              type_binders: [],
+              value_binders: [],
+              body: Literal(Int(1L)),
+            },
+          ],
+        }),
+      ),
+    ],
+  }
+  inspect(
+    @prettyprinter.render(verify_program(program), width=100),
+    content=(
+      #|verify_result {
+      #|  not_function Int
+      #|  type_mismatch {
+      #|    expected Int
+      #|    actual Unit
+      #|  }
+      #|  non_exhaustive_match
       #|}
     ),
   )

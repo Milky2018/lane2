@@ -7,6 +7,7 @@ import {
 }
 
 // Values
+pub fn verify_program(Program) -> VerifyResult
 
 // Errors
 
@@ -184,6 +185,36 @@ pub(all) enum ValueKind {
   MatchBinder
 } derive(Eq, @debug.Debug)
 pub impl @prettyprinter.Pretty for ValueKind
+
+pub(all) struct VerifyDiagnostic {
+  kind : VerifyDiagnosticKind
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for VerifyDiagnostic
+
+pub(all) enum VerifyDiagnosticKind {
+  UnknownType(TypeId)
+  UnknownTypeParameter(TypeParameterId)
+  UnknownValue(ValueId)
+  UnknownDataConstructor(DataConId)
+  TypeMismatch(expected~ : Type, actual~ : Type)
+  NotFunction(Type)
+  NotForall(Type)
+  ArityMismatch(expected~ : Int, actual~ : Int)
+  InvalidExternal(ValueId)
+  InvalidLetRecRhs(ValueId)
+  InvalidAlternativeBinderCount
+  DuplicateDefaultAlternative
+  DefaultAlternativeNotLast
+  DuplicateAlternative
+  NonExhaustiveMatch
+} derive(Eq, @debug.Debug)
+pub impl @prettyprinter.Pretty for VerifyDiagnosticKind
+
+pub struct VerifyResult {
+  diagnostics : Array[VerifyDiagnostic]
+} derive(Eq, @debug.Debug)
+pub fn VerifyResult::is_ok(Self) -> Bool
+pub impl @prettyprinter.Pretty for VerifyResult
 
 // Type aliases
 
