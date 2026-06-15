@@ -26,6 +26,22 @@ fn expect_anf_program(source : String) -> @anf.AnfProgram {
 }
 
 ///|
+fn expect_buslane_program(source : String) -> @buslane.Program {
+  let parse_result = @parser.parse_string(source)
+  if !parse_result.lexical_errors.is_empty() ||
+    !parse_result.parse_errors.is_empty() {
+    abort("expected parse success")
+  }
+  guard parse_result.source is Some(file) else { abort("expected source") }
+  let resolved = @resolve.resolve_source_file(file)
+  let checked = @typecheck.typecheck_checked_source_file(resolved)
+  guard checked.source is Some(source) else {
+    abort(@prettyprinter.render(checked.diagnostics, width=100))
+  }
+  @elaborate.lower_checked_source_file_to_buslane(source)
+}
+
+///|
 fn expect_top_level_value(
   program : @anf.AnfProgram,
   name : String,
@@ -36,6 +52,16 @@ fn expect_top_level_value(
     }
   }
   abort("expected top-level value \{name}")
+}
+
+///|
+fn expect_last_buslane_let(program : @buslane.Program) -> @buslane.ValueId {
+  for index = program.terms.length() - 1; index >= 0; index = index - 1 {
+    if program.terms[index] is Let(id, _) {
+      return id
+    }
+  }
+  abort("expected Buslane top-level let")
 }
 
 ///|
@@ -283,5 +309,24 @@ test "evaluate buslane nominal data match" {
   inspect(
     @prettyprinter.render(evaluated.lookup(result), width=80),
     content="int 7",
+  )
+}
+
+///|
+test "evaluate source field access through buslane selector" {
+  let program = expect_buslane_program(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|  y : Int
+      #|}
+      #|let answer : Int = Point::{ x: 1, y: 2 }.x
+    ),
+  )
+  let answer = expect_last_buslane_let(program)
+  let evaluated = evaluate_buslane_program(program, BuslaneExternalRuntime())
+  inspect(
+    @prettyprinter.render(evaluated.lookup(answer), width=80),
+    content="int 1",
   )
 }

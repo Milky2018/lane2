@@ -160,6 +160,28 @@ test "elaborate generic enum variant into verifiable buslane" {
 }
 
 ///|
+test "elaborate struct field access into buslane selector" {
+  let result = elaborate_buslane_source(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|  y : Int
+      #|}
+      #|let answer : Int = Point::{ x: 1, y: 2 }.x
+    ),
+  )
+  guard result.program is Some(program) else {
+    abort("expected buslane program")
+  }
+  inspect(
+    @prettyprinter.render(@buslane.verify_program(program), width=100),
+    content=(
+      #|verify_result {}
+    ),
+  )
+}
+
+///|
 test "elaborate resolved source into anf" {
   let result = elaborate_anf_source(
     (

@@ -29,6 +29,12 @@ priv struct StructConMapEntry {
 }
 
 ///|
+priv struct FieldSelectorMapEntry {
+  source : @symbol.FieldSymbolId
+  target : @buslane.ValueId
+}
+
+///|
 priv struct BuslaneLowerer {
   metadata : @buslane.MetadataRegistry
   type_symbols : Array[TypeMapEntry]
@@ -36,6 +42,8 @@ priv struct BuslaneLowerer {
   values : Array[ValueMapEntry]
   data_constructors : Array[DataConMapEntry]
   struct_constructors : Array[StructConMapEntry]
+  field_selectors : Array[FieldSelectorMapEntry]
+  selector_terms : Array[@buslane.TopTerm]
   external_terms : Array[@buslane.TopTerm]
 }
 
@@ -48,6 +56,8 @@ fn BuslaneLowerer::BuslaneLowerer() -> BuslaneLowerer {
     values: [],
     data_constructors: [],
     struct_constructors: [],
+    field_selectors: [],
+    selector_terms: [],
     external_terms: [],
   }
 }
@@ -60,6 +70,7 @@ pub fn lower_checked_source_file_to_buslane(
   let lowerer = BuslaneLowerer::BuslaneLowerer()
   lowerer.collect_type_headers(source)
   lowerer.collect_data_constructors(source)
+  lowerer.collect_field_selectors(source)
   lowerer.collect_top_values(source)
   let terms = lowerer.lower_top_terms(source)
   { metadata: lowerer.metadata, terms: lowerer.external_terms + terms }
@@ -162,6 +173,123 @@ fn BuslaneLowerer::collect_enum_constructors(
 }
 
 ///|
+fn BuslaneLowerer::collect_field_selectors(
+  self : BuslaneLowerer,
+  source : @checked.CheckedSourceFile,
+) -> Unit {
+  for declaration in source.declarations {
+    if declaration is Struct(declaration) {
+      for index in 0..<declaration.fields.length() {
+        self.collect_field_selector(declaration, index)
+      }
+    }
+  }
+}
+
+///|
+fn BuslaneLowerer::collect_field_selector(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedStructDeclaration,
+  field_index : Int,
+) -> Unit {
+  let field = declaration.fields[field_index]
+  let type_parameters = self.selector_type_parameters(declaration)
+  let selector_type = self.selector_type(declaration, field)
+  let selector = self.metadata.define_value(Function, selector_type)
+  self.field_selectors.push({ source: field.symbol, target: selector })
+  self.selector_terms.push(
+    Let(selector, self.selector_body(declaration, field_index, type_parameters)),
+  )
+}
+
+///|
+fn BuslaneLowerer::selector_type_parameters(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedStructDeclaration,
+) -> Array[@buslane.TypeParameterId] {
+  let parameters = declaration.type_parameters.map(fn(parameter) {
+    self.define_type_parameter(parameter.id)
+  })
+  for type_member in declaration.type_members {
+    parameters.push(self.define_type_parameter(type_member.type_parameter.id))
+  }
+  parameters
+}
+
+///|
+fn BuslaneLowerer::selector_type(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedStructDeclaration,
+  field : @checked.CheckedFieldDeclaration,
+) -> @buslane.Type {
+  let function = @buslane.Type::Function(
+    [self.selector_receiver_type(declaration)],
+    self.lower_type(field.type_),
+  )
+  let type_parameters = self.selector_type_parameters(declaration)
+  if type_parameters.is_empty() {
+    function
+  } else {
+    Forall(type_parameters, function)
+  }
+}
+
+///|
+fn BuslaneLowerer::selector_receiver_type(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedStructDeclaration,
+) -> @buslane.Type {
+  Nominal(
+    self.type_id(declaration.symbol),
+    declaration.type_parameters.map(fn(parameter) {
+      Parameter(self.type_parameter_id(parameter.id))
+    }),
+  )
+}
+
+///|
+fn BuslaneLowerer::selector_body(
+  self : BuslaneLowerer,
+  declaration : @checked.CheckedStructDeclaration,
+  field_index : Int,
+  type_parameters : Array[@buslane.TypeParameterId],
+) -> @buslane.Expr {
+  let receiver_type = self.selector_receiver_type(declaration)
+  let receiver = self.metadata.define_value(Parameter, receiver_type)
+  let result_type = self.lower_type(declaration.fields[field_index].type_)
+  let match_binder = self.metadata.define_value(MatchBinder, receiver_type)
+  let value_binders = declaration.fields.map(fn(field) {
+    self.metadata.define_value(MatchBinder, self.lower_type(field.type_))
+  })
+  let function = @buslane.Expr::Function({
+    parameters: [receiver],
+    result_type,
+    body: Match({
+      scrutinee: Ref(receiver),
+      binder: match_binder,
+      result_type,
+      alternatives: [
+        {
+          alt_constructor: DataCon(
+            self.struct_constructor_id(declaration.symbol),
+          ),
+          type_binders: declaration.type_members.map(fn(type_member) {
+            self.type_parameter_id(type_member.type_parameter.id)
+          }),
+          value_binders,
+          body: Ref(value_binders[field_index]),
+        },
+      ],
+    }),
+  })
+  if type_parameters.is_empty() {
+    function
+  } else {
+    TypeLambda(type_parameters, function)
+  }
+}
+
+///|
 fn BuslaneLowerer::collect_top_values(
   self : BuslaneLowerer,
   source : @checked.CheckedSourceFile,
@@ -207,6 +335,9 @@ fn BuslaneLowerer::lower_top_terms(
   }
   if !recursive_functions.is_empty() {
     terms.push(LetRec(recursive_functions))
+  }
+  for selector in self.selector_terms {
+    terms.push(selector)
   }
   for declaration in source.declarations {
     if declaration is Let(declaration) {
@@ -290,7 +421,7 @@ fn BuslaneLowerer::lower_expr(
         self.lower_expr(callee),
         arguments.map(fn(argument) { self.lower_expr(argument) }),
       )
-    Field(base~, ..) => self.lower_field(base)
+    Field(base~, field~, ..) => self.lower_field(base, field)
     StructLiteral(symbol~, type_arguments~, type_witnesses~, fields~, ..) =>
       Construct({
         data_constructor: self.struct_constructor_id(symbol),
@@ -642,14 +773,22 @@ fn BuslaneLowerer::value_binder_for_payload(
 fn BuslaneLowerer::lower_field(
   self : BuslaneLowerer,
   base : @checked.CheckedExpr,
+  field : @symbol.FieldSymbolId,
 ) -> @buslane.Expr {
-  // Field selectors are ordinary generated values in the Buslane model. The
-  // full selector-body generation will be added with the verifier-facing
-  // lowering pass; until then the field base is preserved as an ordinary call
-  // shape rather than a Buslane field node.
-  Call(Ref(self.define_external(self.lower_type(base.type_()))), [
-    self.lower_expr(base),
-  ])
+  let selector : @buslane.Expr = Ref(self.field_selector_id(field))
+  let callee = match base.type_() {
+    Nominal(_, arguments) =>
+      if arguments.is_empty() {
+        selector
+      } else {
+        TypeApply(
+          selector,
+          arguments.map(fn(argument) { self.lower_type(argument) }),
+        )
+      }
+    _ => selector
+  }
+  Call(callee, [self.lower_expr(base)])
 }
 
 ///|
@@ -843,4 +982,17 @@ fn BuslaneLowerer::struct_constructor_id(
     }
   }
   abort("unknown Buslane struct constructor id")
+}
+
+///|
+fn BuslaneLowerer::field_selector_id(
+  self : BuslaneLowerer,
+  source : @symbol.FieldSymbolId,
+) -> @buslane.ValueId {
+  for entry in self.field_selectors {
+    if entry.source == source {
+      return entry.target
+    }
+  }
+  abort("unknown Buslane field selector id")
 }
