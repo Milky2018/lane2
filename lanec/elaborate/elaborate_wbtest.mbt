@@ -138,6 +138,28 @@ test "elaborate resolved source into buslane core" {
 }
 
 ///|
+test "elaborate generic enum variant into verifiable buslane" {
+  let result = elaborate_buslane_source(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|let answer : Option[Int] = Option::some(1)
+    ),
+  )
+  guard result.program is Some(program) else {
+    abort("expected buslane program")
+  }
+  inspect(
+    @prettyprinter.render(@buslane.verify_program(program), width=100),
+    content=(
+      #|verify_result {}
+    ),
+  )
+}
+
+///|
 test "elaborate resolved source into anf" {
   let result = elaborate_anf_source(
     (

@@ -302,10 +302,10 @@ fn BuslaneLowerer::lower_expr(
         }),
         payloads: fields.map(fn(field) { self.lower_expr(field.value) }),
       })
-    Variant(symbol~, type_arguments~, arguments~, ..) =>
+    Variant(symbol~, type_arguments~, arguments~, type_~, ..) =>
       Construct({
         data_constructor: self.data_constructor_id(symbol),
-        type_arguments: [],
+        type_arguments: self.nominal_type_arguments(type_),
         hidden_witnesses: type_arguments.map(fn(argument) {
           self.lower_type(argument)
         }),
@@ -707,6 +707,18 @@ fn BuslaneLowerer::lower_type(
         }),
         self.lower_type(body),
       )
+  }
+}
+
+///|
+fn BuslaneLowerer::nominal_type_arguments(
+  self : BuslaneLowerer,
+  type_ : @types.Type,
+) -> Array[@buslane.Type] {
+  match type_ {
+    Nominal(_, arguments) =>
+      arguments.map(fn(argument) { self.lower_type(argument) })
+    _ => []
   }
 }
 
