@@ -88,7 +88,9 @@ fn VerifyContext::verify_metadata(self : VerifyContext) -> Unit {
     }
   }
   for value in self.program.metadata.values {
-    self.verify_type(value.type_, { parameters: [] })
+    if value.kind.has_closed_metadata_type() {
+      self.verify_type(value.type_, { parameters: [] })
+    }
   }
   for data_constructor in self.program.metadata.data_constructors {
     self.require_type(data_constructor.owner)
@@ -107,6 +109,14 @@ fn VerifyContext::verify_metadata(self : VerifyContext) -> Unit {
     for payload_type in data_constructor.payload_types {
       self.verify_type(payload_type, scope)
     }
+  }
+}
+
+///|
+fn ValueKind::has_closed_metadata_type(self : ValueKind) -> Bool {
+  match self {
+    Function | Value | External => true
+    Parameter | Local | MatchBinder => false
   }
 }
 

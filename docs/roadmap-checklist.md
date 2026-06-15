@@ -216,15 +216,18 @@ and unresolved or ambiguous states before Buslane lowering.
 - [x] Provide a Buslane reference interpreter with erased type applications,
   nominal data, one-level matches, closures, let-rec groups, and external value
   handlers.
-- [ ] Use the interpreter as the semantic oracle for later execution targets.
+- [x] Use the Buslane interpreter as the semantic oracle for the first native
+  `lane run` implementation.
 
 ## 8. Prelude And Conformance
 
 - [x] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial contextual offer environment from prelude-provided
   offered value definitions.
-- [ ] Provide required intrinsic implementations through builtin runtime
+- [x] Provide required intrinsic implementations through builtin runtime
   plugins.
+- [x] Provide a native-only `lane` command for single-file `check` and
+  `run --entry` workflows.
 - [x] Expand valid and invalid conformance fixtures under `spec/examples`.
 - [x] Existential: add valid and invalid parser, resolver, type checker,
   elaborator, Buslane Core Language, ANF, and interpreter fixture coverage for

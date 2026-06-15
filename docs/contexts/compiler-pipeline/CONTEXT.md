@@ -29,6 +29,10 @@ _Avoid_: pure desugaring, Buslane lowering
 The transformation from Checked Source AST into Buslane Core Language.
 _Avoid_: source elaboration, parsing, bytecode generation
 
+**Compiler Facade**:
+The stable compiler-library entry package consumed by tools instead of importing internal pipeline packages directly.
+_Avoid_: CLI command, compiler process boundary, Buslane package
+
 **Buslane Core Language**:
 The typed expression-tree core language produced from Checked Source AST before ANF normalization.
 _Avoid_: source AST, checked source AST, ANF IR, bytecode, VM instruction format
@@ -308,6 +312,7 @@ _Avoid_: type checking, name resolution
 - Lane2 compiler IR uses **Separated Symbol Identity** and **Separated Namespaces**.
 - **Source Elaboration** consumes type checking information and produces a **Checked Source AST**.
 - A **Checked Source AST** preserves **Source-Level Structure** while removing source-only syntax and unresolved or ambiguous references.
+- A **Compiler Facade** exposes stable parse, check, and compile entrypoints for the **Tools Project**.
 - **Semantic Lowering** transforms a **Checked Source AST** into **Buslane Core Language**.
 - A **Buslane Program** is the root value consumed by Buslane pretty printing, ANF lowering, and execution-oriented passes.
 - A **Buslane Verifier** verifies a whole **Buslane Program** and checks Buslane core invariants without checking Lane-front-end lowering quality.
@@ -359,6 +364,7 @@ _Avoid_: type checking, name resolution
 - **Buslane Expression Tree** has no separate value AST; ANF lowering decides which expressions become atoms.
 - Buslane has no unsafe-builtin expression; source builtins lower to **Buslane External Values**.
 - Buslane external value metadata does not store runtime names; a **Buslane External Map** belongs to the compiler, linker, or runtime.
+- The **Compiler Facade** may return a **Buslane External Map** alongside a **Buslane Program**.
 - Buslane v1 has no module namespace; a future **Buslane Unit** may wrap a program with linking metadata.
 - Buslane has no `if` node; source conditionals lower to **Synthetic Bool Matches**.
 - Buslane uses **One-Level Buslane Matches**; nested source patterns are compiled into nested one-level matches before entering Buslane.

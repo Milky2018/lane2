@@ -1,4 +1,5 @@
 members = [
   "./lanec",
   "./buslane",
+  "./lane-tools/lane",
 ]

@@ -182,6 +182,44 @@ test "verify buslane function call program" {
 }
 
 ///|
+test "verify buslane generic function parameter scope" {
+  let metadata = MetadataRegistry::MetadataRegistry()
+  let parameter_type = metadata.define_type_parameter(Type)
+  let function = metadata.define_value(
+    Function,
+    Forall(
+      [parameter_type],
+      Function([Parameter(parameter_type)], Parameter(parameter_type)),
+    ),
+  )
+  let parameter = metadata.define_value(Parameter, Parameter(parameter_type))
+  let program = Program::{
+    metadata,
+    terms: [
+      LetRec([
+        {
+          id: function,
+          rhs: TypeLambda(
+            [parameter_type],
+            Function({
+              parameters: [parameter],
+              result_type: Parameter(parameter_type),
+              body: Ref(parameter),
+            }),
+          ),
+        },
+      ]),
+    ],
+  }
+  inspect(
+    @prettyprinter.render(verify_program(program), width=100),
+    content=(
+      #|verify_result {}
+    ),
+  )
+}
+
+///|
 test "verify buslane reports structural errors" {
   let metadata = MetadataRegistry::MetadataRegistry()
   let value = metadata.define_value(Value, int_type())

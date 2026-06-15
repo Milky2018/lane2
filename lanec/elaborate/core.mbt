@@ -17,6 +17,32 @@ pub(all) struct BuslaneElaborateResult {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct BuslaneBuiltinExternal {
+  value : @buslane.ValueId
+  name : String
+  type_ : @buslane.Type
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BuslaneExternalMap {
+  builtins : Array[BuslaneBuiltinExternal]
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BuslaneEntry {
+  name : String
+  value : @buslane.ValueId
+  type_ : @buslane.Type
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BuslaneLowerResult {
+  program : @buslane.Program
+  externals : BuslaneExternalMap
+  entries : Array[BuslaneEntry]
+} derive(Debug, Eq)
+
+///|
 /// Elaborates a resolved source file into Checked Source AST when type checking
 /// succeeds and all checked-source nodes required by the file are implemented.
 pub fn elaborate_resolved_source_file(

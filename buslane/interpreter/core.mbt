@@ -61,6 +61,21 @@ pub struct BuslaneExternalRuntime {
 }
 
 ///|
+/// Creates a runtime error for an external value that no runtime handler owns.
+pub fn missing_external(id : @buslane.ValueId) -> BuslaneRuntimeError {
+  MissingExternal(id)
+}
+
+///|
+/// Creates a runtime error for an external value handler failure.
+pub fn external_failure(
+  id : @buslane.ValueId,
+  message : String,
+) -> BuslaneRuntimeError {
+  ExternalFailure(id~, message~)
+}
+
+///|
 /// Creates an integer Buslane runtime value.
 pub fn BuslaneRuntimeValue::int(value : Int64) -> BuslaneRuntimeValue {
   { kind: Int(value) }
@@ -82,6 +97,42 @@ pub fn BuslaneRuntimeValue::string(value : String) -> BuslaneRuntimeValue {
 /// Returns the unit Buslane runtime value.
 pub fn BuslaneRuntimeValue::unit() -> BuslaneRuntimeValue {
   { kind: Unit }
+}
+
+///|
+/// Returns this runtime value as an integer when it is an integer value.
+pub fn BuslaneRuntimeValue::as_int(self : BuslaneRuntimeValue) -> Int64? {
+  match self.kind {
+    Int(value) => Some(value)
+    _ => None
+  }
+}
+
+///|
+/// Returns this runtime value as a boolean when it is a boolean value.
+pub fn BuslaneRuntimeValue::as_bool(self : BuslaneRuntimeValue) -> Bool? {
+  match self.kind {
+    Bool(value) => Some(value)
+    _ => None
+  }
+}
+
+///|
+/// Returns this runtime value as a string when it is a string value.
+pub fn BuslaneRuntimeValue::as_string(self : BuslaneRuntimeValue) -> String? {
+  match self.kind {
+    String(value) => Some(value)
+    _ => None
+  }
+}
+
+///|
+/// Returns whether this runtime value behaves as a callable value.
+pub fn BuslaneRuntimeValue::is_function(self : BuslaneRuntimeValue) -> Bool {
+  match self.kind {
+    Closure(..) | TypeClosure(..) | External(_) => true
+    _ => false
+  }
 }
 
 ///|

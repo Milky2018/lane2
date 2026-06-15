@@ -45,6 +45,8 @@ priv struct BuslaneLowerer {
   field_selectors : Array[FieldSelectorMapEntry]
   selector_terms : Array[@buslane.TopTerm]
   external_terms : Array[@buslane.TopTerm]
+  builtin_externals : Array[BuslaneBuiltinExternal]
+  entries : Array[BuslaneEntry]
 }
 
 ///|
@@ -59,6 +61,8 @@ fn BuslaneLowerer::BuslaneLowerer() -> BuslaneLowerer {
     field_selectors: [],
     selector_terms: [],
     external_terms: [],
+    builtin_externals: [],
+    entries: [],
   }
 }
 
@@ -67,13 +71,28 @@ fn BuslaneLowerer::BuslaneLowerer() -> BuslaneLowerer {
 pub fn lower_checked_source_file_to_buslane(
   source : @checked.CheckedSourceFile,
 ) -> @buslane.Program {
+  lower_checked_source_file_to_buslane_result(source).program
+}
+
+///|
+/// Lowers Checked Source into Buslane and returns compiler-owned side tables.
+pub fn lower_checked_source_file_to_buslane_result(
+  source : @checked.CheckedSourceFile,
+) -> BuslaneLowerResult {
   let lowerer = BuslaneLowerer::BuslaneLowerer()
   lowerer.collect_type_headers(source)
   lowerer.collect_data_constructors(source)
   lowerer.collect_field_selectors(source)
   lowerer.collect_top_values(source)
   let terms = lowerer.lower_top_terms(source)
-  { metadata: lowerer.metadata, terms: lowerer.external_terms + terms }
+  {
+    program: {
+      metadata: lowerer.metadata,
+      terms: lowerer.external_terms + terms,
+    },
+    externals: { builtins: lowerer.builtin_externals },
+    entries: lowerer.entries,
+  }
 }
 
 ///|
@@ -88,6 +107,16 @@ fn BuslaneLowerer::collect_type_headers(
       _ => ()
     }
   }
+}
+
+///|
+fn BuslaneLowerer::add_entry(
+  self : BuslaneLowerer,
+  name : String,
+  value : @buslane.ValueId,
+  type_ : @buslane.Type,
+) -> Unit {
+  self.entries.push({ name, value, type_ })
 }
 
 ///|
@@ -300,22 +329,17 @@ fn BuslaneLowerer::collect_top_values(
         for parameter in declaration.type_parameters {
           ignore(self.define_type_parameter(parameter.id))
         }
-        ignore(
-          self.define_value(
-            declaration.symbol,
-            Function,
-            self.lower_type(declaration.type_),
-          ),
-        )
+        let type_ = self.lower_type(declaration.type_)
+        let value = self.define_value(declaration.symbol, Function, type_)
+        self.add_entry(declaration.name, value, type_)
       }
-      Let(declaration) =>
-        ignore(
-          self.define_value(
-            declaration.symbol,
-            Value,
-            self.lower_type(declaration.type_),
-          ),
-        )
+      Let(declaration) => {
+        let type_ = self.lower_type(declaration.type_)
+        let value = self.define_value(declaration.symbol, Value, type_)
+        if declaration.name is Some(name) {
+          self.add_entry(name, value, type_)
+        }
+      }
       _ => ()
     }
   }
@@ -327,6 +351,9 @@ fn BuslaneLowerer::lower_top_terms(
   source : @checked.CheckedSourceFile,
 ) -> Array[@buslane.TopTerm] {
   let terms : Array[@buslane.TopTerm] = []
+  for selector in self.selector_terms {
+    terms.push(selector)
+  }
   let recursive_functions : Array[@buslane.RecursiveBinding] = []
   for declaration in source.declarations {
     if declaration is Function(function) {
@@ -335,9 +362,6 @@ fn BuslaneLowerer::lower_top_terms(
   }
   if !recursive_functions.is_empty() {
     terms.push(LetRec(recursive_functions))
-  }
-  for selector in self.selector_terms {
-    terms.push(selector)
   }
   for declaration in source.declarations {
     if declaration is Let(declaration) {
@@ -400,8 +424,8 @@ fn BuslaneLowerer::lower_expr(
   match expression {
     Literal(literal~, ..) => Literal(lower_literal(literal))
     Value(symbol~, ..) => Ref(self.value_id(symbol))
-    UnsafeBuiltin(type_~, ..) =>
-      Ref(self.define_external(self.lower_type(type_)))
+    UnsafeBuiltin(name~, type_~, ..) =>
+      Ref(self.define_builtin_external(name, self.lower_type(type_)))
     FunctionLiteral(type_parameters~, parameters~, return_type~, body~, ..) =>
       self.lower_function_literal(
         type_parameters, parameters, return_type, body,
@@ -881,6 +905,17 @@ fn BuslaneLowerer::define_external(
   let id = self.metadata.define_value(External, type_)
   self.external_terms.push(External(id))
   id
+}
+
+///|
+fn BuslaneLowerer::define_builtin_external(
+  self : BuslaneLowerer,
+  name : String,
+  type_ : @buslane.Type,
+) -> @buslane.ValueId {
+  let value = self.define_external(type_)
+  self.builtin_externals.push({ value, name, type_ })
+  value
 }
 
 ///|

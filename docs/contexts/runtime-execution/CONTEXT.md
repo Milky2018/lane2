@@ -17,6 +17,14 @@ _Avoid_: source interpreter, bytecode VM
 The rule that a caller chooses which checked value or function to evaluate rather than the interpreter hard-coding `main`.
 _Avoid_: built-in main, source entrypoint
 
+**Run Entry Convention**:
+The Lane Command convention that single-file `lane run` requires an explicit entry name and prints the selected value with debug rendering.
+_Avoid_: language-level main semantics, project entrypoint, interpreter hard-code
+
+**Run Debug Rendering**:
+The Lane Command output rule that prints the selected runtime value without applying function values.
+_Avoid_: implicit entry call, source pretty printing
+
 **Interpreter Value**:
 A uniform runtime value used by the reference interpreter.
 _Avoid_: unboxed primitive special case, source AST node
@@ -57,6 +65,8 @@ _Avoid_: integer trap, arbitrary precision integer
 
 - The first **Execution Target** currently evaluates ANF IR.
 - The **Reference Interpreter** uses **Interpreter Entry Selection** over a whole checked compiler program.
+- **Run Entry Convention** is a caller policy layered on top of **Interpreter Entry Selection** and selects from the final top-level environment after prelude loading.
+- **Run Debug Rendering** displays function values as opaque function placeholders rather than invoking them.
 - The **Reference Interpreter** separates the **Global Environment**, **Call Frame**, and **Closure Environment**.
 - The **Reference Interpreter** evaluates to **Interpreter Values**.
 - Lane2 v1 does not require **Tail-Call Optimization**.
@@ -70,3 +80,9 @@ _Avoid_: integer trap, arbitrary precision integer
 
 > **Dev:** "Does the interpreter decide which `main` to run?"
 > **Domain expert:** "No. **Interpreter Entry Selection** belongs to the caller or later linker, not to the reference interpreter."
+
+> **Dev:** "Can single-file `lane run` execute `main` by default?"
+> **Domain expert:** "No. The **Run Entry Convention** requires an explicit entry name and debug-prints the selected value."
+
+> **Dev:** "If the selected entry is a function, should `lane run` call it?"
+> **Domain expert:** "No. **Run Debug Rendering** prints an opaque function placeholder instead of applying it."

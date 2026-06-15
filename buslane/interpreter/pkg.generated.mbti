@@ -10,6 +10,10 @@ import {
 // Values
 pub fn evaluate_buslane_program(@buslane.Program, BuslaneExternalRuntime) -> BuslaneRuntimeProgram raise BuslaneRuntimeError
 
+pub fn external_failure(@buslane.ValueId, String) -> BuslaneRuntimeError
+
+pub fn missing_external(@buslane.ValueId) -> BuslaneRuntimeError
+
 // Errors
 pub suberror BuslaneRuntimeError {
   InvalidProgram(Array[@buslane.VerifyDiagnostic])
@@ -40,9 +44,13 @@ pub impl @prettyprinter.Pretty for BuslaneRuntimeProgram
 pub struct BuslaneRuntimeValue {
   // private fields
 } derive(Eq, @debug.Debug)
+pub fn BuslaneRuntimeValue::as_bool(Self) -> Bool?
+pub fn BuslaneRuntimeValue::as_int(Self) -> Int64?
+pub fn BuslaneRuntimeValue::as_string(Self) -> String?
 pub fn BuslaneRuntimeValue::bool(Bool) -> Self
 pub fn BuslaneRuntimeValue::data(@buslane.DataConId, Array[Self]) -> Self
 pub fn BuslaneRuntimeValue::int(Int64) -> Self
+pub fn BuslaneRuntimeValue::is_function(Self) -> Bool
 pub fn BuslaneRuntimeValue::string(String) -> Self
 pub fn BuslaneRuntimeValue::unit() -> Self
 pub impl @prettyprinter.Pretty for BuslaneRuntimeValue
