@@ -8,16 +8,16 @@ LIB_DIR="${LANE_LIB:-$HOME/.lane/lib}"
 
 cd "$REPO_ROOT"
 
-moon build --target native
+moon build --target native --release
 
 mkdir -p "$BIN_DIR" "$LIB_DIR"
 
 install -m 755 \
-  "$REPO_ROOT/_build/native/debug/build/Milky2018/lane/lane.exe" \
+  "$REPO_ROOT/_build/native/release/build/Milky2018/lane/lane.exe" \
   "$BIN_DIR/lane"
 
 install -m 755 \
-  "$REPO_ROOT/_build/native/debug/build/Milky2018/lane_lsp/lane_lsp.exe" \
+  "$REPO_ROOT/_build/native/release/build/Milky2018/lane_lsp/lane_lsp.exe" \
   "$BIN_DIR/lane_lsp"
 
 install -m 644 "$REPO_ROOT/lane-std/prelude.lane" "$LIB_DIR/prelude.lane"
