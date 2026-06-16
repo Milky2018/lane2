@@ -938,6 +938,36 @@ test "typecheck function literal parameters from expected function type" {
 }
 
 ///|
+test "typecheck checked function literal parameters from expected function type" {
+  let result = expect_checked_source_result(
+    (
+      #|let id : (Int) -> Int = fn(value) {
+      #|  value
+      #|}
+      #|fn use() -> Int {
+      #|  id(1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source_typecheck_result {
+      #|  checked {
+      #|    let id#0 : (Int) -> Int = fn(value#2 : Int) -> Int {
+      #|      value#2
+      #|    }
+      #|    fn use#1() -> Int {
+      #|      id#0(1)
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
 test "typecheck pipeline expression as first argument call" {
   let result = expect_typecheck_result(
     (
@@ -1027,7 +1057,6 @@ test "typecheck generic function literal parameters from expected forall type" {
       #|  }
       #|  diagnostics {}
       #|}
-
     ),
   )
 }

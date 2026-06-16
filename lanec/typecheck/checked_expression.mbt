@@ -869,11 +869,88 @@ fn SemanticChecker::check_checked_function_literal(
   expected : @types.Type,
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
-  let checked = self.synthesize_checked_function_literal(
-    scope, type_parameters, parameters, return_type, body, loc,
-  )
-  self.expect_type(expected, checked.type_, loc)
-  checked
+  match expected {
+    Function(expected_parameters, expected_result) => {
+      if !type_parameters.is_empty() {
+        self.diagnostics.push({
+          kind: CannotInferExpression("generic function arity"),
+          loc,
+        })
+        return checked_expression_none_reported(expected)
+      }
+      if expected_parameters.length() != parameters.length() {
+        self.diagnostics.push({
+          kind: CannotInferExpression("function arity"),
+          loc,
+        })
+        return checked_expression_none_reported(expected)
+      }
+      let body_scope = scope.copy()
+      let checked_parameters : Array[@checked.CheckedValueParameter] = []
+      for index in 0..<parameters.length() {
+        let parameter = parameters[index]
+        let type_ = expected_parameters[index]
+        if parameter.type_annotation is Some(type_annotation) {
+          self.expect_type(
+            type_,
+            self.check_type(type_annotation),
+            parameter.loc,
+          )
+        }
+        body_scope.bind(parameter.symbol, type_)
+        if parameter.is_offered {
+          self.offer_symbol(
+            body_scope.offers,
+            parameter.symbol,
+            type_,
+            parameter.loc,
+          )
+        }
+        checked_parameters.push({
+          symbol: parameter.symbol,
+          is_auto: false,
+          is_offered: parameter.is_offered,
+          name: parameter.name,
+          type_,
+          loc: parameter.loc,
+        })
+      }
+      if return_type is Some(type_annotation) {
+        self.expect_type(expected_result, self.check_type(type_annotation), loc)
+      }
+      let checked_body = self.check_checked_expr(
+        body_scope, body, expected_result,
+      )
+      guard self.require_checked_expression(
+          checked_body,
+          body.loc(),
+          "function body",
+        )
+        is Some(body) else {
+        return checked_expression_none_reported(expected)
+      }
+      let type_ = @types.Type::Function(expected_parameters, expected_result)
+      checked_expression(
+        FunctionLiteral(
+          type_parameters=[],
+          parameters=checked_parameters,
+          return_type=expected_result,
+          body~,
+          type_~,
+          loc~,
+        ),
+        type_,
+      )
+    }
+    Error => checked_expression_none_reported(Error)
+    _ => {
+      let checked = self.synthesize_checked_function_literal(
+        scope, type_parameters, parameters, return_type, body, loc,
+      )
+      self.expect_type(expected, checked.type_, loc)
+      checked
+    }
+  }
 }
 
 ///|
