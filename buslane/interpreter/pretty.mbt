@@ -26,23 +26,8 @@ pub impl @prettyprinter.Pretty for BuslaneRuntimeValue with fn pretty(
       data_constructor.pretty() +
       space +
       braced_block(arguments.map(BuslaneRuntimeValue::pretty))
-    Closure(parameters~, environment~, ..) =>
-      text("buslane_closure") +
-      space +
-      braced_block([
-        section("parameters", parameters.map(@buslane.ValueId::pretty)),
-        section("environment", [environment.pretty()]),
-      ])
-    TypeClosure(type_parameters~, environment~, ..) =>
-      text("buslane_type_closure") +
-      space +
-      braced_block([
-        section(
-          "type_parameters",
-          type_parameters.map(@buslane.TypeParameterId::pretty),
-        ),
-        section("environment", [environment.pretty()]),
-      ])
+    Closure(..) => text("<function>")
+    TypeClosure(..) => text("<type-function>")
     External(id) => text("external_value") + space + id.pretty()
   }
 }

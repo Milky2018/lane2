@@ -54,6 +54,49 @@ test "external value calls runtime handler" {
 }
 
 ///|
+test "pretty recursive closure environment stays finite" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let box_type = metadata.define_type([])
+  let function_type = @buslane.Type::Function([], int_type())
+  let box = metadata.define_data_constructor(box_type, [], [function_type])
+  let function = metadata.define_value(Function, function_type)
+  let boxed = metadata.define_value(Value, Nominal(box_type, []))
+  let program = @buslane.Program::{
+    metadata,
+    terms: [
+      LetRec([
+        {
+          id: function,
+          rhs: Function({
+            parameters: [],
+            result_type: int_type(),
+            body: Literal(Int(1L)),
+          }),
+        },
+      ]),
+      Let(
+        boxed,
+        Construct({
+          data_constructor: box,
+          type_arguments: [],
+          hidden_witnesses: [],
+          payloads: [Ref(function)],
+        }),
+      ),
+    ],
+  }
+  let evaluated = evaluate_buslane_program(program, BuslaneExternalRuntime())
+  inspect(
+    @prettyprinter.render(evaluated.lookup(boxed), width=80),
+    content=(
+      #|data_value datacon#0 {
+      #|  <function>
+      #|}
+    ),
+  )
+}
+
+///|
 test "data constructor match selects matching alternative" {
   let metadata = @buslane.MetadataRegistry::MetadataRegistry()
   let parameter = metadata.define_type_parameter(Type)
