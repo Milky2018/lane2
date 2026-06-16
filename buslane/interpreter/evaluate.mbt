@@ -16,7 +16,7 @@ pub fn evaluate_buslane_program(
   for term in program.terms {
     match term {
       External(id) =>
-        globals.bind(id, BuslaneRuntimeValue::runtime(External(id)))
+        globals.bind(id, external_runtime_value(program.metadata, id))
       LetRec(bindings) => bind_buslane_recursive_group(bindings, globals)
       Let(id, initializer) => {
         let value = evaluate_buslane_expr(initializer, globals, externals)
@@ -25,6 +25,15 @@ pub fn evaluate_buslane_program(
     }
   }
   BuslaneRuntimeProgram(globals)
+}
+
+///|
+fn external_runtime_value(
+  metadata : @buslane.MetadataRegistry,
+  id : @buslane.ValueId,
+) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
+  guard metadata.value_info(id) is Some(info) else { raise MissingExternal(id) }
+  BuslaneRuntimeValue::runtime(External(id, info.type_))
 }
 
 ///|
@@ -69,7 +78,7 @@ fn evaluate_buslane_expr(
   externals : BuslaneExternalRuntime,
 ) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
   match expr {
-    Ref(id) => environment.lookup(id)
+    Ref(id) => evaluate_buslane_ref(id, environment, externals)
     Literal(literal) => evaluate_buslane_literal(literal)
     Function(function) =>
       BuslaneRuntimeValue::runtime(
@@ -113,6 +122,24 @@ fn evaluate_buslane_expr(
       evaluate_buslane_expr(body, frame, externals)
     }
     Match(match_) => evaluate_buslane_match(match_, environment, externals)
+  }
+}
+
+///|
+fn evaluate_buslane_ref(
+  id : @buslane.ValueId,
+  environment : BuslaneRuntimeEnvironment,
+  externals : BuslaneExternalRuntime,
+) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
+  let value = environment.lookup(id)
+  match value.kind {
+    External(id, type_) =>
+      if runtime_type_is_callable(type_) {
+        value
+      } else {
+        externals.invoke(id, [])
+      }
+    _ => value
   }
 }
 
@@ -161,7 +188,7 @@ fn apply_buslane_function(
       let erased = erase_buslane_type_application(callee, externals)
       apply_buslane_function(erased, arguments, externals)
     }
-    External(id) => externals.invoke(id, arguments)
+    External(id, _) => externals.invoke(id, arguments)
     _ => raise InvalidValue(message="callee is not callable")
   }
 }
@@ -174,7 +201,7 @@ fn erase_buslane_type_application(
   match callee.kind {
     TypeClosure(body~, environment~, ..) =>
       evaluate_buslane_expr(body, environment, externals)
-    Closure(..) | External(_) => callee
+    Closure(..) | External(_, _) => callee
     _ => raise InvalidValue(message="type application target is invalid")
   }
 }

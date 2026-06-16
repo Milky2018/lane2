@@ -14,7 +14,34 @@ fn expect_ok(program : @buslane.Program) -> Unit raise {
 }
 
 ///|
-test "external value calls runtime handler" {
+test "external value reference calls runtime handler" {
+  let metadata = @buslane.MetadataRegistry::MetadataRegistry()
+  let external = metadata.define_value(External, int_type())
+  let result = metadata.define_value(Value, int_type())
+  let program = @buslane.Program::{
+    metadata,
+    terms: [External(external), Let(result, Ref(external))],
+  }
+  expect_ok(program)
+  let runtime = BuslaneExternalRuntime::BuslaneExternalRuntime()
+  runtime.add_handler((id, arguments) => {
+    if id != external {
+      abort("unexpected Buslane external")
+    }
+    if !arguments.is_empty() {
+      abort("unexpected Buslane external arguments")
+    }
+    BuslaneRuntimeValue::int(42L)
+  })
+  let evaluated = evaluate_buslane_program(program, runtime)
+  inspect(
+    @prettyprinter.render(evaluated.lookup(result), width=80),
+    content="int 42",
+  )
+}
+
+///|
+test "external callable calls runtime handler" {
   let metadata = @buslane.MetadataRegistry::MetadataRegistry()
   let external = metadata.define_value(External, Function([], int_type()))
   let result = metadata.define_value(Value, int_type())

@@ -18,7 +18,7 @@ enum BuslaneRuntimeValueKind {
     body~ : @buslane.Expr,
     environment~ : BuslaneRuntimeEnvironment
   )
-  External(@buslane.ValueId)
+  External(@buslane.ValueId, @buslane.Type)
 } derive(Debug, Eq)
 
 ///|
@@ -130,7 +130,16 @@ pub fn BuslaneRuntimeValue::as_string(self : BuslaneRuntimeValue) -> String? {
 /// Returns whether this runtime value behaves as a callable value.
 pub fn BuslaneRuntimeValue::is_function(self : BuslaneRuntimeValue) -> Bool {
   match self.kind {
-    Closure(..) | TypeClosure(..) | External(_) => true
+    Closure(..) | TypeClosure(..) => true
+    External(_, type_) => runtime_type_is_callable(type_)
+    _ => false
+  }
+}
+
+///|
+fn runtime_type_is_callable(type_ : @buslane.Type) -> Bool {
+  match type_ {
+    Function(_, _) | Forall(_, _) => true
     _ => false
   }
 }

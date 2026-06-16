@@ -28,7 +28,7 @@ pub impl @prettyprinter.Pretty for BuslaneRuntimeValue with fn pretty(
       braced_block(arguments.map(BuslaneRuntimeValue::pretty))
     Closure(..) => text("<function>")
     TypeClosure(..) => text("<type-function>")
-    External(id) => text("external_value") + space + id.pretty()
+    External(id, _) => text("external_value") + space + id.pretty()
   }
 }
 
