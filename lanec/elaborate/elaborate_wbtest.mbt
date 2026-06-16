@@ -50,10 +50,10 @@ test "elaborate resolved source into checked source" {
       #|    struct Box#0 {
       #|      value#0 : Int
       #|    }
-      #|    fn identity#0(x#1 : Int) -> Int {
-      #|      x#1
+      #|    fn identity#0(x#2 : Int) -> Int {
+      #|      x#2
       #|    }
-      #|    let answer#2 : Int = 42
+      #|    let answer#1 : Int = 42
       #|  }
       #|  diagnostics {}
       #|}
@@ -191,14 +191,14 @@ test "elaborate builtins through contextual expected types" {
     content=(
       #|elaborate_result {
       #|  checked {
-      #|    fn identity#0(value#3 : Int) -> Int {
-      #|      value#3
+      #|    fn identity#0(value#4 : Int) -> Int {
+      #|      value#4
       #|    }
-      #|    let top#4 : Int = builtin("%top")
-      #|    fn direct#1() -> Int {
+      #|    let top#1 : Int = builtin("%top")
+      #|    fn direct#2() -> Int {
       #|      builtin("%direct")
       #|    }
-      #|    fn use#2() -> Int {
+      #|    fn use#3() -> Int {
       #|      let local#5 : Int = builtin("%local")
       #|      identity#0(builtin("%argument"))
       #|    }
@@ -258,9 +258,9 @@ test "elaborate top level offer value declarations" {
       #|    struct Box#0 {
       #|      value#0 : Int
       #|    }
-      #|    let box#1 : type#0 = builtin("%box")
-      #|    fn use#0() -> type#0 {
-      #|      box#1
+      #|    let box#0 : type#0 = builtin("%box")
+      #|    fn use#1() -> type#0 {
+      #|      box#0
       #|    }
       #|  }
       #|  diagnostics {}

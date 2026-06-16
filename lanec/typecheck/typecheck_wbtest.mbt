@@ -49,9 +49,11 @@ fn expect_checked_let_initializer(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    ordered_value_types: [],
     offers: [],
+    ordered_offers: [],
   }
-  checker.collect_top_level_function_types()
+  checker.collect_top_level_value_types()
   for declaration in source.declarations {
     match declaration {
       Let(declaration) =>
@@ -90,9 +92,11 @@ fn expect_first_checked_match_pattern(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    ordered_value_types: [],
     offers: [],
+    ordered_offers: [],
   }
-  checker.collect_top_level_function_types()
+  checker.collect_top_level_value_types()
   for declaration in source.declarations {
     if declaration is Function(declaration) && declaration.name == name {
       let scope = checker.root_scope()
@@ -323,7 +327,7 @@ test "typecheck inserts contextual auto argument" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|op_add#0[Int](1, 2, int_add_ops#4) : Int
+      #|op_add#0[Int](1, 2, int_add_ops#1) : Int
     ),
   )
 }
@@ -347,7 +351,7 @@ test "typecheck accepts explicit named contextual argument" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|op_add#0[Int](1, 2, custom_add#4) : Int
+      #|op_add#0[Int](1, 2, custom_add#1) : Int
     ),
   )
 }
@@ -371,7 +375,7 @@ test "typecheck offer value declaration supplies contextual argument" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|op_add#0[Int](1, 2, int_add_ops#4) : Int
+      #|op_add#0[Int](1, 2, int_add_ops#1) : Int
     ),
   )
 }
@@ -412,8 +416,8 @@ test "typecheck auto offer parameter is visible in function body" {
       #|  checked_values {
       #|    fn op_add#0 : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
       #|    fn twice#1 : forall [tparam#2 A : Type]. (tparam#2, type#0[tparam#2]) -> tparam#2
-      #|    let int_add_ops#7 : type#0[Int]
-      #|    let answer#8 : Int
+      #|    let int_add_ops#2 : type#0[Int]
+      #|    let answer#3 : Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -443,7 +447,7 @@ test "typecheck forwards offered struct fields" {
   inspect(
     @prettyprinter.render(expression, width=100),
     content=(
-      #|op_equal#0[Int](1, 2, int_compare_ops#4.equal_impl#1) : Bool
+      #|op_equal#0[Int](1, 2, int_compare_ops#1.equal_impl#1) : Bool
     ),
   )
 }
@@ -470,8 +474,8 @@ test "typecheck local offer value declaration supplies contextual argument" {
     @prettyprinter.render(expression, width=100),
     content=(
       #|{
-      #|  let int_add_ops#4 : type#0[Int] = builtin("%int_add_ops")
-      #|  op_add#0[Int](1, 2, int_add_ops#4)
+      #|  let int_add_ops#5 : type#0[Int] = builtin("%int_add_ops")
+      #|  op_add#0[Int](1, 2, int_add_ops#5)
       #|} : Int
     ),
   )
@@ -508,7 +512,7 @@ test "typecheck reports missing contextual offer" {
       #|  }
       #|  checked_values {
       #|    fn op_add#0 : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
-      #|    let answer#4 : Int
+      #|    let answer#1 : Int
       #|  }
       #|  diagnostics {
       #|    cannot_infer missing contextual offer @ 7:24-7:25
@@ -551,9 +555,9 @@ test "typecheck reports ambiguous contextual offer" {
       #|  }
       #|  checked_values {
       #|    fn op_add#0 : forall [tparam#1 A : Type]. (tparam#1, tparam#1, type#0[tparam#1]) -> tparam#1
-      #|    let add_a#4 : type#0[Int]
-      #|    let add_b#5 : type#0[Int]
-      #|    let answer#6 : Int
+      #|    let add_a#1 : type#0[Int]
+      #|    let add_b#2 : type#0[Int]
+      #|    let answer#3 : Int
       #|  }
       #|  diagnostics {
       #|    cannot_infer ambiguous contextual offer @ 9:24-9:25
@@ -588,8 +592,8 @@ test "typecheck top level values and direct calls" {
       #|  }
       #|  checked_values {
       #|    fn id#0 : (Int) -> Int
-      #|    fn use_answer#1 : () -> Int
-      #|    let answer#3 : Int
+      #|    fn use_answer#2 : () -> Int
+      #|    let answer#1 : Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -626,10 +630,10 @@ test "typecheck top level functions recurse and values stay ordered" {
       #|  }
       #|  checked_values {
       #|    fn first#0 : (Int) -> Int
-      #|    fn second#1 : (Int) -> Int
-      #|    fn use#2 : () -> Int
-      #|    let base#4 : Int
-      #|    let copied#6 : Int
+      #|    fn second#2 : (Int) -> Int
+      #|    fn use#4 : () -> Int
+      #|    let base#1 : Int
+      #|    let copied#3 : Int
       #|  }
       #|  diagnostics {}
       #|}
@@ -648,6 +652,51 @@ test "typecheck reports forward top level value use" {
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
     content="unresolved_value second @ 1:19-1:25",
+  )
+}
+
+///|
+test "typecheck top level function bodies see later top level values" {
+  let result = expect_typecheck_result(
+    (
+      #|struct Box {
+      #|  value : Int
+      #|}
+      #|fn read_answer() -> Int {
+      #|  answer
+      #|}
+      #|fn read_box() -> Int {
+      #|  box.value
+      #|}
+      #|let answer : Int = 42
+      #|let box : Box = Box::{ value: answer }
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|typecheck_result {
+      #|  checked_declarations {
+      #|    types {
+      #|      struct Box#0 {
+      #|        value#0 : Int
+      #|      }
+      #|    }
+      #|    type_members {}
+      #|    fields {
+      #|      value#0 : Int
+      #|    }
+      #|    variants {}
+      #|  }
+      #|  checked_values {
+      #|    fn read_answer#0 : () -> Int
+      #|    fn read_box#1 : () -> Int
+      #|    let answer#2 : Int
+      #|    let box#3 : type#0
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
   )
 }
 
@@ -973,11 +1022,12 @@ test "typecheck generic function literal parameters from expected forall type" {
       #|    variants {}
       #|  }
       #|  checked_values {
-      #|    fn use#0 : () -> Int
-      #|    let id#2 : forall [tparam#1 A : Type]. (tparam#1) -> tparam#1
+      #|    fn use#1 : () -> Int
+      #|    let id#0 : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0
       #|  }
       #|  diagnostics {}
       #|}
+
     ),
   )
 }

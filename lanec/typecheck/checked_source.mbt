@@ -12,9 +12,11 @@ pub fn typecheck_checked_source_file(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    ordered_value_types: [],
     offers: [],
+    ordered_offers: [],
   }
-  checker.collect_top_level_function_types()
+  checker.collect_top_level_value_types()
   let checked_declarations : Array[@checked.CheckedTopLevelDeclaration] = []
   let mut complete = true
   for declaration in source.declarations {
@@ -136,20 +138,27 @@ fn SemanticChecker::checked_top_level_let(
   declaration : @desugar.DesugaredLetDeclaration,
 ) -> @checked.CheckedTopLevelDeclaration? {
   let type_ = if declaration.type_annotation is Some(type_annotation) {
-    self.check_type(type_annotation)
+    match self.value_type(declaration.symbol) {
+      Some(type_) => type_
+      None => self.check_type(type_annotation)
+    }
   } else {
     self.diagnostics.push({
       kind: MissingTopLevelLetAnnotation,
       loc: declaration.loc,
     })
-    self.synthesize_expr(self.root_scope(), declaration.initializer)
+    self.synthesize_expr(self.ordered_root_scope(), declaration.initializer)
   }
   let checked_initializer = self.check_checked_expr(
-    self.root_scope(),
+    self.ordered_root_scope(),
     declaration.initializer,
     type_,
   )
-  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
+  self.ordered_value_types.push({
+    symbol: declaration.symbol,
+    type_,
+    parameters: None,
+  })
   self.values.push(
     Let({
       symbol: declaration.symbol,
@@ -182,14 +191,26 @@ fn SemanticChecker::checked_top_level_offer(
   self : SemanticChecker,
   declaration : @desugar.DesugaredOfferDeclaration,
 ) -> @checked.CheckedTopLevelDeclaration? {
-  let type_ = self.check_type(declaration.type_annotation)
+  let type_ = match self.value_type(declaration.symbol) {
+    Some(type_) => type_
+    None => self.check_type(declaration.type_annotation)
+  }
   let checked_initializer = self.check_checked_expr(
-    self.root_scope(),
+    self.ordered_root_scope(),
     declaration.initializer,
     type_,
   )
-  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
-  self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
+  self.ordered_value_types.push({
+    symbol: declaration.symbol,
+    type_,
+    parameters: None,
+  })
+  self.offer_symbol(
+    self.ordered_offers,
+    declaration.symbol,
+    type_,
+    declaration.loc,
+  )
   self.values.push(
     Let({
       symbol: declaration.symbol,

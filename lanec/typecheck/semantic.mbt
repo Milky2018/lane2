@@ -5,7 +5,9 @@ priv struct SemanticChecker {
   diagnostics : Array[TypeCheckDiagnostic]
   values : Array[CheckedValueDeclaration]
   value_types : Array[ValueTypeBinding]
+  ordered_value_types : Array[ValueTypeBinding]
   offers : Array[ContextualOffer]
+  ordered_offers : Array[ContextualOffer]
 }
 
 ///|
@@ -21,9 +23,11 @@ pub fn typecheck_source_file(
     diagnostics: declaration_result.diagnostics.copy(),
     values: [],
     value_types: [],
+    ordered_value_types: [],
     offers: [],
+    ordered_offers: [],
   }
-  checker.collect_top_level_function_types()
+  checker.collect_top_level_value_types()
   for declaration in source.declarations {
     match declaration {
       Function(declaration) => checker.check_top_level_function(declaration)
@@ -40,35 +44,73 @@ pub fn typecheck_source_file(
 }
 
 ///|
-fn SemanticChecker::collect_top_level_function_types(
+fn SemanticChecker::collect_top_level_value_types(
   self : SemanticChecker,
 ) -> Unit {
   for declaration in self.source.declarations {
-    if declaration is Function(declaration) {
-      let type_ = self.function_type(
-        declaration.type_parameters,
-        declaration.parameters,
-        declaration.return_type,
-      )
-      let parameters = declaration.parameters.map(fn(parameter) {
-        self.checked_value_parameter(parameter)
-      })
-      self.value_types.push({
-        symbol: declaration.symbol,
-        type_,
-        parameters: Some(parameters),
-      })
-      self.values.push(
-        Function({
-          symbol: declaration.symbol,
-          name: declaration.name,
-          type_,
-          parameters,
-          loc: declaration.loc,
-        }),
-      )
+    match declaration {
+      Function(declaration) => self.collect_top_level_function_type(declaration)
+      Let(declaration) => self.collect_top_level_let_type(declaration)
+      Offer(declaration) => self.collect_top_level_offer_type(declaration)
+      _ => ()
     }
   }
+}
+
+///|
+fn SemanticChecker::collect_top_level_function_type(
+  self : SemanticChecker,
+  declaration : @desugar.DesugaredFunctionDeclaration,
+) -> Unit {
+  let type_ = self.function_type(
+    declaration.type_parameters,
+    declaration.parameters,
+    declaration.return_type,
+  )
+  let parameters = declaration.parameters.map(fn(parameter) {
+    self.checked_value_parameter(parameter)
+  })
+  let binding = {
+    symbol: declaration.symbol,
+    type_,
+    parameters: Some(parameters),
+  }
+  self.value_types.push(binding)
+  self.ordered_value_types.push(binding)
+  self.values.push(
+    Function({
+      symbol: declaration.symbol,
+      name: declaration.name,
+      type_,
+      parameters,
+      loc: declaration.loc,
+    }),
+  )
+}
+
+///|
+fn SemanticChecker::collect_top_level_let_type(
+  self : SemanticChecker,
+  declaration : @desugar.DesugaredLetDeclaration,
+) -> Unit {
+  if declaration.type_annotation is Some(type_annotation) {
+    let type_ = self.check_type(type_annotation)
+    self.value_types.push({
+      symbol: declaration.symbol,
+      type_,
+      parameters: None,
+    })
+  }
+}
+
+///|
+fn SemanticChecker::collect_top_level_offer_type(
+  self : SemanticChecker,
+  declaration : @desugar.DesugaredOfferDeclaration,
+) -> Unit {
+  let type_ = self.check_type(declaration.type_annotation)
+  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
+  self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
 }
 
 ///|
@@ -97,17 +139,24 @@ fn SemanticChecker::check_top_level_let(
   declaration : @desugar.DesugaredLetDeclaration,
 ) -> Unit {
   let type_ = if declaration.type_annotation is Some(type_annotation) {
-    let type_ = self.check_type(type_annotation)
-    self.check_expr(self.root_scope(), declaration.initializer, type_)
+    let type_ = match self.value_type(declaration.symbol) {
+      Some(type_) => type_
+      None => self.check_type(type_annotation)
+    }
+    self.check_expr(self.ordered_root_scope(), declaration.initializer, type_)
     type_
   } else {
     self.diagnostics.push({
       kind: MissingTopLevelLetAnnotation,
       loc: declaration.loc,
     })
-    self.synthesize_expr(self.root_scope(), declaration.initializer)
+    self.synthesize_expr(self.ordered_root_scope(), declaration.initializer)
   }
-  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
+  self.ordered_value_types.push({
+    symbol: declaration.symbol,
+    type_,
+    parameters: None,
+  })
   self.values.push(
     Let({
       symbol: declaration.symbol,
@@ -123,10 +172,22 @@ fn SemanticChecker::check_top_level_offer(
   self : SemanticChecker,
   declaration : @desugar.DesugaredOfferDeclaration,
 ) -> Unit {
-  let type_ = self.check_type(declaration.type_annotation)
-  self.check_expr(self.root_scope(), declaration.initializer, type_)
-  self.value_types.push({ symbol: declaration.symbol, type_, parameters: None })
-  self.offer_symbol(self.offers, declaration.symbol, type_, declaration.loc)
+  let type_ = match self.value_type(declaration.symbol) {
+    Some(type_) => type_
+    None => self.check_type(declaration.type_annotation)
+  }
+  self.check_expr(self.ordered_root_scope(), declaration.initializer, type_)
+  self.ordered_value_types.push({
+    symbol: declaration.symbol,
+    type_,
+    parameters: None,
+  })
+  self.offer_symbol(
+    self.ordered_offers,
+    declaration.symbol,
+    type_,
+    declaration.loc,
+  )
   self.values.push(
     Let({
       symbol: declaration.symbol,
@@ -162,4 +223,18 @@ fn SemanticChecker::check_type(
   type_ : @resolve.ResolvedType,
 ) -> @types.Type {
   check_resolved_type(self.source.symbols, self.diagnostics, type_)
+}
+
+///|
+fn SemanticChecker::value_type(
+  self : SemanticChecker,
+  symbol : ValueSymbolId,
+) -> @types.Type? {
+  for index = self.value_types.length() - 1; index >= 0; index = index - 1 {
+    let binding = self.value_types[index]
+    if binding.symbol == symbol {
+      return Some(binding.type_)
+    }
+  }
+  None
 }

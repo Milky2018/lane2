@@ -276,10 +276,10 @@ test "lower checked source generic call and unsafe builtin to ANF" {
     @prettyprinter.render(program, width=100),
     content=(
       #|anf {
-      #|  fn[tparam#0 A : Type] id#0(value#1 : tparam#0) -> tparam#0 {
-      #|    value#1
+      #|  fn[tparam#0 A : Type] id#0(value#2 : tparam#0) -> tparam#0 {
+      #|    value#2
       #|  }
-      #|  let answer#2 : Int = {
+      #|  let answer#1 : Int = {
       #|    let temp#0 : (Int) -> Int = id#0[Int]
       #|    let temp#1 : Int = temp#0(builtin("%answer"))
       #|    temp#1

@@ -2,6 +2,7 @@
 priv struct Resolver {
   registry : SymbolRegistry
   top_values : Array[ValueBinding]
+  ordered_top_values : Array[ValueBinding]
   diagnostics : Array[ResolveDiagnostic]
 }
 
@@ -34,7 +35,7 @@ pub fn resolve_source_file_result(source : @syntax.SourceFile) -> ResolveResult 
 
 ///|
 fn Resolver::Resolver(registry : SymbolRegistry) -> Resolver {
-  { registry, top_values: [], diagnostics: [] }
+  { registry, top_values: [], ordered_top_values: [], diagnostics: [] }
 }
 
 ///|
@@ -66,14 +67,55 @@ fn Resolver::collect_top_level_headers(
           TopLevelFunction,
           declaration.loc,
         )
-        self.top_values.push({
+        let binding = {
           name: declaration.name,
           reference: Symbol(symbol),
           type_: None,
           kind: Plain,
-        })
+        }
+        self.publish_complete_top_level_binding(binding, declaration.loc)
+        self.publish_ordered_top_level_binding(binding, declaration.loc)
       }
-      Let(_) | Offer(_) => ()
+      Let(declaration) =>
+        if declaration.name is Some(name) {
+          let symbol = self.registry.define_value(
+            name,
+            TopLevelValue,
+            declaration.loc,
+          )
+          let type_annotation = declaration.type_annotation.map(fn(type_) {
+            type_.resolve_type(self, self.scope([]))
+          })
+          self.publish_complete_top_level_binding(
+            {
+              name,
+              reference: Symbol(symbol),
+              type_: type_annotation,
+              kind: Plain,
+            },
+            declaration.loc,
+          )
+        }
+      Offer(declaration) => {
+        let symbol = self.registry.define_value(
+          declaration.name,
+          TopLevelValue,
+          declaration.loc,
+        )
+        let type_annotation = declaration.type_annotation.resolve_type(
+          self,
+          self.scope([]),
+        )
+        self.publish_complete_top_level_binding(
+          {
+            name: declaration.name,
+            reference: Symbol(symbol),
+            type_: Some(type_annotation),
+            kind: Plain,
+          },
+          declaration.loc,
+        )
+      }
     }
   }
 }
@@ -406,8 +448,27 @@ fn @syntax.LetDeclaration::resolve_top_level_let(
   self : @syntax.LetDeclaration,
   resolver : Resolver,
 ) -> ResolvedLetDeclaration {
-  let scope = resolver.scope([])
-  let declaration = self.resolve_let(resolver, scope, TopLevelValue)
+  let scope = resolver.ordered_scope([])
+  let symbol = match self.name {
+    Some(name) => resolver.value_symbol(name)
+    None =>
+      resolver.registry.define_value("<anonymous>", TopLevelValue, self.loc)
+  }
+  let type_annotation = match self.name {
+    Some(name) =>
+      match resolver.top_value_binding(name) {
+        Some(binding) => binding.type_
+        None =>
+          self.type_annotation.map(fn(type_) {
+            type_.resolve_type(resolver, scope)
+          })
+      }
+    None =>
+      self.type_annotation.map(fn(type_) { type_.resolve_type(resolver, scope) })
+  }
+  let declaration = self.resolve_let_with_resolved_type(
+    resolver, scope, symbol, type_annotation,
+  )
   resolver.publish_top_level_let(declaration, self.loc)
   declaration
 }
@@ -425,7 +486,7 @@ fn Resolver::publish_top_level_let(
     kind: Plain,
   }
   match declaration.name {
-    Some(_) => self.publish_top_level_binding(binding, loc)
+    Some(_) => self.publish_ordered_top_level_binding(binding, loc)
     None => ()
   }
 }
@@ -442,13 +503,34 @@ fn @syntax.LetDeclaration::resolve_let(
   kind : @symbol.ValueSymbolKind,
 ) -> ResolvedLetDeclaration {
   let display_name = self.name.unwrap_or("<anonymous>")
-  // The initializer is resolved before the binding is inserted. This keeps
-  // local let bindings sequential and non-recursive.
-  let initializer = self.initializer.resolve_expr(resolver, scope)
+  let symbol = resolver.registry.define_value(display_name, kind, self.loc)
+  self.resolve_let_with_symbol(resolver, scope, symbol)
+}
+
+///|
+fn @syntax.LetDeclaration::resolve_let_with_symbol(
+  self : @syntax.LetDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+  symbol : ValueSymbolId,
+) -> ResolvedLetDeclaration {
   let type_annotation = self.type_annotation.map(fn(type_) {
     type_.resolve_type(resolver, scope)
   })
-  let symbol = resolver.registry.define_value(display_name, kind, self.loc)
+  self.resolve_let_with_resolved_type(resolver, scope, symbol, type_annotation)
+}
+
+///|
+fn @syntax.LetDeclaration::resolve_let_with_resolved_type(
+  self : @syntax.LetDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+  symbol : ValueSymbolId,
+  type_annotation : ResolvedType?,
+) -> ResolvedLetDeclaration {
+  // The initializer is resolved before the binding is inserted. This keeps
+  // local let bindings sequential and non-recursive.
+  let initializer = self.initializer.resolve_expr(resolver, scope)
   if self.name is Some(name) {
     scope.define_value(name, symbol, type_annotation)
   }
@@ -464,8 +546,15 @@ fn @syntax.OfferDeclaration::resolve_top_level_offer(
   self : @syntax.OfferDeclaration,
   resolver : Resolver,
 ) -> ResolvedOfferDeclaration {
-  let scope = resolver.scope([])
-  let declaration = self.resolve_offer_value(resolver, scope, TopLevelValue)
+  let scope = resolver.ordered_scope([])
+  let symbol = resolver.value_symbol(self.name)
+  let type_annotation = match resolver.top_value_binding(self.name) {
+    Some({ type_: Some(type_annotation), .. }) => type_annotation
+    _ => self.type_annotation.resolve_type(resolver, scope)
+  }
+  let declaration = self.resolve_offer_value_with_resolved_type(
+    resolver, scope, symbol, type_annotation,
+  )
   resolver.publish_top_level_offer(declaration, self.loc)
   declaration
 }
@@ -476,7 +565,7 @@ fn Resolver::publish_top_level_offer(
   declaration : ResolvedOfferDeclaration,
   loc : SourceSpan,
 ) -> Unit {
-  self.publish_top_level_binding(
+  self.publish_ordered_top_level_binding(
     {
       name: declaration.name,
       reference: Symbol(declaration.symbol),
@@ -494,9 +583,32 @@ fn @syntax.OfferDeclaration::resolve_offer_value(
   scope : ResolveScope,
   kind : @symbol.ValueSymbolKind,
 ) -> ResolvedOfferDeclaration {
-  let initializer = self.initializer.resolve_expr(resolver, scope)
-  let type_annotation = self.type_annotation.resolve_type(resolver, scope)
   let symbol = resolver.registry.define_value(self.name, kind, self.loc)
+  self.resolve_offer_value_with_symbol(resolver, scope, symbol)
+}
+
+///|
+fn @syntax.OfferDeclaration::resolve_offer_value_with_symbol(
+  self : @syntax.OfferDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+  symbol : ValueSymbolId,
+) -> ResolvedOfferDeclaration {
+  let type_annotation = self.type_annotation.resolve_type(resolver, scope)
+  self.resolve_offer_value_with_resolved_type(
+    resolver, scope, symbol, type_annotation,
+  )
+}
+
+///|
+fn @syntax.OfferDeclaration::resolve_offer_value_with_resolved_type(
+  self : @syntax.OfferDeclaration,
+  resolver : Resolver,
+  scope : ResolveScope,
+  symbol : ValueSymbolId,
+  type_annotation : ResolvedType,
+) -> ResolvedOfferDeclaration {
+  let initializer = self.initializer.resolve_expr(resolver, scope)
   scope.define_value(self.name, symbol, Some(type_annotation))
   { symbol, name: self.name, type_annotation, initializer, loc: self.loc }
 }
@@ -1171,6 +1283,17 @@ fn Resolver::scope(
 }
 
 ///|
+fn Resolver::ordered_scope(
+  self : Resolver,
+  type_parameters : Array[ResolvedTypeParameter],
+) -> ResolveScope {
+  {
+    values: self.ordered_top_values.copy(),
+    type_parameters: type_parameters.copy(),
+  }
+}
+
+///|
 fn Resolver::type_symbol(self : Resolver, name : String) -> TypeSymbolId {
   self.registry.type_named(name).unwrap()
 }
@@ -1199,7 +1322,21 @@ fn Resolver::top_value_binding(self : Resolver, name : String) -> ValueBinding? 
 }
 
 ///|
-fn Resolver::publish_top_level_binding(
+fn Resolver::ordered_top_value_binding(
+  self : Resolver,
+  name : String,
+) -> ValueBinding? {
+  for index = self.ordered_top_values.length(); index > 0; index = index - 1 {
+    let binding = self.ordered_top_values[index - 1]
+    if binding.name == name && binding.kind == Plain {
+      return Some(binding)
+    }
+  }
+  None
+}
+
+///|
+fn Resolver::publish_complete_top_level_binding(
   self : Resolver,
   binding : ValueBinding,
   loc : SourceSpan,
@@ -1217,6 +1354,29 @@ fn Resolver::publish_top_level_binding(
             loc,
           )
         None => self.top_values.push(binding)
+      }
+  }
+}
+
+///|
+fn Resolver::publish_ordered_top_level_binding(
+  self : Resolver,
+  binding : ValueBinding,
+  loc : SourceSpan,
+) -> Unit {
+  match binding.kind {
+    Plain =>
+      match self.ordered_top_value_binding(binding.name) {
+        Some(existing) =>
+          self.report(
+            ConflictingTopLevelValue(
+              name=binding.name,
+              existing=self.binding_display(existing),
+              incoming=self.binding_display(binding),
+            ),
+            loc,
+          )
+        None => self.ordered_top_values.push(binding)
       }
   }
 }

@@ -25,6 +25,14 @@ fn SemanticChecker::root_scope(self : SemanticChecker) -> TypeScope {
 }
 
 ///|
+fn SemanticChecker::ordered_root_scope(self : SemanticChecker) -> TypeScope {
+  {
+    values: self.ordered_value_types.copy(),
+    offers: self.ordered_offers.copy(),
+  }
+}
+
+///|
 fn TypeScope::bind(
   self : TypeScope,
   symbol : ValueSymbolId,

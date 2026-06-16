@@ -44,10 +44,10 @@ test "collect top level declaration symbols" {
       #|    type_members {}
       #|    values {
       #|      value#0 top_function unwrap_or
-      #|      value#1 parameter value
-      #|      value#2 parameter fallback
-      #|      value#3 pattern_binder x
-      #|      value#4 top_value origin
+      #|      value#1 top_value origin
+      #|      value#2 parameter value
+      #|      value#3 parameter fallback
+      #|      value#4 pattern_binder x
       #|    }
       #|    fields {
       #|      field#0 owner=type#0 x index=0
@@ -67,13 +67,13 @@ test "collect top level declaration symbols" {
       #|      variant variant#0 none index=0 payloads=0
       #|      variant variant#1 some index=1 payloads=1(tparam#0 A)
       #|    }
-      #|    fn value#0 unwrap_or(value#1 value : type#1 Option[Int], value#2 fallback : Int) -> Int {
-      #|      match var value#1 value {
-      #|        variant#0 Option::none() => var value#2 fallback
-      #|        variant#1 Option::some(bind value#3 x) => var value#3 x
+      #|    fn value#0 unwrap_or(value#2 value : type#1 Option[Int], value#3 fallback : Int) -> Int {
+      #|      match var value#2 value {
+      #|        variant#0 Option::none() => var value#3 fallback
+      #|        variant#1 Option::some(bind value#4 x) => var value#4 x
       #|      }
       #|    }
-      #|    let value#4 origin : type#0 Point = Point::{
+      #|    let value#1 origin : type#0 Point = Point::{
       #|      x: 1
       #|      y: 2
       #|    }
@@ -422,6 +422,57 @@ test "report unresolved qualified field when base type is known" {
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
     content="unresolved_field Point.z",
+  )
+}
+
+///|
+test "resolve top level function bodies with complete top level values" {
+  let file = expect_parse_ok(
+    (
+      #|struct Box {
+      #|  value : Int
+      #|}
+      #|fn read_box() -> Int {
+      #|  box.value
+      #|}
+      #|let box : Box = Box::{ value: 42 }
+    ),
+  )
+  inspect(
+    @prettyprinter.render(resolve_source_file_result(file), width=100),
+    content=(
+      #|resolve_result {
+      #|  resolved {
+      #|    symbols {
+      #|      types {
+      #|        type#0 struct Box/0
+      #|      }
+      #|      type_parameters {}
+      #|      type_members {}
+      #|      values {
+      #|        value#0 top_function read_box
+      #|        value#1 top_value box
+      #|      }
+      #|      fields {
+      #|        field#0 owner=type#0 value index=0
+      #|      }
+      #|      variants {}
+      #|    }
+      #|    declarations {
+      #|      struct type#0 Box {
+      #|        field field#0 value : Int index=0
+      #|      }
+      #|      fn value#0 read_box() -> Int {
+      #|        var value#1 box.field#0 value
+      #|      }
+      #|      let value#1 box : type#0 Box = Box::{
+      #|        value: 42
+      #|      }
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
   )
 }
 

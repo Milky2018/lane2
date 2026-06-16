@@ -115,12 +115,12 @@ test "desugar preserves offered value definitions and expands struct field punni
       #|  struct type#0 Box {
       #|    field field#0 value : Int index=0
       #|  }
-      #|  offer value#1 box {
+      #|  offer value#0 box {
       #|    Box::{
       #|      value: 1
       #|    }
       #|  }
-      #|  fn value#0 make {
+      #|  fn value#1 make {
       #|    body {
       #|      {
       #|        Box::{
