@@ -537,6 +537,7 @@ fn BuslaneLowerer::lower_items(
         )
       }
       PatternLet(declaration) => {
+        self.define_pattern_binders(declaration.pattern)
         let initializer = self.lower_expr(declaration.initializer)
         let body = self.lower_items(items, index + 1, result)
         self.lower_pattern_as_match(declaration.pattern, initializer, body)
@@ -603,6 +604,7 @@ fn BuslaneLowerer::lower_match_arm(
   match_binder : @buslane.ValueId,
   result_type : @types.Type,
 ) -> @buslane.Alternative {
+  self.define_pattern_binders(arm.pattern)
   self.lower_pattern_alternative(
     arm.pattern,
     match_binder,
@@ -618,6 +620,7 @@ fn BuslaneLowerer::lower_pattern_as_match(
   initializer : @buslane.Expr,
   body : @buslane.Expr,
 ) -> @buslane.Expr {
+  self.define_pattern_binders(pattern)
   let binder = self.define_fresh_value(
     MatchBinder,
     self.lower_type(pattern.type_()),
@@ -787,9 +790,34 @@ fn BuslaneLowerer::value_binder_for_payload(
   pattern : @checked.CheckedPattern,
 ) -> @buslane.ValueId {
   match pattern {
-    Binding(symbol~, type_~, ..) =>
-      self.define_value(symbol, MatchBinder, self.lower_type(type_))
+    Binding(symbol~, ..) => self.value_id(symbol)
     _ => self.define_fresh_value(MatchBinder, self.lower_type(pattern.type_()))
+  }
+}
+
+///|
+fn BuslaneLowerer::define_pattern_binders(
+  self : BuslaneLowerer,
+  pattern : @checked.CheckedPattern,
+) -> Unit {
+  match pattern {
+    Wildcard(..) | Literal(..) => ()
+    Binding(symbol~, type_~, ..) =>
+      ignore(self.define_value(symbol, MatchBinder, self.lower_type(type_)))
+    Variant(arguments~, ..) =>
+      for argument in arguments {
+        self.define_pattern_binders(argument)
+      }
+    Struct(type_binders~, fields~, ..) => {
+      for binder in type_binders {
+        if binder.type_parameter is Some(parameter) {
+          ignore(self.define_type_parameter(parameter.id))
+        }
+      }
+      for field in fields {
+        self.define_pattern_binders(field.pattern)
+      }
+    }
   }
 }
 

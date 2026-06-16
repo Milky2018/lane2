@@ -139,6 +139,43 @@ test "elaborate struct field access into buslane selector" {
 }
 
 ///|
+test "elaborate pattern binders before match arm bodies" {
+  let result = elaborate_buslane_source(
+    (
+      #|struct Point {
+      #|  x : Int
+      #|  y : Int
+      #|}
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn choose(value : Option[Int], fallback : Int) -> Int {
+      #|  match value {
+      #|    Option::none => fallback
+      #|    Option::some(x) => x
+      #|  }
+      #|}
+      #|fn first(point : Point) -> Int {
+      #|  match point {
+      #|    Point::{ x, y } => x
+      #|  }
+      #|}
+      #|let answer : Int = choose(Option::some(1), first(Point::{ x: 2, y: 3 }))
+    ),
+  )
+  guard result.program is Some(program) else {
+    abort("expected buslane program")
+  }
+  inspect(
+    @prettyprinter.render(@buslane.verify_program(program), width=100),
+    content=(
+      #|verify_result {}
+    ),
+  )
+}
+
+///|
 test "elaborate resolved source into anf" {
   let result = elaborate_anf_source(
     (
