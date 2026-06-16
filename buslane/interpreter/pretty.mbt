@@ -33,6 +33,28 @@ pub impl @prettyprinter.Pretty for BuslaneRuntimeValue with fn pretty(
 }
 
 ///|
+/// Renders a runtime value with the Buslane type selected by a caller-facing
+/// entry point.
+pub fn BuslaneRuntimeValue::pretty_with_type(
+  value : BuslaneRuntimeValue,
+  type_ : @buslane.Type,
+) -> Document {
+  runtime_value_source_doc(value) + space + text(":") + space + type_.pretty()
+}
+
+///|
+fn runtime_value_source_doc(value : BuslaneRuntimeValue) -> Document {
+  match value.kind {
+    Int(value) => text(value.to_string())
+    Bool(value) => text(value.to_string())
+    String(value) => quoted(value)
+    Unit => text("()")
+    Closure(..) | TypeClosure(..) => text("<function>")
+    _ => value.pretty()
+  }
+}
+
+///|
 impl @prettyprinter.Pretty for BuslaneRuntimeBinding with fn pretty(
   binding : BuslaneRuntimeBinding,
 ) {
