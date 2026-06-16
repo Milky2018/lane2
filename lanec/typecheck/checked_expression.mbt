@@ -870,6 +870,50 @@ fn SemanticChecker::check_checked_function_literal(
   loc : SourceSpan,
 ) -> CheckedExpressionSynthesis {
   match expected {
+    Forall(expected_parameters, expected_body) => {
+      if type_parameters.length() != expected_parameters.length() {
+        self.diagnostics.push({
+          kind: CannotInferExpression("generic function arity"),
+          loc,
+        })
+        return checked_expression_none_reported(expected)
+      }
+      let substitution = @types.TypeSubstitution::TypeSubstitution()
+      for index in 0..<expected_parameters.length() {
+        substitution.insert(
+          expected_parameters[index].id,
+          Parameter(type_parameters[index].symbol),
+        )
+      }
+      let checked = self.check_checked_function_literal(
+        scope,
+        [],
+        parameters,
+        return_type,
+        body,
+        expected_body.substitute(substitution),
+        loc,
+      )
+      guard checked.expression
+        is Some(
+          FunctionLiteral(parameters~, return_type~, body~, type_~, loc~, ..)
+        ) else {
+        return checked
+      }
+      let type_parameters = type_parameters.map(checked_type_parameter)
+      let type_ : @types.Type = Forall(type_parameters, type_)
+      checked_expression(
+        FunctionLiteral(
+          type_parameters~,
+          parameters~,
+          return_type~,
+          body~,
+          type_~,
+          loc~,
+        ),
+        type_,
+      )
+    }
     Function(expected_parameters, expected_result) => {
       if !type_parameters.is_empty() {
         self.diagnostics.push({

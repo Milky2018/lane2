@@ -1062,6 +1062,36 @@ test "typecheck generic function literal parameters from expected forall type" {
 }
 
 ///|
+test "typecheck checked generic function literal parameters from expected forall type" {
+  let result = expect_checked_source_result(
+    (
+      #|let id : [A](A) -> A = fn[A](value) {
+      #|  value
+      #|}
+      #|fn use() -> Int {
+      #|  id(1)
+      #|}
+    ),
+  )
+  inspect(
+    @prettyprinter.render(result, width=100),
+    content=(
+      #|checked_source_typecheck_result {
+      #|  checked {
+      #|    let id#0 : forall [tparam#0 A : Type]. (tparam#0) -> tparam#0 = fn[A#1 : Type](value#2 : tparam#1) -> tparam#1 {
+      #|      value#2
+      #|    }
+      #|    fn use#1() -> Int {
+      #|      id#0[Int](1)
+      #|    }
+      #|  }
+      #|  diagnostics {}
+      #|}
+    ),
+  )
+}
+
+///|
 test "typecheck reports generic function literal arity mismatch" {
   let result = expect_typecheck_result(
     (
