@@ -29,6 +29,7 @@ pub(all) enum ResolveDiagnosticKind {
   UnresolvedValue(String)
   UnresolvedField(type_name~ : String, field~ : String)
   UnresolvedQualifiedVariant(type_name~ : String, variant~ : String)
+  PayloadlessVariantCall(String)
   ConflictingTopLevelValue(
     name~ : String,
     existing~ : String,

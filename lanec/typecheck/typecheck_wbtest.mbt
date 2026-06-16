@@ -1802,7 +1802,7 @@ test "typecheck unqualified enum variant construction" {
       #|  some(value)
       #|}
       #|fn empty() -> Option[Int] {
-      #|  none()
+      #|  none
       #|}
     ),
   )
@@ -1844,7 +1844,7 @@ test "typecheck reports unresolved variant type arguments" {
       #|}
       #|fn use() -> Bool {
       #|  {
-      #|    let value = none()
+      #|    let value = none
       #|    true
       #|  }
       #|}
@@ -1852,7 +1852,7 @@ test "typecheck reports unresolved variant type arguments" {
   )
   inspect(
     @prettyprinter.render(result.diagnostics[0]),
-    content="cannot_infer type arguments @ 7:22-7:23",
+    content="cannot_infer type arguments @ 7:17-7:21",
   )
 }
 

@@ -69,7 +69,7 @@ test "collect top level declaration symbols" {
       #|    }
       #|    fn value#0 unwrap_or(value#2 value : type#1 Option[Int], value#3 fallback : Int) -> Int {
       #|      match var value#2 value {
-      #|        variant#0 Option::none() => var value#3 fallback
+      #|        variant#0 Option::none => var value#3 fallback
       #|        variant#1 Option::some(bind value#4 x) => var value#4 x
       #|      }
       #|    }
@@ -129,6 +129,26 @@ test "resolve unqualified variant calls after nominal member collection" {
       #|  }
       #|}
     ),
+  )
+}
+
+///|
+test "report payloadless unqualified variant call" {
+  let file = expect_parse_ok(
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|fn empty() -> Option[Int] {
+      #|  none()
+      #|}
+    ),
+  )
+  let result = resolve_source_file_result(file)
+  inspect(
+    @prettyprinter.render(result.diagnostics[0]),
+    content="payloadless_variant_call none",
   )
 }
 

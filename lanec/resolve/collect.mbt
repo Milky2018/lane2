@@ -681,11 +681,8 @@ fn @syntax.Expr::resolve_expr(
     StringLiteral(value, loc~) => StringLiteral(value, loc~)
     BoolLiteral(value, loc~) => BoolLiteral(value, loc~)
     UnitLiteral(loc~) => UnitLiteral(loc~)
-    Var(name, loc~) => {
-      let reference = scope.value_reference(name)
-      resolver.report_unresolved_value(reference, loc)
-      Var(name~, reference~, loc~)
-    }
+    Var(name, loc~) =>
+      resolver.resolve_unqualified_name_use(scope, name, loc, BareUse(loc))
     QualifiedVariant(
       type_name~,
       type_arguments~,
@@ -814,6 +811,12 @@ fn @syntax.Expr::resolve_expr(
 }
 
 ///|
+priv enum UnqualifiedNameUse {
+  BareUse(SourceSpan)
+  CallUse(arguments~ : Array[@syntax.CallArgument], loc~ : SourceSpan)
+}
+
+///|
 fn Resolver::operator_reference(
   self : Resolver,
   scope : ResolveScope,
@@ -899,6 +902,130 @@ fn Resolver::nominal_type_of_expr(
 }
 
 ///|
+/// Resolves an unqualified source name in value position.
+///
+/// Example: `none` and `none()` both start from the same visible name. A visible
+/// value named `none` wins first; otherwise the name may fall back to an
+/// unqualified enum variant. Payloadless variants are values, so `none` is the
+/// valid form and `none()` is diagnosed here while the original call syntax is
+/// still available.
+fn Resolver::resolve_unqualified_name_use(
+  self : Resolver,
+  scope : ResolveScope,
+  name : String,
+  name_loc : SourceSpan,
+  name_use : UnqualifiedNameUse,
+) -> ResolvedExpr {
+  match scope.value_reference(name) {
+    Symbol(_) | OpenedField(..) | Candidates(..) as reference =>
+      name_use.resolve_as_value(self, scope, name, name_loc, reference)
+    Unresolved(_) =>
+      self.resolve_unqualified_variant_use(scope, name, name_loc, name_use)
+  }
+}
+
+///|
+fn Resolver::resolve_unqualified_variant_use(
+  self : Resolver,
+  scope : ResolveScope,
+  name : String,
+  name_loc : SourceSpan,
+  name_use : UnqualifiedNameUse,
+) -> ResolvedExpr {
+  match self.unqualified_variant_reference(name, name_use.loc()) {
+    Symbol(symbol) as reference => {
+      name_use.report_payloadless_variant_call(self, symbol, name)
+      name_use.resolve_as_variant(self, scope, name, reference)
+    }
+    Ambiguous(_) as reference =>
+      name_use.resolve_as_variant(self, scope, name, reference)
+    Unresolved(..) | UnresolvedUnqualified(_) =>
+      name_use.resolve_as_unresolved_value(self, scope, name, name_loc)
+  }
+}
+
+///|
+fn UnqualifiedNameUse::resolve_as_value(
+  self : UnqualifiedNameUse,
+  resolver : Resolver,
+  scope : ResolveScope,
+  name : String,
+  name_loc : SourceSpan,
+  reference : ResolvedValueReference,
+) -> ResolvedExpr {
+  match self {
+    BareUse(loc) => Var(name~, reference~, loc~)
+    CallUse(arguments~, loc~) =>
+      Call(
+        callee=Var(name~, reference~, loc=name_loc),
+        arguments=arguments.map(fn(argument) {
+          argument.resolve_call_argument(resolver, scope)
+        }),
+        loc~,
+      )
+  }
+}
+
+///|
+fn UnqualifiedNameUse::resolve_as_variant(
+  self : UnqualifiedNameUse,
+  resolver : Resolver,
+  scope : ResolveScope,
+  name : String,
+  reference : ResolvedVariantReference,
+) -> ResolvedExpr {
+  match self {
+    BareUse(loc) =>
+      UnqualifiedVariant(variant=name, reference~, arguments=[], loc~)
+    CallUse(arguments~, loc~) =>
+      UnqualifiedVariant(
+        variant=name,
+        reference~,
+        arguments=arguments.map(fn(argument) {
+          argument.resolve_positional_call_argument(resolver, scope)
+        }),
+        loc~,
+      )
+  }
+}
+
+///|
+fn UnqualifiedNameUse::resolve_as_unresolved_value(
+  self : UnqualifiedNameUse,
+  resolver : Resolver,
+  scope : ResolveScope,
+  name : String,
+  name_loc : SourceSpan,
+) -> ResolvedExpr {
+  resolver.report(UnresolvedValue(name), self.loc())
+  self.resolve_as_value(resolver, scope, name, name_loc, Unresolved(name))
+}
+
+///|
+fn UnqualifiedNameUse::report_payloadless_variant_call(
+  self : UnqualifiedNameUse,
+  resolver : Resolver,
+  symbol : VariantSymbolId,
+  name : String,
+) -> Unit {
+  guard self is CallUse(arguments~, ..) else { return }
+  guard arguments.is_empty() else { return }
+  guard resolver.registry.variant_metadata(symbol) is Some(metadata) else {
+    return
+  }
+  if metadata.payload_count == 0 {
+    resolver.report(PayloadlessVariantCall(name), self.loc())
+  }
+}
+
+///|
+fn UnqualifiedNameUse::loc(self : UnqualifiedNameUse) -> SourceSpan {
+  match self {
+    BareUse(loc) | CallUse(loc~, ..) => loc
+  }
+}
+
+///|
 /// Resolves call syntax whose callee was parsed as an expression.
 ///
 /// Example: `f(x)` resolves to a value call when `f` is visible as a value,
@@ -912,50 +1039,13 @@ fn @syntax.Expr::resolve_call(
   loc : SourceSpan,
 ) -> ResolvedExpr {
   match self {
-    Var(name, ..) =>
-      match scope.value_reference(name) {
-        // A bare call callee can denote either a value or an unqualified enum
-        // variant. Value lookup is tried first because ordinary lexical
-        // bindings shadow variant fallback at this syntactic position.
-        Symbol(_) | OpenedField(..) | Candidates(..) as reference =>
-          Call(
-            callee=Var(name~, reference~, loc=self.loc()),
-            arguments=arguments.map(fn(argument) {
-              argument.resolve_call_argument(resolver, scope)
-            }),
-            loc~,
-          )
-        Unresolved(_) =>
-          match resolver.unqualified_variant_reference(name, loc) {
-            Symbol(_) | Ambiguous(_) as reference =>
-              UnqualifiedVariant(
-                variant=name,
-                reference~,
-                arguments=arguments.map(fn(argument) {
-                  argument.resolve_positional_call_argument(resolver, scope)
-                }),
-                loc~,
-              )
-            UnresolvedUnqualified(_) => {
-              resolver.report(UnresolvedValue(name), loc)
-              Call(
-                callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
-                arguments=arguments.map(fn(argument) {
-                  argument.resolve_call_argument(resolver, scope)
-                }),
-                loc~,
-              )
-            }
-            Unresolved(..) =>
-              Call(
-                callee=Var(name~, reference=Unresolved(name), loc=self.loc()),
-                arguments=arguments.map(fn(argument) {
-                  argument.resolve_call_argument(resolver, scope)
-                }),
-                loc~,
-              )
-          }
-      }
+    Var(name, loc=name_loc) =>
+      resolver.resolve_unqualified_name_use(
+        scope,
+        name,
+        name_loc,
+        CallUse(arguments~, loc~),
+      )
     _ =>
       Call(
         callee=self.resolve_expr(resolver, scope),

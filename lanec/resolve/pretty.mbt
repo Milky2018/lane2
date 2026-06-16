@@ -67,6 +67,8 @@ pub impl @prettyprinter.Pretty for ResolveDiagnosticKind with fn pretty(
       text(type_name) +
       text("::") +
       text(variant)
+    PayloadlessVariantCall(name) =>
+      text("payloadless_variant_call") + space + text(name)
     ConflictingTopLevelValue(name~, existing~, incoming~) =>
       text("conflicting_top_value") +
       space +
@@ -601,14 +603,20 @@ pub impl @prettyprinter.Pretty for ResolvedPattern with fn pretty(
       reference~,
       arguments~,
       ..
-    ) =>
-      reference.pretty() +
-      space +
-      text(type_name) +
-      text("::") +
-      text(variant) +
-      type_parameters_doc(type_binders) +
-      @pretty.parenthesized_inline(arguments.map(ResolvedPattern::pretty))
+    ) => {
+      let head = reference.pretty() +
+        space +
+        text(type_name) +
+        text("::") +
+        text(variant) +
+        type_parameters_doc(type_binders)
+      if arguments.is_empty() {
+        head
+      } else {
+        head +
+        @pretty.parenthesized_inline(arguments.map(ResolvedPattern::pretty))
+      }
+    }
     Struct(type_name~, fields~, ..) =>
       text(type_name) +
       @pretty.braced_block(fields.map(ResolvedStructPatternField::pretty))

@@ -34,3 +34,22 @@ test "compile with prelude records builtin externals and entries" {
   )
   guard result.program is Some(_) else { abort("expected Buslane program") }
 }
+
+///|
+test "check reports payloadless variant call" {
+  let result = check_with_prelude(
+    "",
+    (
+      #|enum Option[A] {
+      #|  none
+      #|  some(A)
+      #|}
+      #|let value : Option[Int] = none()
+    ),
+  )
+  inspect(result.diagnostics.length(), content="1")
+  inspect(
+    result.diagnostics[0].message,
+    content="payloadless_variant_call none",
+  )
+}
