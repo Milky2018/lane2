@@ -2,7 +2,8 @@
 type RuntimeValue = @buslane_interpreter.BuslaneRuntimeValue
 
 ///|
-fn external_runtime(
+/// Creates a Buslane external runtime for the standard Lane intrinsic set.
+pub fn standard_external_runtime(
   external_map : @elaborate.BuslaneExternalMap,
 ) -> @buslane_interpreter.BuslaneExternalRuntime {
   let runtime = @buslane_interpreter.BuslaneExternalRuntime()
@@ -10,7 +11,7 @@ fn external_runtime(
     guard find_builtin_external(external_map, id) is Some(external) else {
       raise @buslane_interpreter.missing_external(id)
     }
-    invoke_builtin(external, arguments)
+    invoke_standard_intrinsic(external, arguments)
   })
   runtime
 }
@@ -29,7 +30,7 @@ fn find_builtin_external(
 }
 
 ///|
-fn invoke_builtin(
+fn invoke_standard_intrinsic(
   external : @elaborate.BuslaneBuiltinExternal,
   arguments : Array[RuntimeValue],
 ) -> RuntimeValue raise @buslane_interpreter.BuslaneRuntimeError {
@@ -43,7 +44,8 @@ fn invoke_builtin(
     "%i64_equal" => int_compare(external, arguments, (a, b) => a == b)
     "%i64_less" => int_compare(external, arguments, (a, b) => a < b)
     "%string_equal" => string_compare(external, arguments, (a, b) => a == b)
-    name => builtin_failure(external, "unsupported builtin " + name)
+    name =>
+      intrinsic_failure(external, "unsupported standard intrinsic " + name)
   }
 }
 
@@ -64,10 +66,10 @@ fn int_unary(
   op : (Int64) -> Int64,
 ) -> RuntimeValue raise @buslane_interpreter.BuslaneRuntimeError {
   if arguments.length() != 1 {
-    return builtin_failure(external, "expected one integer argument")
+    return intrinsic_failure(external, "expected one integer argument")
   }
   guard arguments[0].as_int() is Some(value) else {
-    return builtin_failure(external, "expected one integer argument")
+    return intrinsic_failure(external, "expected one integer argument")
   }
   RuntimeValue::int(op(value))
 }
@@ -98,13 +100,13 @@ fn expect_two_ints(
   arguments : Array[RuntimeValue],
 ) -> (Int64, Int64) raise @buslane_interpreter.BuslaneRuntimeError {
   if arguments.length() != 2 {
-    return builtin_failure(external, "expected two integer arguments")
+    return intrinsic_failure(external, "expected two integer arguments")
   }
   guard arguments[0].as_int() is Some(a) else {
-    return builtin_failure(external, "expected two integer arguments")
+    return intrinsic_failure(external, "expected two integer arguments")
   }
   guard arguments[1].as_int() is Some(b) else {
-    return builtin_failure(external, "expected two integer arguments")
+    return intrinsic_failure(external, "expected two integer arguments")
   }
   (a, b)
 }
@@ -115,19 +117,19 @@ fn expect_two_strings(
   arguments : Array[RuntimeValue],
 ) -> (String, String) raise @buslane_interpreter.BuslaneRuntimeError {
   if arguments.length() != 2 {
-    return builtin_failure(external, "expected two string arguments")
+    return intrinsic_failure(external, "expected two string arguments")
   }
   guard arguments[0].as_string() is Some(a) else {
-    return builtin_failure(external, "expected two string arguments")
+    return intrinsic_failure(external, "expected two string arguments")
   }
   guard arguments[1].as_string() is Some(b) else {
-    return builtin_failure(external, "expected two string arguments")
+    return intrinsic_failure(external, "expected two string arguments")
   }
   (a, b)
 }
 
 ///|
-fn[T] builtin_failure(
+fn[T] intrinsic_failure(
   external : @elaborate.BuslaneBuiltinExternal,
   message : String,
 ) -> T raise @buslane_interpreter.BuslaneRuntimeError {

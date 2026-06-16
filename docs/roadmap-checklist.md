@@ -224,8 +224,8 @@ and unresolved or ambiguous states before Buslane lowering.
 - [x] Encode and check the v1 prelude as Lane2 source.
 - [ ] Populate the initial contextual offer environment from prelude-provided
   offered value definitions.
-- [x] Provide required intrinsic implementations through builtin runtime
-  plugins.
+- [x] Provide required standard intrinsic implementations through `lanec`
+  intrinsic runtime plugins.
 - [x] Provide a native-only `lane` command for single-file `check` and
   `run --entry` workflows.
 - [x] Expand valid and invalid conformance fixtures under `spec/examples`.
