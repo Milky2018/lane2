@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/intrinsics"
+package "Milky2018/lanec/intrinsics"
 
 import {
   "Milky2018/buslane/interpreter",
-  "Milky2018/lane2/elaborate",
+  "Milky2018/lanec/elaborate",
 }
 
 // Values

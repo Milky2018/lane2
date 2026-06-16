@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/syntax"
+package "Milky2018/lanec/syntax"
 
 import {
-  "Milky2018/lane2/basic",
+  "Milky2018/lanec/basic",
   "moonbit-community/prettyprinter",
   "moonbitlang/core/debug",
 }

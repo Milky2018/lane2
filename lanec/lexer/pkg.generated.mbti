@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/lexer"
+package "Milky2018/lanec/lexer"
 
 import {
-  "Milky2018/lane2/basic",
+  "Milky2018/lanec/basic",
   "moonbitlang/core/debug",
 }
 

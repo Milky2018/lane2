@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/desugar"
+package "Milky2018/lanec/desugar"
 
 import {
-  "Milky2018/lane2/basic",
-  "Milky2018/lane2/resolve",
-  "Milky2018/lane2/symbol",
+  "Milky2018/lanec/basic",
+  "Milky2018/lanec/resolve",
+  "Milky2018/lanec/symbol",
   "moonbit-community/prettyprinter",
   "moonbitlang/core/debug",
 }

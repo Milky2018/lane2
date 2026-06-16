@@ -12,6 +12,7 @@ topic instead of loading every glossary at once.
 - [Pattern Matching](./docs/contexts/pattern-matching/CONTEXT.md) — checked patterns, exhaustiveness, usefulness, and future decision-tree lowering.
 - [Contextual Resolution](./docs/contexts/contextual-resolution/CONTEXT.md) — contextual offers, contextual parameters, operator aliases, prelude operations, and unsafe builtins.
 - [Runtime And Execution](./docs/contexts/runtime-execution/CONTEXT.md) — execution targets, the reference interpreter, runtime values, environments, closures, and runtime error boundaries.
+- [IDE Tooling](./docs/contexts/ide-tooling/CONTEXT.md) — LSP server boundaries, VS Code extension responsibilities, editor diagnostics, and compiler-analysis APIs.
 
 ## Relationships
 
@@ -20,3 +21,4 @@ topic instead of loading every glossary at once.
 - **Type System -> Compiler Pipeline**: checked type objects and symbol identities are carried through Checked Source, Buslane, and ANF.
 - **Pattern Matching -> Compiler Pipeline**: checked patterns are analyzed before Buslane; Buslane uses one-level matches, while decision trees are reserved for later execution IR.
 - **Compiler Pipeline -> Runtime And Execution**: Buslane defines the semantic core; ANF currently feeds the reference interpreter.
+- **IDE Tooling -> Compiler Pipeline**: editor features call compiler-analysis APIs and consume diagnostics without owning compiler semantics.

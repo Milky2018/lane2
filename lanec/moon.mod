@@ -1,4 +1,4 @@
-name = "Milky2018/lane2"
+name = "Milky2018/lanec"
 
 version = "0.1.0"
 

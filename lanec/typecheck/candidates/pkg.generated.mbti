@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/typecheck/candidates"
+package "Milky2018/lanec/typecheck/candidates"
 
 import {
-  "Milky2018/lane2/resolve",
-  "Milky2018/lane2/types",
+  "Milky2018/lanec/resolve",
+  "Milky2018/lanec/types",
   "moonbitlang/core/debug",
 }
 

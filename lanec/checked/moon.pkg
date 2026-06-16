@@ -1,7 +1,7 @@
 import {
-  "Milky2018/lane2/basic",
-  "Milky2018/lane2/pretty",
-  "Milky2018/lane2/symbol",
-  "Milky2018/lane2/types",
+  "Milky2018/lanec/basic",
+  "Milky2018/lanec/pretty",
+  "Milky2018/lanec/symbol",
+  "Milky2018/lanec/types",
   "moonbit-community/prettyprinter",
 }

@@ -1,12 +1,12 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/anf"
+package "Milky2018/lanec/anf"
 
 import {
   "Milky2018/buslane",
-  "Milky2018/lane2/basic",
-  "Milky2018/lane2/checked",
-  "Milky2018/lane2/symbol",
-  "Milky2018/lane2/types",
+  "Milky2018/lanec/basic",
+  "Milky2018/lanec/checked",
+  "Milky2018/lanec/symbol",
+  "Milky2018/lanec/types",
   "moonbit-community/prettyprinter",
   "moonbitlang/core/debug",
 }

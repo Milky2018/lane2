@@ -1,8 +1,8 @@
 import {
-  "Milky2018/lane2/basic",
-  "Milky2018/lane2/lexer",
-  "Milky2018/lane2/parser/yacc_parser",
-  "Milky2018/lane2/syntax",
+  "Milky2018/lanec/basic",
+  "Milky2018/lanec/lexer",
+  "Milky2018/lanec/parser/yacc_parser",
+  "Milky2018/lanec/syntax",
 }
 
 import {

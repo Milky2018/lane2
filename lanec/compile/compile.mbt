@@ -4,6 +4,14 @@ using @prettyprinter {type Document, line, separate, space, text}
 ///|
 pub(all) struct CompileDiagnostic {
   message : String
+  span : @basic.SourceSpan?
+  severity : CompileDiagnosticSeverity
+} derive(Debug, Eq)
+
+///|
+pub(all) enum CompileDiagnosticSeverity {
+  Error
+  Warning
 } derive(Debug, Eq)
 
 ///|
@@ -74,25 +82,31 @@ fn checked_source_with_prelude(
     return Err(parse_diagnostics)
   }
   guard parsed.source is Some(file) else {
-    return Err([make_diagnostic("parser produced no source file")])
+    return Err([make_error("parser produced no source file", span=None)])
   }
   let resolved = @resolve.resolve_source_file_result(file)
   let resolve_diagnostics = resolved.diagnostics.map(fn(diagnostic) {
-    make_diagnostic(@prettyprinter.render(diagnostic, width=100))
+    make_error(
+      @prettyprinter.render(diagnostic.kind, width=100),
+      span=Some(diagnostic.loc),
+    )
   })
   if !resolve_diagnostics.is_empty() {
     return Err(resolve_diagnostics)
   }
   let checked = @typecheck.typecheck_checked_source_file(resolved.source)
   let typecheck_diagnostics = checked.diagnostics.map(fn(diagnostic) {
-    make_diagnostic(@prettyprinter.render(diagnostic, width=100))
+    make_error(
+      @prettyprinter.render(diagnostic.kind, width=100),
+      span=Some(diagnostic.loc),
+    )
   })
   if !typecheck_diagnostics.is_empty() {
     return Err(typecheck_diagnostics)
   }
   match checked.source {
     Some(source) => Ok(source)
-    None => Err([make_diagnostic("checked source construction failed")])
+    None => Err([make_error("checked source construction failed", span=None)])
   }
 }
 
@@ -110,8 +124,9 @@ fn parse_diagnostics(result : @parser.ParseResult) -> Array[CompileDiagnostic] {
 
 ///|
 fn lex_diagnostic(error : @lexer.LexError) -> CompileDiagnostic {
-  make_diagnostic(
-    span_text(error.span) + ": lexical error: " + lex_error_text(error.error),
+  make_error(
+    "lexical error: " + lex_error_text(error.error),
+    span=Some(error.span),
   )
 }
 
@@ -129,8 +144,9 @@ fn lex_error_text(error : @lexer.LexicalError) -> String {
 
 ///|
 fn parse_diagnostic(error : @parser.ParseError) -> CompileDiagnostic {
-  make_diagnostic(
-    span_text(error.loc) + ": parse error: " + parse_error_text(error.kind),
+  make_error(
+    "parse error: " + parse_error_text(error.kind),
+    span=Some(error.loc),
   )
 }
 
@@ -166,15 +182,22 @@ fn span_text(span : @basic.SourceSpan) -> String {
 }
 
 ///|
-fn make_diagnostic(message : String) -> CompileDiagnostic {
-  { message, }
+fn make_error(
+  message : String,
+  span~ : @basic.SourceSpan?,
+) -> CompileDiagnostic {
+  { message, span, severity: Error }
 }
 
 ///|
 pub impl @prettyprinter.Pretty for CompileDiagnostic with fn pretty(
   diagnostic : CompileDiagnostic,
 ) -> Document {
-  text(diagnostic.message)
+  let message = text(diagnostic.message)
+  match diagnostic.span {
+    Some(span) => text(span_text(span)) + text(":") + space + message
+    None => message
+  }
 }
 
 ///|

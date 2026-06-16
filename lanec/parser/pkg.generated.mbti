@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/parser"
+package "Milky2018/lanec/parser"
 
 import {
-  "Milky2018/lane2/basic",
-  "Milky2018/lane2/lexer",
-  "Milky2018/lane2/syntax",
+  "Milky2018/lanec/basic",
+  "Milky2018/lanec/lexer",
+  "Milky2018/lanec/syntax",
   "moonbitlang/core/debug",
 }
 

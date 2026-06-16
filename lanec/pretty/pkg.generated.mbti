@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/pretty"
+package "Milky2018/lanec/pretty"
 
 import {
-  "Milky2018/lane2/basic",
+  "Milky2018/lanec/basic",
   "moonbit-community/prettyprinter",
 }
 

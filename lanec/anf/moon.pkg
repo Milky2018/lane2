@@ -1,15 +1,15 @@
 import {
-  "Milky2018/lane2/basic",
+  "Milky2018/lanec/basic",
   "Milky2018/buslane",
-  "Milky2018/lane2/checked",
-  "Milky2018/lane2/pretty",
-  "Milky2018/lane2/symbol",
-  "Milky2018/lane2/types",
+  "Milky2018/lanec/checked",
+  "Milky2018/lanec/pretty",
+  "Milky2018/lanec/symbol",
+  "Milky2018/lanec/types",
   "moonbit-community/prettyprinter",
 }
 
 import {
-  "Milky2018/lane2/parser",
-  "Milky2018/lane2/resolve",
-  "Milky2018/lane2/typecheck",
+  "Milky2018/lanec/parser",
+  "Milky2018/lanec/resolve",
+  "Milky2018/lanec/typecheck",
 } for "wbtest"

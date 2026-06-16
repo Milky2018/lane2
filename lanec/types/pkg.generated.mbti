@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "Milky2018/lane2/types"
+package "Milky2018/lanec/types"
 
 import {
-  "Milky2018/lane2/symbol",
+  "Milky2018/lanec/symbol",
   "moonbit-community/prettyprinter",
   "moonbitlang/core/debug",
 }
