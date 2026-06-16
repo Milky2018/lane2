@@ -1,7 +1,4 @@
 ///|
-let prelude_path : String = "lane-std/prelude.lane"
-
-///|
 let server_name : String = "lane_lsp"
 
 ///|

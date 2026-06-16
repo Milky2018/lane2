@@ -1,7 +1,10 @@
 ///|
 async fn main {
   @async.pause()
-  let prelude = @fs.read_file_to_string(prelude_path, encoding="utf8") catch {
+  let stdlib = parse_lsp_stdlib() catch {
+    _ => abort("failed to parse command line")
+  }
+  let prelude = read_prelude(stdlib) catch {
     _ => abort("failed to read prelude")
   }
   run_server(ServerState(prelude))

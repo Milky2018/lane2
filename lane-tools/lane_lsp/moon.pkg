@@ -5,10 +5,12 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/io",
   "moonbitlang/async/stdio",
+  "moonbitlang/core/argparse",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
 }
 
 supported_targets = "native"

@@ -51,6 +51,14 @@ test "initialize returns full document sync capability" {
 }
 
 ///|
+test "stdlib option resolves prelude path" {
+  inspect(
+    prelude_path(Some("/tmp/lane-lib")),
+    content="/tmp/lane-lib/prelude.lane",
+  )
+}
+
+///|
 test "didOpen publishes compiler diagnostics" {
   let state = ServerState::ServerState(lsp_test_prelude())
   let result = state.handle_message(
