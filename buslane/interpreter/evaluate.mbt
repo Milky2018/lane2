@@ -78,7 +78,7 @@ fn evaluate_buslane_expr(
   externals : BuslaneExternalRuntime,
 ) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
   match expr {
-    Ref(id) => evaluate_buslane_ref(id, environment, externals)
+    Ref(id) => environment.lookup(id)
     Literal(literal) => evaluate_buslane_literal(literal)
     Function(function) =>
       BuslaneRuntimeValue::runtime(
@@ -122,24 +122,6 @@ fn evaluate_buslane_expr(
       evaluate_buslane_expr(body, frame, externals)
     }
     Match(match_) => evaluate_buslane_match(match_, environment, externals)
-  }
-}
-
-///|
-fn evaluate_buslane_ref(
-  id : @buslane.ValueId,
-  environment : BuslaneRuntimeEnvironment,
-  externals : BuslaneExternalRuntime,
-) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
-  let value = environment.lookup(id)
-  match value.kind {
-    External(id, type_) =>
-      if runtime_type_is_callable(type_) {
-        value
-      } else {
-        externals.invoke(id, [])
-      }
-    _ => value
   }
 }
 

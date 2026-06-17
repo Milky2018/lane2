@@ -14,7 +14,7 @@ fn expect_ok(program : @buslane.Program) -> Unit raise {
 }
 
 ///|
-test "external value reference calls runtime handler" {
+test "external value reference stays opaque" {
   let metadata = @buslane.MetadataRegistry::MetadataRegistry()
   let external = metadata.define_value(External, int_type())
   let result = metadata.define_value(Value, int_type())
@@ -24,41 +24,44 @@ test "external value reference calls runtime handler" {
   }
   expect_ok(program)
   let runtime = BuslaneExternalRuntime::BuslaneExternalRuntime()
-  runtime.add_handler((id, arguments) => {
-    if id != external {
-      abort("unexpected Buslane external")
-    }
-    if !arguments.is_empty() {
-      abort("unexpected Buslane external arguments")
-    }
-    BuslaneRuntimeValue::int(42L)
+  runtime.add_handler((_id, arguments) => {
+    abort(
+      "external value reference must not invoke runtime handler with \{arguments.length()} arguments",
+    )
   })
   let evaluated = evaluate_buslane_program(program, runtime)
+  assert_false(evaluated.lookup(result).is_function())
   inspect(
     @prettyprinter.render(evaluated.lookup(result), width=80),
-    content="int 42",
+    content="external_value value#0",
   )
 }
 
 ///|
-test "external callable calls runtime handler" {
+test "external callable call invokes runtime handler" {
   let metadata = @buslane.MetadataRegistry::MetadataRegistry()
-  let external = metadata.define_value(External, Function([], int_type()))
+  let external = metadata.define_value(
+    External,
+    Function([int_type()], int_type()),
+  )
   let result = metadata.define_value(Value, int_type())
   let program = @buslane.Program::{
     metadata,
-    terms: [External(external), Let(result, Call(Ref(external), []))],
+    terms: [
+      External(external),
+      Let(result, Call(Ref(external), [Literal(Int(40L))])),
+    ],
   }
   inspect(
     @prettyprinter.render(program, width=100),
     content=(
       #|buslane {
       #|  metadata {
-      #|    external value#0 : () -> Int
+      #|    external value#0 : (Int) -> Int
       #|    value value#1 : Int
       #|  }
       #|  external value#0
-      #|  let value#1 = value#0()
+      #|  let value#1 = value#0(40)
       #|}
     ),
   )
@@ -68,7 +71,7 @@ test "external callable calls runtime handler" {
     if id != external {
       abort("unexpected Buslane external")
     }
-    if !arguments.is_empty() {
+    guard arguments.length() == 1 && arguments[0].as_int() == Some(40L) else {
       abort("unexpected Buslane external arguments")
     }
     BuslaneRuntimeValue::int(42L)

@@ -100,7 +100,12 @@ expect_contains \
   "meter_equal_ops" \
   "<function>"
 
-expect_failure_contains \
+expect_contains \
   "spec/examples/valid/07_builtin_expected_type.lane" \
   "host_value" \
-  "unsupported standard intrinsic %host_value"
+  "external_value"
+
+expect_contains \
+  "spec/examples/valid/07_builtin_expected_type.lane" \
+  "host_value" \
+  " : Int"
