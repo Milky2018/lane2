@@ -26,9 +26,9 @@ pub impl @prettyprinter.Pretty for BuslaneRuntimeValue with fn pretty(
       data_constructor.pretty() +
       space +
       braced_block(arguments.map(BuslaneRuntimeValue::pretty))
-    Closure(..) => text("<function>")
+    Closure(..) | NativeFunction(_) => text("<function>")
     TypeClosure(..) => text("<type-function>")
-    External(id, _) => text("external_value") + space + id.pretty()
+    External(id) => text("external_value") + space + id.pretty()
   }
 }
 
@@ -49,7 +49,7 @@ fn runtime_value_source_doc(value : BuslaneRuntimeValue) -> Document {
     Bool(value) => text(value.to_string())
     String(value) => quoted(value)
     Unit => text("()")
-    Closure(..) | TypeClosure(..) => text("<function>")
+    Closure(..) | TypeClosure(..) | NativeFunction(_) => text("<function>")
     _ => value.pretty()
   }
 }

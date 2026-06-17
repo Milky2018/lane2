@@ -248,14 +248,16 @@ test "evaluate buslane external call" {
     terms: [External(external), Let(result, Call(Ref(external), []))],
   }
   let runtime = @buslane_interpreter.BuslaneExternalRuntime()
-  runtime.add_handler((id, arguments) => {
+  runtime.add_resolver((id, _type) => {
     if id != external {
       abort("unexpected Buslane external")
     }
-    if !arguments.is_empty() {
-      abort("unexpected Buslane external arguments")
-    }
-    @buslane_interpreter.BuslaneRuntimeValue::int(42L)
+    @buslane_interpreter.BuslaneRuntimeValue::native_function(arguments => {
+      if !arguments.is_empty() {
+        abort("unexpected Buslane external arguments")
+      }
+      @buslane_interpreter.BuslaneRuntimeValue::int(42L)
+    })
   })
   let evaluated = @buslane_interpreter.evaluate_buslane_program(
     program, runtime,

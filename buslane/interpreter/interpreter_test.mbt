@@ -23,13 +23,7 @@ test "external value reference stays opaque" {
     terms: [External(external), Let(result, Ref(external))],
   }
   expect_ok(program)
-  let runtime = BuslaneExternalRuntime::BuslaneExternalRuntime()
-  runtime.add_handler((_id, arguments) => {
-    abort(
-      "external value reference must not invoke runtime handler with \{arguments.length()} arguments",
-    )
-  })
-  let evaluated = evaluate_buslane_program(program, runtime)
+  let evaluated = evaluate_buslane_program(program, BuslaneExternalRuntime())
   assert_false(evaluated.lookup(result).is_function())
   inspect(
     @prettyprinter.render(evaluated.lookup(result), width=80),
@@ -38,7 +32,7 @@ test "external value reference stays opaque" {
 }
 
 ///|
-test "external callable call invokes runtime handler" {
+test "external callable call invokes resolved native function" {
   let metadata = @buslane.MetadataRegistry::MetadataRegistry()
   let external = metadata.define_value(
     External,
@@ -67,14 +61,16 @@ test "external callable call invokes runtime handler" {
   )
   expect_ok(program)
   let runtime = BuslaneExternalRuntime::BuslaneExternalRuntime()
-  runtime.add_handler((id, arguments) => {
+  runtime.add_resolver((id, _type) => {
     if id != external {
       abort("unexpected Buslane external")
     }
-    guard arguments.length() == 1 && arguments[0].as_int() == Some(40L) else {
-      abort("unexpected Buslane external arguments")
-    }
-    BuslaneRuntimeValue::int(42L)
+    BuslaneRuntimeValue::native_function(arguments => {
+      guard arguments.length() == 1 && arguments[0].as_int() == Some(40L) else {
+        abort("unexpected Buslane external arguments")
+      }
+      BuslaneRuntimeValue::int(42L)
+    })
   })
   let evaluated = evaluate_buslane_program(program, runtime)
   inspect(

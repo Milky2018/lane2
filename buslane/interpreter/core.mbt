@@ -13,34 +13,31 @@ enum BuslaneRuntimeValueKind {
     body~ : @buslane.Expr,
     environment~ : BuslaneRuntimeEnvironment
   )
-  TypeClosure(
-    type_parameters~ : Array[@buslane.TypeParameterId],
-    body~ : @buslane.Expr,
-    environment~ : BuslaneRuntimeEnvironment
-  )
-  External(@buslane.ValueId, @buslane.Type)
-} derive(Debug, Eq)
+  TypeClosure(body~ : @buslane.Expr, environment~ : BuslaneRuntimeEnvironment)
+  NativeFunction(BuslaneNativeFunction)
+  External(@buslane.ValueId)
+}
 
 ///|
 pub struct BuslaneRuntimeValue {
   priv kind : BuslaneRuntimeValueKind
-} derive(Debug, Eq)
+}
 
 ///|
-struct BuslaneRuntimeBinding {
+priv struct BuslaneRuntimeBinding {
   id : @buslane.ValueId
   value : BuslaneRuntimeValue
-} derive(Debug, Eq)
+}
 
 ///|
-struct BuslaneRuntimeEnvironment {
+priv struct BuslaneRuntimeEnvironment {
   values : Array[BuslaneRuntimeBinding]
-} derive(Debug, Eq)
+}
 
 ///|
 pub struct BuslaneRuntimeProgram {
   priv globals : BuslaneRuntimeEnvironment
-} derive(Debug, Eq)
+}
 
 ///|
 #warnings("-unused_constructor")
@@ -53,11 +50,14 @@ pub suberror BuslaneRuntimeError {
 } derive(Debug, Eq)
 
 ///|
-pub type BuslaneExternalHandler = (@buslane.ValueId, Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError
+pub type BuslaneNativeFunction = (Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError
+
+///|
+pub type BuslaneExternalResolver = (@buslane.ValueId, @buslane.Type) -> BuslaneRuntimeValue raise BuslaneRuntimeError
 
 ///|
 pub struct BuslaneExternalRuntime {
-  priv handlers : Array[BuslaneExternalHandler]
+  priv resolvers : Array[BuslaneExternalResolver]
 }
 
 ///|
@@ -130,18 +130,25 @@ pub fn BuslaneRuntimeValue::as_string(self : BuslaneRuntimeValue) -> String? {
 /// Returns whether this runtime value behaves as a callable value.
 pub fn BuslaneRuntimeValue::is_function(self : BuslaneRuntimeValue) -> Bool {
   match self.kind {
-    Closure(..) | TypeClosure(..) => true
-    External(_, type_) => runtime_type_is_callable(type_)
+    Closure(..) | TypeClosure(..) | NativeFunction(_) => true
     _ => false
   }
 }
 
 ///|
-fn runtime_type_is_callable(type_ : @buslane.Type) -> Bool {
-  match type_ {
-    Function(_, _) | Forall(_, _) => true
-    _ => false
-  }
+/// Creates an opaque external Buslane runtime value.
+pub fn BuslaneRuntimeValue::external(
+  id : @buslane.ValueId,
+) -> BuslaneRuntimeValue {
+  { kind: External(id) }
+}
+
+///|
+/// Creates a native function Buslane runtime value.
+pub fn BuslaneRuntimeValue::native_function(
+  handler : BuslaneNativeFunction,
+) -> BuslaneRuntimeValue {
+  { kind: NativeFunction(handler) }
 }
 
 ///|
@@ -177,34 +184,34 @@ fn BuslaneRuntimeProgram::BuslaneRuntimeProgram(
 ///|
 /// Creates an external runtime with no handlers.
 pub fn BuslaneExternalRuntime::BuslaneExternalRuntime() -> BuslaneExternalRuntime {
-  { handlers: [] }
+  { resolvers: [] }
 }
 
 ///|
-/// Adds an external handler. Handlers are tried in insertion order.
-pub fn BuslaneExternalRuntime::add_handler(
+/// Adds an external value resolver. Resolvers are tried in insertion order.
+pub fn BuslaneExternalRuntime::add_resolver(
   self : BuslaneExternalRuntime,
-  handler : BuslaneExternalHandler,
+  resolver : BuslaneExternalResolver,
 ) -> Unit {
-  self.handlers.push(handler)
+  self.resolvers.push(resolver)
 }
 
 ///|
-/// Invokes the first external handler that accepts the value identity.
-fn BuslaneExternalRuntime::invoke(
+/// Resolves an external declaration into a runtime value.
+fn BuslaneExternalRuntime::resolve(
   self : BuslaneExternalRuntime,
   id : @buslane.ValueId,
-  arguments : Array[BuslaneRuntimeValue],
+  type_ : @buslane.Type,
 ) -> BuslaneRuntimeValue raise BuslaneRuntimeError {
-  for handler in self.handlers {
+  for resolver in self.resolvers {
     try {
-      return handler(id, arguments)
+      return resolver(id, type_)
     } catch {
       MissingExternal(_) => ()
       error => raise error
     }
   }
-  raise MissingExternal(id)
+  BuslaneRuntimeValue::external(id)
 }
 
 ///|

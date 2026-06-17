@@ -29,37 +29,37 @@ pub struct BuslaneExternalRuntime {
   // private fields
 }
 pub fn BuslaneExternalRuntime::BuslaneExternalRuntime() -> Self
-pub fn BuslaneExternalRuntime::add_handler(Self, (@buslane.ValueId, Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError) -> Unit
-
-type BuslaneRuntimeBinding derive(Eq, @debug.Debug)
-
-type BuslaneRuntimeEnvironment derive(Eq, @debug.Debug)
+pub fn BuslaneExternalRuntime::add_resolver(Self, (@buslane.ValueId, @buslane.Type) -> BuslaneRuntimeValue raise BuslaneRuntimeError) -> Unit
 
 pub struct BuslaneRuntimeProgram {
   // private fields
-} derive(Eq, @debug.Debug)
+}
 pub fn BuslaneRuntimeProgram::lookup(Self, @buslane.ValueId) -> BuslaneRuntimeValue raise BuslaneRuntimeError
 pub impl @prettyprinter.Pretty for BuslaneRuntimeProgram
 
 pub struct BuslaneRuntimeValue {
   // private fields
-} derive(Eq, @debug.Debug)
+}
 pub fn BuslaneRuntimeValue::as_bool(Self) -> Bool?
 pub fn BuslaneRuntimeValue::as_int(Self) -> Int64?
 pub fn BuslaneRuntimeValue::as_string(Self) -> String?
 pub fn BuslaneRuntimeValue::bool(Bool) -> Self
 pub fn BuslaneRuntimeValue::data(@buslane.DataConId, Array[Self]) -> Self
+pub fn BuslaneRuntimeValue::external(@buslane.ValueId) -> Self
 pub fn BuslaneRuntimeValue::int(Int64) -> Self
 pub fn BuslaneRuntimeValue::is_function(Self) -> Bool
+pub fn BuslaneRuntimeValue::native_function((Array[Self]) -> Self raise BuslaneRuntimeError) -> Self
 pub fn BuslaneRuntimeValue::pretty_with_type(Self, @buslane.Type) -> @prettyprinter.Document
 pub fn BuslaneRuntimeValue::string(String) -> Self
 pub fn BuslaneRuntimeValue::unit() -> Self
 pub impl @prettyprinter.Pretty for BuslaneRuntimeValue
 
-type BuslaneRuntimeValueKind derive(Eq, @debug.Debug)
+type BuslaneRuntimeValueKind
 
 // Type aliases
-pub type BuslaneExternalHandler = (@buslane.ValueId, Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError
+pub type BuslaneExternalResolver = (@buslane.ValueId, @buslane.Type) -> BuslaneRuntimeValue raise BuslaneRuntimeError
+
+pub type BuslaneNativeFunction = (Array[BuslaneRuntimeValue]) -> BuslaneRuntimeValue raise BuslaneRuntimeError
 
 // Traits
 

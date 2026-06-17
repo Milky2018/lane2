@@ -215,7 +215,13 @@ and unresolved or ambiguous states before Buslane lowering.
 - [x] Define the builtin runtime plugin contract and runtime error reports.
 - [x] Provide a Buslane reference interpreter with erased type applications,
   nominal data, one-level matches, closures, let-rec groups, and external value
-  handlers.
+  resolution.
+- [x] Treat Buslane external declarations as values resolved by a runtime
+  resolver, with callable externals represented as native function runtime
+  values rather than direct `invoke(id, args)` operations.
+- [ ] Add ABI signatures for native function runtime values and standard
+  intrinsic declarations, and check ABI compatibility against the declared
+  Buslane type during external resolution or linking.
 - [x] Use the Buslane interpreter as the semantic oracle for the first native
   `lane run` implementation.
 

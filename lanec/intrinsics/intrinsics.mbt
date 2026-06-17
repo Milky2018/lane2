@@ -7,11 +7,11 @@ pub fn standard_external_runtime(
   external_map : @elaborate.BuslaneExternalMap,
 ) -> @buslane_interpreter.BuslaneExternalRuntime {
   let runtime = @buslane_interpreter.BuslaneExternalRuntime()
-  runtime.add_handler((id, arguments) => {
+  runtime.add_resolver((id, type_) => {
     guard find_builtin_external(external_map, id) is Some(external) else {
       raise @buslane_interpreter.missing_external(id)
     }
-    invoke_standard_intrinsic(external, arguments)
+    resolve_standard_intrinsic(external, type_)
   })
   runtime
 }
@@ -30,23 +30,55 @@ fn find_builtin_external(
 }
 
 ///|
-fn invoke_standard_intrinsic(
+fn resolve_standard_intrinsic(
   external : @elaborate.BuslaneBuiltinExternal,
-  arguments : Array[RuntimeValue],
-) -> RuntimeValue raise @buslane_interpreter.BuslaneRuntimeError {
+  type_ : @buslane.Type,
+) -> RuntimeValue {
   match external.name {
-    "%i64_add" => int_binary(external, arguments, (a, b) => a + b)
-    "%i64_sub" => int_binary(external, arguments, (a, b) => a - b)
-    "%i64_mul" => int_binary(external, arguments, (a, b) => a * b)
-    "%i64_div" => int_binary(external, arguments, (a, b) => a / b)
-    "%i64_rem" => int_binary(external, arguments, (a, b) => a % b)
-    "%i64_neg" => int_unary(external, arguments, a => -a)
-    "%i64_equal" => int_compare(external, arguments, (a, b) => a == b)
-    "%i64_less" => int_compare(external, arguments, (a, b) => a < b)
-    "%string_equal" => string_compare(external, arguments, (a, b) => a == b)
-    name =>
-      intrinsic_failure(external, "unsupported standard intrinsic " + name)
+    "%i64_add" =>
+      native(type_, arguments => {
+        int_binary(external, arguments, (a, b) => a + b)
+      })
+    "%i64_sub" =>
+      native(type_, arguments => {
+        int_binary(external, arguments, (a, b) => a - b)
+      })
+    "%i64_mul" =>
+      native(type_, arguments => {
+        int_binary(external, arguments, (a, b) => a * b)
+      })
+    "%i64_div" =>
+      native(type_, arguments => {
+        int_binary(external, arguments, (a, b) => a / b)
+      })
+    "%i64_rem" =>
+      native(type_, arguments => {
+        int_binary(external, arguments, (a, b) => a % b)
+      })
+    "%i64_neg" =>
+      native(type_, arguments => int_unary(external, arguments, a => -a))
+    "%i64_equal" =>
+      native(type_, arguments => {
+        int_compare(external, arguments, (a, b) => a == b)
+      })
+    "%i64_less" =>
+      native(type_, arguments => {
+        int_compare(external, arguments, (a, b) => a < b)
+      })
+    "%string_equal" =>
+      native(type_, arguments => {
+        string_compare(external, arguments, (a, b) => a == b)
+      })
+    _ => RuntimeValue::external(external.value)
   }
+}
+
+///|
+fn native(
+  _type : @buslane.Type,
+  handler : @buslane_interpreter.BuslaneNativeFunction,
+) -> RuntimeValue {
+  RuntimeValue::native_function(handler)
 }
 
 ///|
