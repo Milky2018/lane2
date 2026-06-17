@@ -23,6 +23,11 @@ affect. Items prefixed with `Existential:` refer to the design note in
   `T = Int`, and struct patterns such as `Hide::{ T, val }`.
 - [x] Existential: decide and implement the wildcard spelling for ignored
   hidden type binders in struct patterns.
+- [ ] F-Omega: promote higher-kinded types, type-level lambdas, top-level type
+  aliases, and definitional type equality into the language specification.
+- [ ] F-Omega: extend syntax, parser, and pretty printers for kind parameter
+  lists, kind-annotated type binders, type-level lambdas, and name-only
+  top-level type aliases.
 
 ## 1. Compiler Identity And Types
 
@@ -38,6 +43,14 @@ affect. Items prefixed with `Existential:` refer to the design note in
 - [x] Existential: extend type objects and kind checking so existential
   packages can carry explicit hidden type members while preserving nominal
   struct and enum identity.
+- [ ] F-Omega: replace nominal type applications with separate nominal
+  constructor objects and uniform type application.
+- [ ] F-Omega: implement structural kind checking for parameter-list kinds,
+  higher-kinded type parameters, arbitrary-kind aliases, and higher-kinded
+  existential witnesses.
+- [ ] F-Omega: implement alias expansion, capture-avoiding beta normalization,
+  definitional equality, occurs checks, and internal-bug reporting for
+  exhausted normalization fuel.
 
 ## 2. Name Resolution
 
@@ -100,6 +113,8 @@ ordinary local typing has determined their target types.
 - [x] Implement local type argument synthesis for generic applications,
   including constraints from argument types and expected result types in
   checking mode.
+- [ ] Support higher-kinded generic instantiation by structural matching
+  without higher-order unification.
 - [x] Ensure checked source contains no omitted contextual arguments and no
   contextual offer ambiguity states.
 - [x] Check top-level recursive groups, ordered top-level values, local
@@ -188,6 +203,10 @@ and unresolved or ambiguous states before Buslane lowering.
   let-rec RHS shape.
 - [x] Provide a pure Buslane pretty printer and tests based on stable Buslane
   identity output.
+- [ ] Upgrade Buslane type terms and verifier rules with F-omega constructs:
+  higher kinds, type-level lambdas, and type-level application.
+- [ ] Lower source aliases into alias-free Buslane type terms while preserving
+  source type presentation for diagnostics outside Buslane.
 
 ## 6. ANF IR
 
@@ -239,6 +258,9 @@ and unresolved or ambiguous states before Buslane lowering.
   elaborator, Buslane Core Language, ANF, and interpreter fixture coverage for
   existential enums, structs, higher-kind-ready type members, and escape
   diagnostics.
+- [ ] F-Omega: add conformance fixtures for higher-kinded polymorphism,
+  type-level lambdas, type aliases, contextual offers, and existential
+  witnesses.
 - [ ] Run parser, type checker, elaborator, and interpreter tests over shared
   fixtures where practical.
 
