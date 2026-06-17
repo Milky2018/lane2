@@ -6,7 +6,7 @@ readme = "README.mbt.md"
 
 repository = ""
 
-license = "Apache-2.0"
+license = "MIT"
 
 keywords = [ "language", "compiler", "moonbit" ]
 
